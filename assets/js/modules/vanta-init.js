@@ -1,26 +1,56 @@
 /**
  * Vanta-Init JS - Inicialização do Efeito Visual 3D
- * Otimizado com suporte a preferências de redução de movimento (WCAG).
+ * Único ponto de inicialização do Vanta.js no projeto.
+ * Respeita tanto prefers-reduced-motion (sistema) quanto o toggle manual
+ * "Animação Off" (.reduce-motion, controlado por accessibility.js).
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Respeita a preferência de redução de movimento do usuário
-  const prefereSemAnimacao = window.matchMedia(
-    '(prefers-reduced-motion: reduce)'
-  ).matches
-  if (prefereSemAnimacao) {
-    console.log(
-      '[ParkGestão] Animação Vanta.js desativada por preferência de acessibilidade.'
-    )
+/**
+ * Verifica se a animação deve ser suprimida por acessibilidade.
+ * @param {MediaQueryList} [mediaQueryList]
+ * @returns {boolean}
+ */
+function deveReduzirMovimento (mediaQueryList) {
+  const mql =
+    mediaQueryList || window.matchMedia('(prefers-reduced-motion: reduce)')
+  const preferenciaManual = document.body.classList.contains('reduce-motion')
+  return preferenciaManual || mql.matches
+}
+
+/**
+ * Interrompe e destrói a instância do Vanta.js limpando memória/GPU.
+ */
+function pararVantaSeAtivo () {
+  if (window.vantaEffect) {
+    try {
+      window.vantaEffect.destroy()
+    } catch (e) {
+      console.warn('[ParkGestão] Erro ao destruir efeito Vanta.js:', e)
+    } finally {
+      window.vantaEffect = null
+      console.log('[ParkGestão] Vanta.js interrompido.')
+    }
+  }
+}
+
+/**
+ * Inicializa a animação 3D caso as condições de acessibilidade permitam.
+ */
+function iniciarVantaSePermitido () {
+  const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+  // Se o movimento deve ser reduzido, garante que a animação esteja parada
+  if (deveReduzirMovimento(mql)) {
+    pararVantaSeAtivo()
+    console.log('[ParkGestão] Animação Vanta.js desativada por acessibilidade.')
     return
   }
 
-  // Elemento alvo da animação de fundo (por exemplo, cabeçalho da Home)
-  const targetElement =
-    document.getElementById('vanta-bg') ||
-    document.querySelector('.vanta-container')
+  // Se já existe uma instância rodando, não reinicia
+  if (window.vantaEffect) return
 
-  // Verifica se o container e a biblioteca VANTA existem
+  const targetElement = document.getElementById('vanta-bg')
+
   if (
     targetElement &&
     typeof VANTA !== 'undefined' &&
@@ -29,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       window.vantaEffect = VANTA.TOPOLOGY({
         el: targetElement,
-        THREE: THREE,
+        THREE: window.THREE,
         mouseControls: true,
         touchControls: true,
         gyroControls: false,
@@ -42,10 +72,37 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       console.log('[ParkGestão] Vanta.js inicializado com sucesso.')
     } catch (error) {
-      console.warn(
-        '[ParkGestão] Não foi possível carregar o efeito Vanta.js:',
-        error
-      )
+      console.warn('[ParkGestão] Erro ao inicializar Vanta.js:', error)
     }
   }
-})
+}
+
+// Interface Global de Acessibilidade
+window.deveReduzirMovimento = deveReduzirMovimento
+window.pararVantaSeAtivo = pararVantaSeAtivo
+window.iniciarVantaSePermitido = iniciarVantaSePermitido
+
+// Bootstrap do script respeitando o estado de carregamento do DOM
+function init () {
+  iniciarVantaSePermitido()
+
+  const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+  // Ouve mudanças de acessibilidade em nível de Sistema Operacional em tempo real
+  mql.addEventListener('change', e => {
+    if (e.matches) {
+      pararVantaSeAtivo()
+    } else {
+      iniciarVantaSePermitido()
+    }
+  })
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init)
+} else {
+  init()
+}
+
+// Limpeza de memória GPU ao navegar/fechar a página
+window.addEventListener('beforeunload', pararVantaSeAtivo)

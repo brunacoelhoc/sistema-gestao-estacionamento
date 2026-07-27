@@ -4,7 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  initVantaBackground()
   await loadDashboardData()
 
   document
@@ -14,38 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
 })
 
-// Inicialização da animação de fundo interativa
-// NOTA: usa VANTA.WAVES — o index.html precisa carregar vanta.waves.min.js
-// (não vanta.topology.min.js, que expõe um efeito diferente).
-function initVantaBackground () {
-  const jaReduzido =
-    document.documentElement.classList.contains('reduce-motion') ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  if (jaReduzido) return // respeita a preferência de redução de movimento
-
-  if (
-    typeof VANTA !== 'undefined' &&
-    typeof VANTA.WAVES === 'function' &&
-    document.getElementById('vanta-bg')
-  ) {
-    VANTA.WAVES({
-      el: '#vanta-bg',
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: false,
-      minHeight: 200.0,
-      minWidth: 200.0,
-      scale: 1.0,
-      scaleMobile: 1.0,
-      color: 0x0d6efd,
-      shininess: 35.0,
-      waveHeight: 15.0,
-      waveSpeed: 0.65,
-      zoom: 0.85
-    })
-  }
-}
+// A inicialização do fundo 3D (Vanta.js) mora em
+// assets/js/modules/vanta-init.js — não duplicar essa lógica aqui.
 
 // Carregamento dos Dados do Dashboard
 async function loadDashboardData () {

@@ -16,12 +16,14 @@ class ApiService {
 
   static async request (endpoint, options = {}) {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+
       const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        },
-        ...options
+        ...options,
+        headers
       })
 
       if (!response.ok) {
@@ -43,30 +45,44 @@ class ApiService {
   }
 
   static async getMensalistaByPlaca (placa) {
+    if (!placa) return null
     const mensalistas = await this.getMensalistas()
     const placaSanitizada = this.sanitizeText(placa).toUpperCase()
     return (
-      mensalistas.find(m => m.placa.toUpperCase() === placaSanitizada) || null
+      mensalistas.find(
+        m => m.placa && m.placa.toUpperCase() === placaSanitizada
+      ) || null
     )
   }
 
   static async createMensalista (data) {
+    const payload = {
+      nome: this.sanitizeText(data.nome),
+      cpf: this.sanitizeText(data.cpf),
+      placa: this.sanitizeText(data.placa).toUpperCase(),
+      ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
+      telefone: this.sanitizeText(data.telefone)
+    }
+
     return await this.request('mensalistas', {
       method: 'POST',
-      body: JSON.stringify({
-        nome: this.sanitizeText(data.nome),
-        cpf: this.sanitizeText(data.cpf),
-        placa: this.sanitizeText(data.placa).toUpperCase(),
-        status: data.status || 'Ativo',
-        telefone: this.sanitizeText(data.telefone)
-      })
+      body: JSON.stringify(payload)
     })
   }
 
   static async updateMensalista (id, data) {
+    const payload = {}
+    if (data.nome !== undefined) payload.nome = this.sanitizeText(data.nome)
+    if (data.cpf !== undefined) payload.cpf = this.sanitizeText(data.cpf)
+    if (data.placa !== undefined)
+      payload.placa = this.sanitizeText(data.placa).toUpperCase()
+    if (data.telefone !== undefined)
+      payload.telefone = this.sanitizeText(data.telefone)
+    if (data.ativo !== undefined) payload.ativo = Boolean(data.ativo)
+
     return await this.request(`mensalistas/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data)
+      body: JSON.stringify(payload)
     })
   }
 
@@ -76,9 +92,11 @@ class ApiService {
   }
 
   static async updateVagaStatus (id, status) {
+    // Garante casing padronizado ('ocupada' | 'livre')
+    const statusNormalizado = String(status).toLowerCase()
     return await this.request(`vagas/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status: statusNormalizado })
     })
   }
 
@@ -93,26 +111,35 @@ class ApiService {
   }
 
   /**
-   * Regra de Negócio: Abertura de Ticket
+   * Regra de Negócio: Criação/Abertura de Ticket (Metodo esperado por tickets.js)
+   * @param {Object} params - { placa, vagaId, tarifaId, mensalistaId }
    */
-  static async abrirTicket (placa, tipoVeiculo, vagaId) {
-    const vaga = (await this.getVagas()).find(v => v.id === vagaId)
-    if (!vaga || vaga.status === 'Ocupada') {
+  static async criarTicket ({ placa, vagaId, tarifaId, mensalistaId = null }) {
+    const vagas = await this.getVagas()
+    const vaga = vagas.find(v => String(v.id) === String(vagaId))
+
+    if (!vaga || String(vaga.status).toLowerCase() === 'ocupada') {
       throw new Error('A vaga selecionada já está ocupada ou é inválida.')
     }
 
-    const mensalista = await this.getMensalistaByPlaca(placa)
-    const isMensalistaAtivo = mensalista && mensalista.status === 'Ativo'
+    // Se mensalistaId não veio explicitamente, busca pela placa
+    let finalMensalistaId = mensalistaId
+    if (!finalMensalistaId) {
+      const mensalista = await this.getMensalistaByPlaca(placa)
+      if (mensalista && mensalista.ativo === true) {
+        finalMensalistaId = mensalista.id
+      }
+    }
 
     const novoTicket = {
       placa: this.sanitizeText(placa).toUpperCase(),
-      tipoVeiculo,
       vagaId,
-      mensalistaId: isMensalistaAtivo ? mensalista.id : null,
+      tarifaId: tarifaId || null,
+      mensalistaId: finalMensalistaId || null,
       dataEntrada: new Date().toISOString(),
       dataSaida: null,
       valorTotal: null,
-      status: 'Aberto'
+      status: 'aberto'
     }
 
     const ticketCriado = await this.request('tickets', {
@@ -120,10 +147,17 @@ class ApiService {
       body: JSON.stringify(novoTicket)
     })
 
-    // Atualiza vaga para Ocupada
-    await this.updateVagaStatus(vagaId, 'Ocupada')
+    // Atualiza status da vaga para 'ocupada'
+    await this.updateVagaStatus(vagaId, 'ocupada')
 
     return ticketCriado
+  }
+
+  /**
+   * Alias para manter compatibilidade com chamadas legado
+   */
+  static async abrirTicket (placa, tipoVeiculo, vagaId) {
+    return await this.criarTicket({ placa, vagaId, tarifaId: null })
   }
 
   /**
@@ -131,8 +165,9 @@ class ApiService {
    */
   static async fecharTicket (ticketId) {
     const tickets = await this.getTickets()
-    const ticket = tickets.find(t => t.id === ticketId)
-    if (!ticket || ticket.status !== 'Aberto') {
+    const ticket = tickets.find(t => String(t.id) === String(ticketId))
+
+    if (!ticket || String(ticket.status).toLowerCase() !== 'aberto') {
       throw new Error('Ticket inválido ou já finalizado.')
     }
 
@@ -145,20 +180,29 @@ class ApiService {
 
     let valorTotal = 0
 
-    // Se for Mensalista Ativo, o valor final é R$ 0,00
+    // Se for Mensalista Ativo, valor e isento (R$ 0,00)
     if (ticket.mensalistaId) {
-      const mensalista = (await this.getMensalistas()).find(
-        m => m.id === ticket.mensalistaId
+      const mensalistas = await this.getMensalistas()
+      const mensalista = mensalistas.find(
+        m => String(m.id) === String(ticket.mensalistaId)
       )
-      if (mensalista && mensalista.status === 'Ativo') {
+      if (mensalista && mensalista.ativo === true) {
         valorTotal = 0.0
       }
-    } else {
-      // Cálculo para avulsos com base na tarifa cadastrada
+    }
+
+    // Se nao for mensalista e houver calculo a fazer
+    if (!ticket.mensalistaId || valorTotal !== 0) {
       const tarifas = await this.getTarifas()
-      const tarifa = tarifas.find(t => t.tipoVeiculo === ticket.tipoVeiculo)
-      const valorHora = tarifa ? tarifa.valorHora : 10.0
-      const valorAdicional = tarifa ? tarifa.valorAdicional : 5.0
+      // Busca tarifa pelo tarifaId gravado no ticket ou usa a primeira disponível
+      const tarifa =
+        tarifas.find(t => String(t.id) === String(ticket.tarifaId)) ||
+        tarifas[0]
+
+      const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor) : 10.0
+      const valorAdicional = tarifa
+        ? Number(tarifa.valorAdicional || tarifa.adicional || 5.0)
+        : 5.0
 
       if (diffHoras === 1) {
         valorTotal = valorHora
@@ -167,18 +211,20 @@ class ApiService {
       }
     }
 
-    // Atualizar ticket
+    // Atualiza ticket para fechado
     const ticketAtualizado = await this.request(`tickets/${ticketId}`, {
       method: 'PATCH',
       body: JSON.stringify({
         dataSaida: dataSaida.toISOString(),
         valorTotal,
-        status: 'Pago'
+        status: 'fechado'
       })
     })
 
-    // Liberar vaga automaticamente
-    await this.updateVagaStatus(ticket.vagaId, 'Livre')
+    // Libera a vaga automaticamente
+    if (ticket.vagaId) {
+      await this.updateVagaStatus(ticket.vagaId, 'livre')
+    }
 
     return ticketAtualizado
   }
