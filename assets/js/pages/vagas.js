@@ -1,7 +1,7 @@
 /**
  * Lógica da Página de Vagas & Tarifas
  * Renderização dinâmica do mapa de pátio, bloqueio/manutenção de vagas,
- * criação/edição/exclusão de vagas e tarifas com validações e SweetAlert2.
+ * criação/edição/exclusão e filtragem de vagas e tarifas.
  */
 
 let todasVagas = []
@@ -11,12 +11,26 @@ let todasTarifas = []
 document.addEventListener('DOMContentLoaded', async () => {
   await carregarTodosOsDados()
 
-  // Evento do filtro por tipo/categoria no Mapa Visual
+  // Evento do filtro por tipo no Mapa Visual
   document.getElementById('filtro-tipo-vaga')?.addEventListener('change', e => {
     filtrarVagasPorTipo(e.target.value)
   })
 
-  // Listener para formulários de cadastro na página (caso existam no HTML)
+  // Listeners dos filtros da Tabela de Vagas
+  document
+    .getElementById('filtro-tabela-busca')
+    ?.addEventListener('input', aplicarFiltrosTabelaVagas)
+  document
+    .getElementById('filtro-tabela-tipo')
+    ?.addEventListener('change', aplicarFiltrosTabelaVagas)
+  document
+    .getElementById('filtro-tabela-status')
+    ?.addEventListener('change', aplicarFiltrosTabelaVagas)
+  document
+    .getElementById('btn-limpar-filtros-tabela')
+    ?.addEventListener('click', limparFiltrosTabelaVagas)
+
+  // Listener para formulários de cadastro na página
   document
     .getElementById('form-nova-tarifa')
     ?.addEventListener('submit', cadastrarNovaTarifa)
@@ -24,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('form-nova-vaga')
     ?.addEventListener('submit', cadastrarNovaVaga)
 
-  // Botão "Tentar novamente" em caso de erro na página
+  // Botão "Tentar novamente"
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
     carregarTodosOsDados()
   })
@@ -89,7 +103,7 @@ async function carregarTodosOsDados () {
     todasTarifas = tarifas || []
 
     renderizarGridVagas(todasVagas)
-    renderizarTabelaVagas(todasVagas)
+    aplicarFiltrosTabelaVagas() // Aplica os filtros ativos ao carregar
     renderizarTabelaTarifas(todasTarifas)
   } catch (error) {
     console.error('Erro ao carregar dados de Vagas e Tarifas:', error)
@@ -164,6 +178,7 @@ function renderizarGridVagas (vagasList) {
 
 function filtrarVagasPorTipo (tipo) {
   const tipoFormatado = (tipo || '').trim().toLowerCase()
+
   if (
     !tipoFormatado ||
     tipoFormatado === 'todas' ||
@@ -171,15 +186,17 @@ function filtrarVagasPorTipo (tipo) {
   ) {
     renderizarGridVagas(todasVagas)
   } else {
-    const filtradas = todasVagas.filter(
-      v => (v.tipo || '').toLowerCase() === tipoFormatado
-    )
+    const filtradas = todasVagas.filter(vaga => {
+      const tipoVaga = (vaga.tipo || '').trim().toLowerCase()
+      return tipoVaga === tipoFormatado
+    })
+
     renderizarGridVagas(filtradas)
   }
 }
 
 /* ==========================================================================
-   2. INTERAÇÃO E ALTERAÇÃO DE STATUS (MANUTENÇÃO / LIBERAÇÃO)
+   2. INTERAÇÃO E ALTERAÇÃO DE STATUS
    ========================================================================== */
 
 async function abrirOpcoesVaga (vaga) {
@@ -263,7 +280,6 @@ async function abrirOpcoesVaga (vaga) {
    3. CADASTRO DE NOVAS TARIFAS E VAGAS
    ========================================================================== */
 
-// Cadastro via Modal Direta
 async function abrirModalNovaTarifa () {
   if (typeof Swal === 'undefined') return
 
@@ -306,7 +322,6 @@ async function abrirModalNovaTarifa () {
   }
 }
 
-// Cadastro via Form do HTML
 async function cadastrarNovaTarifa (event) {
   if (event) event.preventDefault()
 
@@ -339,7 +354,6 @@ async function cadastrarNovaTarifa (event) {
   }
 }
 
-// Lógica de Persistência da Tarifa na API
 async function executarSalvarTarifa (dadosTarifa) {
   try {
     if (typeof ApiService !== 'undefined') {
@@ -375,7 +389,6 @@ async function executarSalvarTarifa (dadosTarifa) {
   }
 }
 
-// Modal Rápida para Cadastrar Nova Vaga
 async function abrirModalNovaVaga () {
   if (typeof Swal === 'undefined') return
 
@@ -440,21 +453,61 @@ async function abrirModalNovaVaga () {
 }
 
 /* ==========================================================================
-   4. GESTÃO DE VAGAS (TABELA)
+   4. GESTÃO DE VAGAS (TABELA & FILTROS)
    ========================================================================== */
+
+function aplicarFiltrosTabelaVagas () {
+  const busca = (document.getElementById('filtro-tabela-busca')?.value || '')
+    .trim()
+    .toLowerCase()
+  const tipo = (
+    document.getElementById('filtro-tabela-tipo')?.value || 'todos'
+  ).toLowerCase()
+  const status = (
+    document.getElementById('filtro-tabela-status')?.value || 'todos'
+  ).toLowerCase()
+
+  const vagasFiltradas = todasVagas.filter(vaga => {
+    const numero = String(
+      vaga.codigo || vaga.numero || vaga.id || ''
+    ).toLowerCase()
+    const tipoVaga = String(vaga.tipo || '').toLowerCase()
+    const statusVaga = String(vaga.status || 'livre').toLowerCase()
+
+    const bateBusca = !busca || numero.includes(busca)
+    const bateTipo = tipo === 'todos' || tipoVaga === tipo
+    const bateStatus = status === 'todos' || statusVaga === status
+
+    return bateBusca && bateTipo && bateStatus
+  })
+
+  renderizarTabelaVagas(vagasFiltradas)
+}
+
+function limparFiltrosTabelaVagas () {
+  const inputBusca = document.getElementById('filtro-tabela-busca')
+  const selectTipo = document.getElementById('filtro-tabela-tipo')
+  const selectStatus = document.getElementById('filtro-tabela-status')
+
+  if (inputBusca) inputBusca.value = ''
+  if (selectTipo) selectTipo.value = 'todos'
+  if (selectStatus) selectStatus.value = 'todos'
+
+  renderizarTabelaVagas(todasVagas)
+}
 
 function renderizarTabelaVagas (vagas) {
   const tbody =
+    document.getElementById('tbody-vagas') ||
     document.getElementById('tabela-vagas-body') ||
     document.querySelector('#tabela-vagas tbody') ||
-    document.getElementById('listagem-vagas-body') ||
     document.querySelector('table tbody')
 
   if (!tbody) return
 
   if (!vagas || vagas.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhuma vaga cadastrada.</td></tr>'
+      '<tr><td colspan="4" class="text-center py-4 text-muted"><i class="fas fa-search me-1"></i>Nenhuma vaga encontrada com os filtros aplicados.</td></tr>'
     return
   }
 
@@ -462,15 +515,20 @@ function renderizarTabelaVagas (vagas) {
     .map(vaga => {
       const numero = vaga.codigo || vaga.numero || vaga.id
       const tipo = vaga.tipo || 'comum'
-      const status = vaga.status || 'livre'
+      const statusRaw = (vaga.status || 'livre').toLowerCase()
+      const statusInfo = STATUS_VAGA[statusRaw] || STATUS_VAGA.livre
 
       return `
       <tr>
         <td class="fw-bold">${sanitizar(numero)}</td>
         <td class="text-capitalize">${sanitizar(tipo)}</td>
-        <td><span class="badge status-${status.toLowerCase()}">${sanitizar(
-        status
-      )}</span></td>
+        <td>
+          <span class="badge-status ${statusInfo.badgeClass}">
+            <i class="fas ${statusInfo.icon}" aria-hidden="true"></i> ${
+        statusInfo.texto
+      }
+          </span>
+        </td>
         <td>
           <button class="btn btn-sm btn-outline-primary me-1" onclick="editarVaga('${
             vaga.id
@@ -495,9 +553,9 @@ function renderizarTabelaVagas (vagas) {
 
 function renderizarTabelaTarifas (tarifas) {
   const tbody =
+    document.getElementById('tbody-tarifas') ||
     document.getElementById('tabela-tarifas-body') ||
     document.querySelector('#tabela-tarifas tbody') ||
-    document.getElementById('listagem-tarifas-body') ||
     document.querySelector('#tarifas-body') ||
     document.querySelectorAll('table tbody')[1] ||
     document.querySelector('.table-tarifas tbody')
@@ -551,7 +609,6 @@ function possuiTicketAberto (vagaId) {
   )
 }
 
-// EDIÇÃO DE VAGA
 async function editarVaga (vagaId) {
   const vaga = todasVagas.find(v => String(v.id) === String(vagaId))
   if (!vaga) return
@@ -629,7 +686,6 @@ async function editarVaga (vagaId) {
   }
 }
 
-// EDIÇÃO DE TARIFA
 async function editarTarifa (tarifaId) {
   const tarifa = todasTarifas.find(t => String(t.id) === String(tarifaId))
   if (!tarifa) return
@@ -707,7 +763,6 @@ async function editarTarifa (tarifaId) {
   }
 }
 
-// EXCLUSÃO DE VAGA
 async function excluirVaga (vagaId) {
   if (possuiTicketAberto(vagaId)) {
     if (typeof Swal !== 'undefined') {
@@ -751,7 +806,6 @@ async function excluirVaga (vagaId) {
   }
 }
 
-// EXCLUSÃO DE TARIFA
 async function excluirTarifa (tarifaId) {
   const temTicketAberto = todosTickets.some(
     t =>
@@ -809,3 +863,5 @@ window.excluirTarifa = excluirTarifa
 window.cadastrarNovaTarifa = cadastrarNovaTarifa
 window.abrirModalNovaTarifa = abrirModalNovaTarifa
 window.abrirModalNovaVaga = abrirModalNovaVaga
+window.aplicarFiltrosTabelaVagas = aplicarFiltrosTabelaVagas
+window.limparFiltrosTabelaVagas = limparFiltrosTabelaVagas

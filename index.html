@@ -32,39 +32,58 @@
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
-    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex align-items-center justify-content-between text-xs border-bottom border-white-10"
         role="region" aria-label="Barra de Acessibilidade">
-        <div class="d-flex align-items-center gap-2">
-            <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+
+        <!-- Controles de Tamanho de Fonte -->
+        <div class="accessibility-group d-flex align-items-center gap-2">
+            <span class="fw-bold text-white-80">
+                <i class="fas fa-universal-access text-warning me-1" aria-hidden="true"></i> Acessibilidade:
+            </span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Controles de tamanho de texto">
+                <button id="btn-font-increase" class="btn btn-outline-light py-0 px-2 rounded-start-pill text-xs"
+                    type="button" title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+                <button id="btn-font-decrease" class="btn btn-outline-light py-0 px-2 text-xs" type="button"
+                    title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+                <button id="btn-font-reset" class="btn btn-outline-light py-0 px-2 rounded-end-pill text-xs"
+                    type="button" title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+            </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
-                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
-                <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
+
+        <!-- Ferramentas Visuais & Filtros -->
+        <div class="accessibility-group d-flex align-items-center gap-2">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2 rounded-pill text-xs"
+                type="button" title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste"
+                aria-pressed="false">
+                <i class="fas fa-adjust me-1" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill text-xs" type="button"
                 title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
                 aria-pressed="false">
-                <i class="fas fa-font" aria-hidden="true"></i> Dislexia
+                <i class="fas fa-font me-1" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
-                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
-                <i class="fas fa-running" aria-hidden="true"></i> Animação Off
+
+            <button id="btn-motion" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página"
+                aria-pressed="false">
+                <i class="fas fa-running me-1" aria-hidden="true"></i> Animação Off
             </button>
-            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
-            <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Selecionar filtro para daltonismo">
-                <option value="normal">Daltonismo: Normal</option>
-                <option value="protanopia">Protanopia</option>
-                <option value="deuteranopia">Deuteranopia</option>
-                <option value="tritanopia">Tritanopia</option>
-            </select>
+
+            <!-- Select Estilizado de Daltonismo -->
+            <div class="position-relative d-inline-flex align-items-center">
+                <i class="fas fa-eye position-absolute start-0 ms-2 text-warning pointer-events-none text-xs"
+                    aria-hidden="true"></i>
+                <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+                <select id="select-daltonism"
+                    class="form-select form-select-sm custom-select-dark ps-4 py-0 text-xs rounded-pill"
+                    aria-label="Selecionar filtro para daltonismo">
+                    <option value="normal">Daltonismo: Normal</option>
+                    <option value="protanopia">Protanopia</option>
+                    <option value="deuteranopia">Deuteranopia</option>
+                    <option value="tritanopia">Tritanopia</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -73,7 +92,7 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="index.html">
-                    <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
+                    <img src="assets/img/favicon.svg" alt="Logo ParkGestão" width="36" height="36" class="rounded-2">
                     <span>ParkGestão</span>
                 </a>
 
@@ -110,12 +129,75 @@
         </nav>
     </header>
 
-    <!-- HERO BANNER COM VANTA.JS -->
-    <section class="hero-section text-center text-white" aria-labelledby="hero-title">
-        <div id="vanta-bg" aria-hidden="true"></div>
-        <div class="container hero-content py-4">
-            <h1 id="hero-title" class="display-5 fw-bold mb-2">Painel de Controle Principal</h1>
-            <p class="lead mb-0">Gestão inteligente, acessível e em tempo real para o seu estacionamento.</p>
+    <!-- HERO BANNER PREMIUM COM INSPIRAÇÃO EM MOBILIDADE & ESTACIONAMENTO -->
+    <section class="hero-section py-4 px-3 px-md-4" aria-labelledby="hero-title">
+        <div class="container-fluid px-0">
+            <div class="hero-card-container position-relative overflow-hidden rounded-5 text-white shadow-lg">
+
+                <!-- Fundo dinâmico com Vanta.js ou Imagem Temática Overlay -->
+                <div id="vanta-bg" class="hero-bg-overlay position-absolute top-0 start-0 w-100 h-100"
+                    aria-hidden="true"></div>
+
+                <!-- Conteúdo Principal do Hero -->
+                <div class="position-relative z-1 p-4 p-md-5 d-flex flex-column justify-content-between min-vh-40">
+
+                    <!-- Cabeçalho Secundário do Hero -->
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <span
+                            class="badge bg-white bg-opacity-10 backdrop-blur border border-white-11 text-white px-3 py-2 rounded-pill text-xs fw-semibold">
+                            <i class="fas fa-parking text-warning me-1" aria-hidden="true"></i> SISTEMA DE CONTROLE
+                            URBANO
+                        </span>
+                        <div class="d-flex align-items-center gap-2 text-xs text-white-50">
+                            <span class="d-inline-block rounded-circle bg-success pulse-dot"
+                                style="width:8px; height:8px;"></span>
+                            <span>Pátio Operacional</span>
+                        </div>
+                    </div>
+
+                    <!-- Título e Subtítulo de Impacto -->
+                    <div class="my-3 my-md-4 max-w-700">
+                        <h1 id="hero-title" class="display-4 fw-black text-white mb-3 tracking-tight">
+                            Gestão Inteligente de <span class="fst-italic text-warning">Estacionamento</span>
+                        </h1>
+                        <p class="lead text-white-80 mb-4 fs-5">
+                            Monitore vagas, controle acessos e acompanhe o faturamento do seu pátio em tempo real com
+                            acessibilidade total.
+                        </p>
+                    </div>
+
+                    <!-- Barra de Ações Rápidas & Métricas Flutuantes -->
+                    <div
+                        class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 border-top border-white-10">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="paginas/tickets.html"
+                                class="btn btn-warning btn-lg rounded-pill fw-bold fs-6 px-4 shadow-sm text-dark d-inline-flex align-items-center gap-2">
+                                <i class="fas fa-ticket-alt" aria-hidden="true"></i>
+                                Emitir Novo Ticket
+                            </a>
+                            <a href="paginas/vagas-tarifas.html"
+                                class="btn btn-outline-light btn-lg rounded-pill fw-medium fs-6 px-4 d-inline-flex align-items-center gap-2">
+                                <i class="fas fa-th" aria-hidden="true"></i>
+                                Mapa de Vagas
+                            </a>
+                        </div>
+
+                        <!-- Mini Widget Integrado -->
+                        <div
+                            class="d-none d-lg-flex align-items-center gap-3 bg-black bg-opacity-30 backdrop-blur p-2 px-3 rounded-pill border border-white-10">
+                            <div class="text-end">
+                                <span class="d-block text-xs text-white-50 text-uppercase fw-bold">Capacidade
+                                    Ativa</span>
+                                <span class="fw-bold fs-6 text-white">240 Vagas Monitoradas</span>
+                            </div>
+                            <div class="bg-primary bg-opacity-20 p-2 rounded-circle text-primary">
+                                <i class="fas fa-car fs-5 text-warning" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
     </section>
 
@@ -133,10 +215,10 @@
         </div>
 
         <!-- SEÇÃO COM FILTRO E CARDS DE VAGAS -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2 gap-2">
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
             <h2 class="h6 text-uppercase text-muted fw-bold mb-0">Vagas por status</h2>
 
-            <!-- FILTRO POR TIPO DE VAGA (REQUISITO 2.7) -->
+            <!-- FILTRO POR TIPO DE VAGA -->
             <div class="d-flex align-items-center gap-2">
                 <label for="filtro-tipo-vaga" class="form-label text-sm text-muted mb-0 fw-semibold">
                     <i class="fas fa-filter me-1" aria-hidden="true"></i>Filtrar tipo:
@@ -144,9 +226,10 @@
                 <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto shadow-sm"
                     aria-label="Filtrar métricas por tipo de vaga">
                     <option value="todos">Todos os tipos</option>
-                    <option value="comum">Comum</option>
-                    <option value="coberta">Coberta</option>
-                    <option value="mensalista">Mensalista</option>
+                    <option value="carro">Carro</option>
+                    <option value="moto">Moto</option>
+                    <option value="deficiente">Deficiente (PCD)</option>
+                    <option value="idoso">Idoso</option>
                 </select>
             </div>
         </div>
@@ -154,15 +237,15 @@
         <!-- CARDS KPI: contagem de vagas por status -->
         <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-success border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-success h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">VAGAS LIVRES</span>
-                            <h2 id="kpi-vagas-livres" class="mb-0 fw-bold text-success">
+                            <span class="kpi-label">Vagas Livres</span>
+                            <div id="kpi-vagas-livres" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-success-subtle p-3 rounded-circle text-success fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-check-circle" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -170,15 +253,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-danger border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-danger h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">VAGAS OCUPADAS</span>
-                            <h2 id="kpi-vagas-ocupadas" class="mb-0 fw-bold text-danger">
+                            <span class="kpi-label">Vagas Ocupadas</span>
+                            <div id="kpi-vagas-ocupadas" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-danger-subtle p-3 rounded-circle text-danger fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-car-side" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -186,15 +269,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-secondary border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-secondary h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">EM MANUTENÇÃO</span>
-                            <h2 id="kpi-vagas-manutencao" class="mb-0 fw-bold text-secondary">
+                            <span class="kpi-label">Em Manutenção</span>
+                            <div id="kpi-vagas-manutencao" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-secondary-subtle p-3 rounded-circle text-secondary fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-tools" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -202,15 +285,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-primary border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-primary h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">TAXA DE OCUPAÇÃO</span>
-                            <h2 id="kpi-taxa-ocupacao" class="mb-0 fw-bold text-primary">
+                            <span class="kpi-label">Taxa de Ocupação</span>
+                            <div id="kpi-taxa-ocupacao" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-primary-subtle p-3 rounded-circle text-primary fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-percent" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -219,18 +302,18 @@
         </div>
 
         <!-- CARDS KPI: financeiro e operação -->
-        <h2 class="h6 text-uppercase text-muted fw-bold mb-2">Financeiro &amp; operação</h2>
+        <h2 class="h6 text-uppercase text-muted fw-bold mb-3">Financeiro &amp; operação</h2>
         <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-warning border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-warning h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">TICKETS ABERTOS</span>
-                            <h2 id="kpi-tickets-abertos" class="mb-0 fw-bold text-warning">
+                            <span class="kpi-label">Tickets Abertos</span>
+                            <div id="kpi-tickets-abertos" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-warning-subtle p-3 rounded-circle text-warning fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-clock" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -238,15 +321,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-primary border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-primary h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">FATURAMENTO TOTAL</span>
-                            <h2 id="kpi-faturamento" class="mb-0 fw-bold text-primary">
+                            <span class="kpi-label">Faturamento Total</span>
+                            <div id="kpi-faturamento" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-8"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-primary-subtle p-3 rounded-circle text-primary fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-coins" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -254,15 +337,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-info border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-info h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">TICKET MÉDIO</span>
-                            <h2 id="kpi-ticket-medio" class="mb-0 fw-bold text-info fs-4">
+                            <span class="kpi-label">Ticket Médio</span>
+                            <div id="kpi-ticket-medio" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-info-subtle p-3 rounded-circle text-info fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-receipt" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -270,15 +353,15 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card card-kpi border-start border-dark border-4 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card-kpi kpi-secondary h-100">
+                    <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">TEMPO MÉDIO DE PERMANÊNCIA</span>
-                            <h2 id="kpi-tempo-medio" class="mb-0 fw-bold text-dark fs-4">
+                            <span class="kpi-label">Tempo Médio Perm.</span>
+                            <div id="kpi-tempo-medio" class="kpi-value fs-3">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
-                            </h2>
+                            </div>
                         </div>
-                        <div class="bg-dark-subtle p-3 rounded-circle text-dark fs-3">
+                        <div class="kpi-icon-bubble">
                             <i class="fas fa-hourglass-half" aria-hidden="true"></i>
                         </div>
                     </div>
@@ -289,21 +372,21 @@
         <div class="row g-4">
             <!-- TABELA DE ATIVIDADES RECENTES -->
             <div class="col-12 col-lg-7">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div
+                        class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
                         <h2 class="h5 mb-0 fw-bold text-dark">
                             <i class="fas fa-list-alt text-primary me-2" aria-hidden="true"></i> Tickets Ativos no
                             Momento
                         </h2>
-                        <a href="paginas/tickets.html" class="btn btn-outline-primary btn-sm">Ver Todos</a>
+                        <a href="paginas/tickets.html" class="btn btn-outline-primary btn-sm rounded-pill">Ver Todos</a>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" role="table"
                                 aria-label="Tickets ativos no momento">
                                 <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, vaga,
-                                    horário
-                                    de entrada e cliente associado.</caption>
+                                    horário de entrada e cliente associado.</caption>
                                 <thead class="table-light">
                                     <tr>
                                         <th scope="col">Placa</th>
@@ -328,10 +411,10 @@
                 </div>
             </div>
 
-            <!-- RANKING DAS VAGAS MAIS UTILIZADAS (REQUISITO 2.6) -->
+            <!-- RANKING DAS VAGAS MAIS UTILIZADAS -->
             <div class="col-12 col-lg-5">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white py-3">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-white py-3 border-bottom">
                         <h2 class="h5 mb-0 fw-bold text-dark">
                             <i class="fas fa-trophy text-warning me-2" aria-hidden="true"></i> Ranking de Uso das Vagas
                         </h2>
@@ -368,23 +451,70 @@
 
     </main>
 
-    <!-- FOOTER ACESSÍVEL -->
-    <footer class="py-4 text-center border-top mt-4">
-        <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
-            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
-            <p class="mb-1">
-                <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
-                Em conformidade com WCAG 2.1 AAA e LGPD.
-            </p>
-            <p class="mb-0">
-                <a href="paginas/sobre.html#privacidade" class="link-secondary me-3">Política de Privacidade</a>
-                <a href="paginas/sobre.html#contato" class="link-secondary">Contato</a>
-            </p>
+    <!-- FOOTER ACESSÍVEL MELHORADO -->
+    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+
+                <!-- COLUNA 1: CONTATO E ENDEREÇO -->
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
+                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                    </p>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
+                        <a href="mailto:contato@parkgestao.com.br"
+                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                    </p>
+                    <p class="mb-0 text-sm">
+                        <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
+                        Av. Paulista, 1000 — São Paulo, SP
+                    </p>
+                </div>
+
+                <!-- COLUNA 2: LOGO E CRÉDITOS (CENTRO) -->
+                <div class="col-12 col-md-4 text-center">
+                    <a class="navbar-brand d-inline-flex justify-content-center align-items-center mb-3"
+                        href="index.html">
+                        <img src="assets/img/favicon.svg" alt="Logo ParkGestão" width="100" height="100"
+                            class="rounded-2">
+                    </a>
+                    <p class="mb-1 text-xs text-white-50">
+                        &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
+                    </p>
+                    <p class="mb-0 text-xs text-white-50">
+                        <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                        WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                </div>
+
+                <!-- COLUNA 3: NAVEGAÇÃO RÁPIDA / BOTÕES (DIREITA) -->
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
+                    <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
+                        <a href="paginas/tickets.html"
+                            class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
+                            <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
+                        </a>
+                        <a href="paginas/vagas-tarifas.html"
+                            class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
+                            <i class="fas fa-car me-2 text-warning" aria-hidden="true"></i>Vagas &amp; Tarifas
+                        </a>
+                        <a href="paginas/sobre.html#privacidade"
+                            class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
+                            <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
+                            Privacidade
+                        </a>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </footer>
 
-    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <!-- WIDGET VLIBRAS -->
     <div vw class="enabled">
         <div vw-access-button class="active"></div>
         <div vw-plugin-wrapper>
@@ -392,7 +522,7 @@
         </div>
     </div>
 
-    <!-- DEPENDÊNCIAS DE SCRIPTS EXTERNOS (carregadas uma única vez, com defer) -->
+    <!-- DEPENDÊNCIAS DE SCRIPTS EXTERNOS -->
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"

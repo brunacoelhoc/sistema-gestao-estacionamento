@@ -32,39 +32,58 @@
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
-    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs border-bottom border-white-10"
         role="region" aria-label="Barra de Acessibilidade">
+
+        <!-- Controles de Tamanho de Fonte -->
         <div class="d-flex align-items-center gap-2">
-            <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
-                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+            <span class="fw-bold me-1 text-white-80">
+                <i class="fas fa-universal-access text-warning me-1" aria-hidden="true"></i> Acessibilidade:
+            </span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Controles de tamanho de texto">
+                <button id="btn-font-increase" class="btn btn-outline-light py-0 px-2 rounded-start-pill text-xs"
+                    type="button" title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+                <button id="btn-font-decrease" class="btn btn-outline-light py-0 px-2 text-xs" type="button"
+                    title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+                <button id="btn-font-reset" class="btn btn-outline-light py-0 px-2 rounded-end-pill text-xs"
+                    type="button" title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+            </div>
         </div>
+
+        <!-- Ferramentas Visuais & Filtros -->
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
-                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
-                <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2 rounded-pill text-xs"
+                type="button" title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste"
+                aria-pressed="false">
+                <i class="fas fa-adjust me-1" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill text-xs" type="button"
                 title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
                 aria-pressed="false">
-                <i class="fas fa-font" aria-hidden="true"></i> Dislexia
+                <i class="fas fa-font me-1" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
-                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
-                <i class="fas fa-running" aria-hidden="true"></i> Animação Off
+
+            <button id="btn-motion" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página"
+                aria-pressed="false">
+                <i class="fas fa-running me-1" aria-hidden="true"></i> Animação Off
             </button>
-            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
-            <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Selecionar filtro para daltonismo">
-                <option value="normal">Daltonismo: Normal</option>
-                <option value="protanopia">Protanopia</option>
-                <option value="deuteranopia">Deuteranopia</option>
-                <option value="tritanopia">Tritanopia</option>
-            </select>
+
+            <!-- Select Estilizado de Daltonismo com Ícone de Olho -->
+            <div class="position-relative d-inline-flex align-items-center">
+                <i class="fas fa-eye position-absolute start-0 ms-2 text-warning pointer-events-none text-xs"
+                    aria-hidden="true"></i>
+                <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+                <select id="select-daltonism"
+                    class="form-select form-select-sm custom-select-dark ps-4 py-0 text-xs rounded-pill"
+                    aria-label="Selecionar filtro para daltonismo">
+                    <option value="normal">Daltonismo: Normal</option>
+                    <option value="protanopia">Protanopia</option>
+                    <option value="deuteranopia">Deuteranopia</option>
+                    <option value="tritanopia">Tritanopia</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -336,15 +355,63 @@
         </div>
     </main>
 
-    <!-- FOOTER ACESSÍVEL -->
-    <footer class="py-4 text-center border-top mt-5">
-        <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
-            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
-            <p class="mb-0">
-                <a href="#privacidade" class="link-secondary me-3">Política de Privacidade</a>
-                <a href="#contato" class="link-secondary">Contato</a>
-            </p>
+    <!-- FOOTER ACESSÍVEL MELHORADO -->
+    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+
+                <!-- COLUNA 1: CONTATO E ENDEREÇO -->
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
+                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                    </p>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
+                        <a href="mailto:contato@parkgestao.com.br"
+                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                    </p>
+                    <p class="mb-0 text-sm">
+                        <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
+                        Av. Paulista, 1000 — São Paulo, SP
+                    </p>
+                </div>
+
+                <!-- COLUNA 2: LOGO E CRÉDITOS (CENTRO) -->
+                <div class="col-12 col-md-4 text-center">
+                    <a class="d-inline-flex align-items-center gap-2 fw-bold text-white text-decoration-none fs-4 mb-2"
+                        href="../index.html">
+                        <i class="fas fa-parking text-warning" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+                    <p class="mb-1 text-xs text-white-50">
+                        &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
+                    </p>
+                    <p class="mb-0 text-xs text-white-50">
+                        <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                        WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                </div>
+
+                <!-- COLUNA 3: NAVEGAÇÃO RÁPIDA / BOTÕES (DIREITA) -->
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
+                    <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
+                        <a href="tickets.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
+                        </a>
+                        <a href="vagas-tarifas.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-car me-2 text-warning" aria-hidden="true"></i>Vagas &amp; Tarifas
+                        </a>
+                        <a href="sobre.html#privacidade" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
+                            Privacidade
+                        </a>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </footer>
 

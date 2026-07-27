@@ -1,3 +1,10 @@
+/* ==========================================================================
+   PARKGESTÃO - ESTILOS PRINCIPAIS & ACESSIBILIDADE (WCAG 2.1 AAA)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. FONTS & CONFIGURAÇÕES GERAIS / RESET
+   -------------------------------------------------------------------------- */
 @font-face {
     font-family: "OpenDyslexic";
     src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff") format("woff");
@@ -6,79 +13,324 @@
     font-display: swap;
 }
 
-body.high-contrast {
-    background-color: #000000 !important;
-    color: #ffffff !important;
+html {
+    scroll-behavior: smooth;
 }
 
-body.high-contrast .card,
-body.high-contrast .modal-content,
-body.high-contrast .navbar,
-body.high-contrast .table {
-    background-color: #121212 !important;
-    color: #ffffff !important;
-    border-color: #ffffff !important;
+html,
+body {
+    min-height: 100vh;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background-color: #f8f9fa;
+    color: #212529;
+    display: flex;
+    flex-direction: column;
 }
 
-body.high-contrast a,
-body.high-contrast .btn-link {
-    color: #ffff00 !important;
-    text-decoration: underline !important;
+main {
+    flex: 1;
 }
 
-body.high-contrast .btn-primary {
-    background-color: #ffff00 !important;
-    color: #000000 !important;
-    border-color: #ffffff !important;
-    font-weight: bold;
+.text-xs {
+    font-size: 0.75rem;
 }
 
-body.dyslexic-font {
-    font-family: "OpenDyslexic", "Segoe UI", sans-serif !important;
-    letter-spacing: 0.05em !important;
-    word-spacing: 0.1em !important;
-    line-height: 1.6 !important;
+.text-sm {
+    font-size: 0.875rem;
 }
 
-body.dyslexic-font .fa,
-body.dyslexic-font .fas,
-body.dyslexic-font .far,
-body.dyslexic-font .fal,
-body.dyslexic-font .fad,
-body.dyslexic-font .fab,
-body.dyslexic-font [class^=fa-],
-body.dyslexic-font [class*=" fa-"] {
-    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+/* --------------------------------------------------------------------------
+   2. NAVEGAÇÃO & HERÓI (NAVBAR & HERO)
+   -------------------------------------------------------------------------- */
+.navbar {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-body.protanopia {
-    filter: url("../img/color-blind-filters.svg#protanopia");
+.navbar .nav-link {
+    font-weight: 500;
+    transition: color 0.25s ease, opacity 0.25s ease;
 }
 
-body.deuteranopia {
-    filter: url("../img/color-blind-filters.svg#deuteranopia");
+.navbar .nav-link.active {
+    font-weight: 700;
+    border-bottom: 2px solid currentColor;
 }
 
-body.tritanopia {
-    filter: url("../img/color-blind-filters.svg#tritanopia");
+/* --------------------------------------------------------------------------
+   HERO BANNER PREMIUM (DESIGN MODERNO)
+   -------------------------------------------------------------------------- */
+.hero-section {
+    position: relative;
 }
 
-body.reduce-motion *,
-body.reduce-motion *::before,
-body.reduce-motion *::after,
-html.reduce-motion *,
-html.reduce-motion *::before,
-html.reduce-motion *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
+.hero-card-container {
+    background: linear-gradient(135deg, #0d131f 0%, #151d2a 50%, #0a1118 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    min-height: 380px;
 }
 
-body.reduce-motion #vanta-bg,
-html.reduce-motion #vanta-bg {
+/* Imagem ou Efeito de Fundo Estilo "Estacionamento / Cidade Espacial" */
+.hero-bg-overlay {
+    background-image:
+        radial-gradient(circle at 80% 20%, rgba(255, 193, 7, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 20% 80%, rgba(13, 110, 253, 0.12) 0%, transparent 50%),
+        url('https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=1600');
+    /* Imagem sutil de estacionamento/urbano */
+    background-size: cover;
+    background-position: center;
+    opacity: 0.35;
+    mix-blend-mode: luminosity;
+}
+
+/* Utilitários Visuais */
+.backdrop-blur {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.border-white-10 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.border-white-11 {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.text-white-80 {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.max-w-700 {
+    max-width: 720px;
+}
+
+.fw-black {
+    font-weight: 800;
+}
+
+.tracking-tight {
+    letter-spacing: -0.03em;
+}
+
+.min-vh-40 {
+    min-height: 40vh;
+}
+
+/* Animação do Ponto Verde Ativo */
+.pulse-dot {
+    box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 8px rgba(25, 135, 84, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+    }
+}
+
+/* Suporte para Alto Contraste */
+body.high-contrast .hero-card-container {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .hero-bg-overlay {
     display: none !important;
 }
 
+.modal-header {
+    border-bottom-width: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   3. CARDS DE METRICAS / KPIS (MODERNO, SOFISTICADO & ACESSÍVEL)
+   -------------------------------------------------------------------------- */
+.card-kpi {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05), 0 2px 6px -2px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* Elevação no Hover */
+.card-kpi:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -5px rgba(0, 0, 0, 0.03);
+}
+
+/* Tipografia do KPI */
+.kpi-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.kpi-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #1e293b;
+}
+
+/* Bolha de Ícones */
+.kpi-icon-bubble {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-kpi:hover .kpi-icon-bubble {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Variantes dos Cards KPI */
+.kpi-success .kpi-value {
+    color: #166534;
+}
+
+.kpi-success .kpi-icon-bubble {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.kpi-danger .kpi-value {
+    color: #991b1b;
+}
+
+.kpi-danger .kpi-icon-bubble {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+.kpi-secondary .kpi-value {
+    color: #475569;
+}
+
+.kpi-secondary .kpi-icon-bubble {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+.kpi-primary .kpi-value {
+    color: #1d4ed8;
+}
+
+.kpi-primary .kpi-icon-bubble {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.kpi-warning .kpi-value {
+    color: #b45309;
+}
+
+.kpi-warning .kpi-icon-bubble {
+    background-color: #fef3c7;
+    color: #b45309;
+}
+
+.kpi-info .kpi-value {
+    color: #0369a1;
+}
+
+.kpi-info .kpi-icon-bubble {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+/* --------------------------------------------------------------------------
+   4. GRID E CARDS DAS VAGAS (ESTACIONAMENTO)
+   -------------------------------------------------------------------------- */
+.vagas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.vagas-grid .vaga-card {
+    border-radius: 0.85rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.vagas-grid .vaga-card.is-interativo {
+    cursor: pointer;
+}
+
+.vagas-grid .vaga-card.is-interativo:hover,
+.vagas-grid .vaga-card.is-interativo:focus-visible {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.vagas-grid .vaga-card.vaga-livre {
+    background-color: #e6f4ea;
+    border-color: #a8e6cf;
+    color: #0e3a2f;
+}
+
+.vagas-grid .vaga-card.vaga-ocupada {
+    background-color: #fce8e6;
+    border-color: #ff8b94;
+    color: #3d0c13;
+}
+
+.vagas-grid .vaga-card.vaga-manutencao {
+    background-color: #fef7e0;
+    border-color: #ffd3b6;
+    color: #4a2c00;
+}
+
+.vagas-grid .vaga-card .vaga-codigo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.vagas-grid .vaga-card .vaga-tipo {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.vagas-grid .vaga-card .badge-status {
+    font-size: 0.7rem;
+    padding: 0.3em 0.6em;
+}
+
+/* --------------------------------------------------------------------------
+   5. BADGES E STATUS
+   -------------------------------------------------------------------------- */
 .badge-status {
     display: inline-flex;
     align-items: center;
@@ -120,93 +372,28 @@ html.reduce-motion #vanta-bg {
     color: #0a3a40;
 }
 
-.vagas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-}
-
-.vagas-grid .vaga-card {
-    border-radius: 0.75rem;
-    padding: 1.25rem 1rem;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vagas-grid .vaga-card.is-interativo {
-    cursor: pointer;
-}
-
-.vagas-grid .vaga-card.is-interativo:hover,
-.vagas-grid .vaga-card.is-interativo:focus-visible {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.vagas-grid .vaga-card.is-interativo:focus-visible {
-    outline: 3px solid #ffbf47;
-    outline-offset: 2px;
-}
-
-.vagas-grid .vaga-card.vaga-livre {
-    background-color: rgb(89.1859243697%, 96.8925070028%, 94.0336134454%);
-    border-color: #a8e6cf;
-    color: #0e3a2f;
-}
-
-.vagas-grid .vaga-card.vaga-ocupada {
-    background-color: rgb(100%, 84.5098039216%, 85.7116294794%);
-    border-color: #ff8b94;
-    color: #3d0c13;
-}
-
-.vagas-grid .vaga-card.vaga-manutencao {
-    background-color: rgb(100%, 94.7998925598%, 91.3725490196%);
-    border-color: #ffd3b6;
-    color: #4a2c00;
-}
-
-.vagas-grid .vaga-card .vaga-codigo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-}
-
-.vagas-grid .vaga-card .vaga-tipo {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-}
-
-.vagas-grid .vaga-card .badge-status {
-    font-size: 0.7rem;
-    padding: 0.3em 0.6em;
-}
-
+/* --------------------------------------------------------------------------
+   6. PAINEL DE MÉTRICAS DARK (TEMA ESCURO)
+   -------------------------------------------------------------------------- */
 .metrics-dark-panel {
     background-color: #121212;
     color: #f8f9fa;
     min-height: calc(100vh - 250px);
 }
 
-.metrics-kpi-card {
+.metrics-kpi-card,
+.metrics-chart-card {
     background-color: #1e1e1e;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
 }
 
 .metrics-kpi-label {
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .metrics-kpi-value {
     color: #f8f9fa;
-}
-
-.metrics-chart-card {
-    background-color: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .metrics-chart-card .card-header {
@@ -218,10 +405,9 @@ html.reduce-motion #vanta-bg {
     --bs-table-bg: transparent;
 }
 
-.card-kpi {
-    border-radius: 0.5rem;
-}
-
+/* --------------------------------------------------------------------------
+   7. WIDGET DE ACESSIBILIDADE & BOTÕES
+   -------------------------------------------------------------------------- */
 .accessibility-widget {
     position: fixed;
     bottom: 20px;
@@ -233,34 +419,16 @@ html.reduce-motion #vanta-bg {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.25rem;
+    transition: transform 0.25s ease;
 }
 
-.accessibility-widget .btn-accessibility-toggle:focus-visible {
-    outline: 3px solid #ffbf47;
-    outline-offset: 2px;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-html,
-body {
-    min-height: 100vh;
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    background-color: #f8f9fa;
-    color: #212529;
-    display: flex;
-    flex-direction: column;
-}
-
-main {
-    flex: 1;
+.accessibility-widget .btn-accessibility-toggle:hover {
+    transform: scale(1.08);
 }
 
 .skip-link {
@@ -284,16 +452,189 @@ main {
     outline-offset: 2px;
 }
 
+/* Foco global para navegação via teclado */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-[tabindex]:focus-visible {
-    outline: 3px solid #ffbf47;
-    outline-offset: 2px;
+[tabindex]:focus-visible,
+.vagas-grid .vaga-card.is-interativo:focus-visible {
+    outline: 3px solid #ffbf47 !important;
+    outline-offset: 2px !important;
 }
 
+/* Select de Daltonismo Customizado - Ajuste Universal */
+.accessibility-bar .position-relative,
+.custom-select-dark {
+    width: auto !important;
+    max-width: 180px !important;
+    flex: 0 0 auto !important;
+    /* Impede o Flexbox de esticar o container */
+}
+
+.custom-select-dark {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    /* Ícone de seta claro customizado */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f8fafc' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    padding-left: 2rem !important;
+    padding-right: 1.75rem !important;
+    display: inline-block !important;
+}
+
+.custom-select-dark:hover,
+.custom-select-dark:focus {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25) !important;
+}
+
+.custom-select-dark option {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+}
+
+.pointer-events-none {
+    pointer-events: none;
+}
+
+/* Responsividade da Barra de Acessibilidade (Mobile & Tablet) */
+@media (max-width: 767.98px) {
+    .accessibility-bar {
+        flex-direction: column !important;
+        justify-content: center !important;
+        gap: 0.5rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .accessibility-bar>div {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Melhora a área de toque dos botões e select no celular (WCAG Touch Target) */
+    .accessibility-bar .btn,
+    .accessibility-bar .form-select {
+        min-height: 32px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   8. RODAPÉ (FOOTER)
+   -------------------------------------------------------------------------- */
+footer {
+    margin-top: auto;
+    background-color: #1e293b;
+    color: #f8fafc;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+footer,
+footer p,
+footer span,
+footer div,
+footer small {
+    color: #f8fafc !important;
+}
+
+footer .text-muted {
+    color: #cbd5e1 !important;
+}
+
+footer a {
+    color: #38bdf8;
+    text-decoration: underline;
+    transition: color 0.2s ease-in-out;
+}
+
+footer a:hover {
+    color: #7dd3fc;
+    text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   9. MODOS DE ACESSIBILIDADE ESPECIAS (CONTRASTE, DISLEXIA, DALTONISMO)
+   -------------------------------------------------------------------------- */
+
+/* Modo Alto Contraste */
+body.high-contrast {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .card,
+body.high-contrast .card-kpi,
+body.high-contrast .modal-content,
+body.high-contrast .navbar,
+body.high-contrast .table {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+body.high-contrast .kpi-label,
+body.high-contrast .kpi-value {
+    color: #ffffff !important;
+}
+
+body.high-contrast .kpi-icon-bubble {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+body.high-contrast a,
+body.high-contrast .btn-link {
+    color: #ffff00 !important;
+    text-decoration: underline !important;
+}
+
+body.high-contrast .btn-primary {
+    background-color: #ffff00 !important;
+    color: #000000 !important;
+    border-color: #ffffff !important;
+    font-weight: bold;
+}
+
+/* Fonte para Dislexia */
+body.dyslexic-font {
+    font-family: "OpenDyslexic", "Segoe UI", sans-serif !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.1em !important;
+    line-height: 1.6 !important;
+}
+
+body.dyslexic-font .fa,
+body.dyslexic-font .fas,
+body.dyslexic-font .far,
+body.dyslexic-font .fal,
+body.dyslexic-font .fad,
+body.dyslexic-font .fab,
+body.dyslexic-font [class^=fa-],
+body.dyslexic-font [class*=" fa-"] {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+}
+
+/* Filtros para Daltonismo */
+body.protanopia {
+    filter: url("../img/color-blind-filters.svg#protanopia");
+}
+
+body.deuteranopia {
+    filter: url("../img/color-blind-filters.svg#deuteranopia");
+}
+
+body.tritanopia {
+    filter: url("../img/color-blind-filters.svg#tritanopia");
+}
+
+/* Redução de Animação (Acessibilidade Vestibular) */
 @media (prefers-reduced-motion: reduce) {
 
     *,
@@ -308,90 +649,30 @@ textarea:focus-visible,
     #vanta-bg {
         display: none !important;
     }
+
+    .card-kpi:hover,
+    .card-kpi:hover .kpi-icon-bubble {
+        transform: none !important;
+    }
 }
 
-.text-xs {
-    font-size: 0.75rem;
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after,
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
 }
 
-.navbar {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+body.reduce-motion .card-kpi:hover,
+body.reduce-motion .card-kpi:hover .kpi-icon-bubble {
+    transform: none !important;
 }
 
-.navbar .nav-link {
-    font-weight: 500;
-    transition: color 0.2s ease;
-}
-
-.navbar .nav-link.active {
-    font-weight: 700;
-    border-bottom: 2px solid currentColor;
-}
-
-.hero-section {
-    position: relative;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: #ffffff;
-    padding: 3rem 0;
-    overflow: hidden;
-}
-
-.hero-section #vanta-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-}
-
-.hero-section .hero-content {
-    position: relative;
-    z-index: 1;
-}
-
-.modal-header {
-    border-bottom-width: 2px;
-}
-
-/* --- RODAPÉ (FOOTER) --- */
-footer {
-    margin-top: auto;
-    background-color: #1e293b;
-    color: #f8fafc;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Força a cor legível em todos os elementos de texto internos do footer */
-footer,
-footer p,
-footer span,
-footer div,
-footer small {
-    color: #f8fafc !important;
-}
-
-/* Sobrescreve classes utilitárias do Bootstrap (como .text-muted) que escurecem o texto */
-footer .text-muted {
-    color: #cbd5e1 !important;
-    /* Cinza claro com alto contraste sobre fundo escuro */
-}
-
-/* Links do rodapé com contraste aprimorado */
-footer a {
-    color: #38bdf8;
-    text-decoration: underline;
-    /* Mantém o sublinhado visível para acessibilidade */
-    transition: color 0.2s ease-in-out;
-}
-
-footer a:hover {
-    color: #7dd3fc;
-    text-decoration: none;
-}
-
-footer a:focus-visible {
-    outline: 3px solid #ffbf47;
-    outline-offset: 3px;
-    border-radius: 2px;
+body.reduce-motion #vanta-bg,
+html.reduce-motion #vanta-bg {
+    display: none !important;
 }

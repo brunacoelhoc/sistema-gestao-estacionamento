@@ -6,7 +6,8 @@
       "cpf": "123.456.789-00",
       "placa": "ABC1D23",
       "status": "Ativo",
-      "telefone": "(11) 98765-4321"
+      "telefone": "(11) 98765-4321",
+      "ativo": true
     },
     {
       "id": "2",
@@ -31,6 +32,14 @@
       "ativo": true,
       "telefone": "(11) 94469-7783",
       "id": "6uwdDyCT2S0"
+    },
+    {
+      "nome": "",
+      "cpf": "904.460.320-50",
+      "placa": "POI1J22",
+      "ativo": true,
+      "telefone": "",
+      "id": "lMbpJZwh55c"
     }
   ],
   "vagas": [
@@ -38,13 +47,13 @@
       "id": "1",
       "codigo": "A-01",
       "tipo": "Carro",
-      "status": "Ocupada"
+      "status": "livre"
     },
     {
       "id": "2",
       "codigo": "A-02",
       "tipo": "Carro",
-      "status": "ocupada"
+      "status": "livre"
     },
     {
       "id": "3",
@@ -62,12 +71,12 @@
       "id": "5",
       "codigo": "I-01",
       "tipo": "Idoso",
-      "status": "Livre"
+      "status": "ocupada"
     },
     {
       "codigo": "PCD-02",
       "tipo": "deficiente",
-      "status": "livre",
+      "status": "ocupada",
       "id": "Zb2tURs8sMU"
     },
     {
@@ -79,8 +88,26 @@
     {
       "codigo": "PCD-02",
       "tipo": "moto",
-      "status": "livre",
+      "status": "ocupada",
       "id": "hLYcUFsC9lg"
+    },
+    {
+      "codigo": "A-03",
+      "tipo": "carro",
+      "status": "livre",
+      "id": "EVmJejhOfUk"
+    },
+    {
+      "codigo": "A-04",
+      "tipo": "carro",
+      "status": "livre",
+      "id": "2MYOz5RFEm0"
+    },
+    {
+      "codigo": "A-05",
+      "tipo": "carro",
+      "status": "livre",
+      "id": "u7Zxv1_X98I"
     }
   ],
   "tarifas": [
@@ -124,9 +151,9 @@
       "vagaId": "1",
       "mensalistaId": "1",
       "dataEntrada": "2026-07-27T08:00:00.000Z",
-      "dataSaida": null,
-      "valorTotal": null,
-      "status": "Aberto"
+      "dataSaida": "2026-07-27T18:47:46.403Z",
+      "valorTotal": 0,
+      "status": "fechado"
     },
     {
       "placa": "DCB2A34",
@@ -145,9 +172,9 @@
       "tarifaId": "2",
       "mensalistaId": null,
       "dataEntrada": "2026-07-27T18:05:48.219Z",
-      "dataSaida": null,
-      "valorTotal": null,
-      "status": "aberto",
+      "dataSaida": "2026-07-27T19:52:38.839Z",
+      "valorTotal": 9,
+      "status": "fechado",
       "id": "MuQIIAMt6nU"
     },
     {
@@ -156,10 +183,76 @@
       "tarifaId": "2",
       "mensalistaId": null,
       "dataEntrada": "2026-07-27T18:06:18.503Z",
+      "dataSaida": "2026-07-27T19:52:54.885Z",
+      "valorTotal": 9,
+      "status": "fechado",
+      "id": "82_L81CYNuU"
+    },
+    {
+      "placa": "DGB2A98",
+      "vagaId": "u7Zxv1_X98I",
+      "tarifaId": "WzpGh4dqXsk",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T18:47:16.796Z",
+      "dataSaida": "2026-07-27T20:03:51.818Z",
+      "valorTotal": 7,
+      "status": "fechado",
+      "id": "MX9bFXI7GgU"
+    },
+    {
+      "placa": "TRE3B54",
+      "vagaId": "Zb2tURs8sMU",
+      "tarifaId": "wRLv5Y0LitU",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T19:09:59.989Z",
+      "dataSaida": "2026-07-27T20:03:56.317Z",
+      "valorTotal": 0.5,
+      "status": "fechado",
+      "id": "4YzLrEhvyes"
+    },
+    {
+      "placa": "POI5H45",
+      "vagaId": "3",
+      "tarifaId": "xSl886vckLE",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T20:03:42.439Z",
       "dataSaida": null,
       "valorTotal": null,
       "status": "aberto",
-      "id": "82_L81CYNuU"
+      "id": "MJ8O6INPWiI"
+    },
+    {
+      "placa": "ABC0U67",
+      "vagaId": "hLYcUFsC9lg",
+      "tarifaId": "xSl886vckLE",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T20:24:57.181Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "aberto",
+      "id": "KVfl4P67lCk"
+    },
+    {
+      "placa": "UYT4U34",
+      "vagaId": "Zb2tURs8sMU",
+      "tarifaId": "wRLv5Y0LitU",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T20:25:21.828Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "aberto",
+      "id": "wD87MIbWAyo"
+    },
+    {
+      "placa": "IUY7I78",
+      "vagaId": "5",
+      "tarifaId": "WzpGh4dqXsk",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T20:25:43.348Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "aberto",
+      "id": "q6Yi8CEd3h0"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

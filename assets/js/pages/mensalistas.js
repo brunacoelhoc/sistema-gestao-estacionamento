@@ -288,7 +288,23 @@ async function salvarMensalista (e) {
     .value.trim()
     .toUpperCase()
 
-  // Validação de CPF
+  // 1. Validação do Nome Completo (NOVA VALIDAÇÃO)
+  if (!nome) {
+    const inputNome = document.getElementById('mensalista-nome')
+    inputNome?.classList.add('is-invalid')
+    inputNome?.focus()
+
+    Swal.fire({
+      icon: 'warning',
+      title: 'Nome Obrigatório',
+      text: 'Por favor, informe o nome completo do mensalista antes de salvar.'
+    })
+    return
+  } else {
+    document.getElementById('mensalista-nome')?.classList.remove('is-invalid')
+  }
+
+  // 2. Validação de CPF
   if (!validarCPF(cpf)) {
     Swal.fire({
       icon: 'warning',
@@ -298,7 +314,7 @@ async function salvarMensalista (e) {
     return
   }
 
-  // Validação de Placa
+  // 3. Validação de Placa
   if (!validarPlaca(placa)) {
     Swal.fire({
       icon: 'warning',
@@ -308,7 +324,7 @@ async function salvarMensalista (e) {
     return
   }
 
-  // Validação de Duplicidade
+  // 4. Validação de Duplicidade
   const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
     Swal.fire({

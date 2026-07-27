@@ -1,38 +1,66 @@
-@import 'variables';
+@use 'variables' as *;
 
-// ==========================================
-// CLASSES DE ACESSIBILIDADE (WCAG 2.1 AAA)
-// ==========================================
+// ==========================================================================
+// PARKGESTÃO - CLASSES DE ACESSIBILIDADE (WCAG 2.1 AAA)
+// ==========================================================================
 
-// 0. Fonte para Dislexia (OpenDyslexic)
-//
-// IMPORTANTE: $font-family-dyslexic só troca a fonte de fato se o navegador
-// conseguir carregar "OpenDyslexic". Sem este @font-face, o toggle de
-// dislexia muda apenas espaçamento/altura de linha, mas a fonte cai sempre
-// no fallback (Segoe UI). Ajuste a URL abaixo para o CDN/hospedagem
-// definitiva escolhida pela equipe (verificar licença de uso da fonte).
+/* --------------------------------------------------------------------------
+   0. CARREGAMENTO DE FONTE PARA DISLEXIA (OpenDyslexic)
+   -------------------------------------------------------------------------- */
 @font-face {
   font-family: 'OpenDyslexic';
-  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff') format('woff');
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff')
+    format('woff');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
-// 1. Alto Contraste
+/* --------------------------------------------------------------------------
+   1. MODO ALTO CONTRASTE (Conformidade Extrema WCAG AAA)
+   -------------------------------------------------------------------------- */
 body.high-contrast {
   background-color: #000000 !important;
   color: #ffffff !important;
 
+  // Estruturas Principais e Cards Genericos
   .card,
   .modal-content,
   .navbar,
-  .table {
+  .table,
+  .metrics-dark-panel,
+  .metrics-chart-card {
     background-color: #121212 !important;
     color: #ffffff !important;
     border-color: #ffffff !important;
+    box-shadow: none !important;
   }
 
+  // Cards de KPI / Dashboard Sofisticados
+  .card-kpi,
+  .kpi-card,
+  .vaga-card {
+    background-color: #000000 !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: none !important;
+
+    .kpi-label,
+    .kpi-value,
+    .kpi-subtext,
+    .vaga-codigo,
+    .vaga-tipo {
+      color: #ffffff !important;
+    }
+
+    // Adaptação dos Ícones e Bolhas de Glow para Alto Contraste
+    .kpi-icon-bubble {
+      background: #ffffff !important;
+      color: #000000 !important;
+      box-shadow: none !important;
+    }
+  }
+
+  // Links, Botões e Elementos Interativos
   a,
   .btn-link {
     color: #ffff00 !important;
@@ -43,55 +71,42 @@ body.high-contrast {
     background-color: #ffff00 !important;
     color: #000000 !important;
     border-color: #ffffff !important;
-    font-weight: bold;
+    font-weight: 700;
+  }
+
+  // Adaptador para o Widget de Acessibilidade Flutuante
+  .accessibility-widget .btn-accessibility-toggle {
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+    border: 2px solid #ffff00 !important;
   }
 }
 
-// 2. Modo OpenDyslexic / Dislexia
-//
-// ATENÇÃO (bug corrigido): o seletor abaixo troca a fonte de TODO texto
-// dentro de body.dyslexic-font, inclusive de ícones do FontAwesome — que
-// funcionam trocando font-family para renderizar seus glifos. Sem a exceção
-// abaixo, todo ícone <i class="fas ..."> vira um caractere quebrado assim
-// que o modo dislexia é ativado.
+/* --------------------------------------------------------------------------
+   2. MODO DISLEXIA (OpenDyslexic Font Injection)
+   -------------------------------------------------------------------------- */
 body.dyslexic-font {
   font-family: $font-family-dyslexic !important;
   letter-spacing: 0.05em !important;
   word-spacing: 0.1em !important;
   line-height: 1.6 !important;
 
-  // Restaura a fonte de ícones do FontAwesome (todas as variantes usadas no projeto).
+  // Preserva a renderização das fontes de ícones (FontAwesome) para não quebrar glifos
   .fa,
   .fas,
   .far,
   .fal,
   .fad,
   .fab,
-  [class^="fa-"],
-  [class*=" fa-"] {
+  [class^='fa-'],
+  [class*=' fa-'] {
     font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands' !important;
   }
 }
 
-// 3. Filtros para Daltonismo (CSS Filters)
-//
-// ATENÇÃO — LIMITAÇÃO CONHECIDA (precisa de ajuste estrutural no HTML):
-// aplicar `filter` no <body> faz com que ele passe a ser o "containing
-// block" de qualquer elemento com `position: fixed` dentro dele (é assim
-// que a spec de CSS define filter/transform/backdrop-filter). Isso quebra
-// modais do Bootstrap e o widget flutuante de acessibilidade quando um
-// filtro de daltonismo estiver ativo — eles deixam de ficar fixos na tela e
-// passam a se mover junto com o scroll da página.
-//
-// Correção recomendada (fora do escopo deste arquivo CSS): mover a classe
-// de daltonismo do <body> para um <div> wrapper que envolva só o conteúdo
-// rolável (header + main + footer), deixando modais e o widget flutuante
-// FORA desse wrapper. O accessibility.js precisaria alternar a classe nesse
-// wrapper em vez de no body. Posso implementar isso se vocês quiserem.
-//
-// Os filtros agora apontam para um arquivo SVG externo em vez de data-URI
-// embutido no CSS, por robustez entre navegadores (Safari é inconsistente
-// com filtros SVG via data-URI direto na regra CSS).
+/* --------------------------------------------------------------------------
+   3. FILTROS PARA DALTONISMO (CSS Filters via SVG)
+   -------------------------------------------------------------------------- */
 body.protanopia {
   filter: url('../img/color-blind-filters.svg#protanopia');
 }
@@ -104,15 +119,11 @@ body.tritanopia {
   filter: url('../img/color-blind-filters.svg#tritanopia');
 }
 
-// 4. Redução de Movimento (Sensibilidade Labiríntica/Vestibular)
-//
-// Cobre o toggle manual ("Animação Off"). A preferência de sistema
-// (prefers-reduced-motion: reduce) já é tratada globalmente em main.scss —
-// mantida só aqui para não duplicar regras com valores diferentes entre
-// arquivos.
+/* --------------------------------------------------------------------------
+   4. REDUÇÃO DE MOVIMENTO (Sensibilidade Vestibular / Labirintite)
+   -------------------------------------------------------------------------- */
 body.reduce-motion,
 html.reduce-motion {
-
   *,
   *::before,
   *::after {
@@ -121,15 +132,29 @@ html.reduce-motion {
     scroll-behavior: auto !important;
   }
 
-  // Vanta.js é uma animação 3D contínua — não faz sentido "desacelerar",
-  // precisa ser totalmente removida da tela.
+  // Desativa elevações e rotações nos cards
+  .card-kpi:hover,
+  .kpi-card:hover,
+  .vaga-card:hover,
+  .kpi-icon-bubble {
+    transform: none !important;
+  }
+
+  // Remove animação pesada de background 3D (Vanta.js)
   #vanta-bg {
     display: none !important;
   }
 }
 
-// Focus Visível para Navegação por Teclado
-//
-// NOTA: o outline global de foco agora vive centralizado em main.scss
-// (:focus-visible + $color-focus-outline), para evitar duas cores de
-// outline conflitantes definidas com !important em arquivos diferentes.
+/* --------------------------------------------------------------------------
+   5. FOCO ACESSÍVEL PARA NAVEGAÇÃO POR TECLADO
+   -------------------------------------------------------------------------- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid $color-focus-outline !important;
+  outline-offset: 3px !important;
+}

@@ -163,22 +163,25 @@
                             <label for="filtro-tipo-vaga" class="fw-bold text-sm mb-0">Filtrar por Categoria:</label>
                             <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto"
                                 aria-label="Filtrar por tipo de vaga">
-                                <option value="TODOS">Todas as Categorias</option>
-                                <option value="comum">Comum</option>
-                                <option value="coberta">Coberta</option>
-                                <option value="mensalista">Mensalista</option>
+                                <option value="todas">Todas as Categorias</option>
+                                <option value="carro">Carro</option>
+                                <option value="moto">Moto</option>
+                                <option value="deficiente">Deficiente (PCD)</option>
+                                <option value="idoso">Idoso</option>
                             </select>
                         </div>
 
                         <!-- Legenda com Acessibilidade (Cor + Ícone + Texto) -->
                         <div class="d-flex align-items-center gap-3 flex-wrap">
-                            <span class="badge-status status-livre"><i class="fas fa-check-circle"
-                                    aria-hidden="true"></i>
-                                Livre</span>
-                            <span class="badge-status status-ocupada"><i class="fas fa-car" aria-hidden="true"></i>
-                                Ocupada</span>
-                            <span class="badge-status status-pendente"><i class="fas fa-tools" aria-hidden="true"></i>
-                                Manutenção</span>
+                            <span class="badge-status status-livre">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i> Livre
+                            </span>
+                            <span class="badge-status status-ocupada">
+                                <i class="fas fa-car" aria-hidden="true"></i> Ocupada
+                            </span>
+                            <span class="badge-status status-pendente">
+                                <i class="fas fa-tools" aria-hidden="true"></i> Manutenção
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -199,13 +202,52 @@
                 <div class="card shadow-sm">
                     <div
                         class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-list text-primary me-2"
-                                aria-hidden="true"></i>Listagem de Vagas</h2>
+                        <h2 class="h5 mb-0 fw-bold text-dark">
+                            <i class="fas fa-list text-primary me-2" aria-hidden="true"></i>Listagem de Vagas
+                        </h2>
                         <button type="button" class="btn btn-primary btn-sm" id="btn-nova-vaga"
                             onclick="abrirModalNovaVaga()">
                             <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Vaga
                         </button>
                     </div>
+
+                    <!-- BARRA DE FILTROS DA TABELA DE VAGAS -->
+                    <div class="card-body bg-light border-bottom py-2 px-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12 col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i
+                                            class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="filtro-tabela-busca" class="form-control"
+                                        placeholder="Buscar por número (Ex: A-01)...">
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <select id="filtro-tabela-tipo" class="form-select form-select-sm">
+                                    <option value="todos">Todos os Tipos</option>
+                                    <option value="carro">Carro</option>
+                                    <option value="moto">Moto</option>
+                                    <option value="deficiente">Deficiente (PCD)</option>
+                                    <option value="idoso">Idoso</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <select id="filtro-tabela-status" class="form-select form-select-sm">
+                                    <option value="todos">Todos os Status</option>
+                                    <option value="livre">Livre</option>
+                                    <option value="ocupada">Ocupada</option>
+                                    <option value="manutencao">Manutenção</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2 text-end">
+                                <button type="button" id="btn-limpar-filtros-tabela"
+                                    class="btn btn-sm btn-outline-secondary w-100">
+                                    <i class="fas fa-eraser me-1"></i> Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" role="table"
@@ -385,15 +427,63 @@
         </div>
     </div>
 
-    <!-- FOOTER ACESSÍVEL -->
-    <footer class="py-4 text-center border-top mt-5">
-        <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
-            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
-            <p class="mb-0">
-                <a href="sobre.html#privacidade" class="link-secondary me-3">Política de Privacidade</a>
-                <a href="sobre.html#contato" class="link-secondary">Contato</a>
-            </p>
+    <!-- FOOTER ACESSÍVEL MELHORADO -->
+    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+
+                <!-- COLUNA 1: CONTATO E ENDEREÇO -->
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
+                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                    </p>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
+                        <a href="mailto:contato@parkgestao.com.br"
+                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                    </p>
+                    <p class="mb-0 text-sm">
+                        <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
+                        Av. Paulista, 1000 — São Paulo, SP
+                    </p>
+                </div>
+
+                <!-- COLUNA 2: LOGO E CRÉDITOS (CENTRO) -->
+                <div class="col-12 col-md-4 text-center">
+                    <a class="d-inline-flex align-items-center gap-2 fw-bold text-white text-decoration-none fs-4 mb-2"
+                        href="../index.html">
+                        <i class="fas fa-parking text-warning" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+                    <p class="mb-1 text-xs text-white-50">
+                        &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
+                    </p>
+                    <p class="mb-0 text-xs text-white-50">
+                        <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                        WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                </div>
+
+                <!-- COLUNA 3: NAVEGAÇÃO RÁPIDA / BOTÕES (DIREITA) -->
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
+                    <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
+                        <a href="tickets.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
+                        </a>
+                        <a href="vagas-tarifas.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-car me-2 text-warning" aria-hidden="true"></i>Vagas &amp; Tarifas
+                        </a>
+                        <a href="sobre.html#privacidade" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
+                            Privacidade
+                        </a>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </footer>
 

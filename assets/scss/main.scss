@@ -1,21 +1,22 @@
-// ==========================================
-// ARQUIVO PRINCIPAL MASTER SCSS
-// ==========================================
-//
-// NOTA DE MODERNIZAÇÃO (não bloqueante):
-// @import é oficialmente depreciado pelo Dart Sass e será removido em versão
-// futura. Quando revisarmos _variables.scss / _accessibility.scss /
-// _components.scss, vale migrar todo o projeto para @use/@forward de uma vez
-// (evita quebrar a referência às variáveis no meio do caminho).
+// ==========================================================================
+// PARKGESTÃO - ARQUIVO PRINCIPAL MASTER SCSS (DART SASS MODERN)
+// ==========================================================================
 
-// 1. Importação dos Módulos
-@import 'variables';
-@import 'accessibility';
-@import 'components';
+/* --------------------------------------------------------------------------
+   1. MÓDULOS & ARQUIVOS PARCIAIS (Sintaxe Moderna Dart Sass)
+   -------------------------------------------------------------------------- */
+@use 'variables' as *;
+@use 'accessibility';
+@use 'components';
 
-// 2. Estilos Globais
+/* --------------------------------------------------------------------------
+   2. ESTILOS GLOBAIS & RESET ESTRUTURAL
+   -------------------------------------------------------------------------- */
 html {
   scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,
@@ -26,40 +27,44 @@ body {
   color: $color-text-light;
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
 }
 
 main {
-  flex: 1;
+  flex: 1 0 auto;
 }
 
-// 3. Skip Link (Acessibilidade de Teclado)
-// Fica visualmente oculto até receber foco via TAB — é o primeiro elemento
-// focável da página e precisa ter alto contraste quando aparece.
+/* --------------------------------------------------------------------------
+   3. SKIP LINK (Acessibilidade Teclado - WCAG AAA)
+   -------------------------------------------------------------------------- */
+// Fica oculto no topo e surge suavemente quando recebe foco via TAB
 .skip-link {
   position: absolute;
-  top: -100%;
-  left: 0.5rem;
-  z-index: 1080; // acima da accessibility-bar e da navbar
-  padding: 0.75rem 1.25rem;
-  background-color: #000000;
+  top: -100px;
+  left: 1rem;
+  z-index: 1090; // Fica acima da barra de acessibilidade e da navbar
+  padding: 0.85rem 1.5rem;
+  background-color: #0f172a;
   color: #ffffff;
   font-weight: 700;
+  font-size: 0.9rem;
   text-decoration: none;
-  border-radius: 0 0 $border-radius-sm $border-radius-sm;
+  border-radius: 0 0 $border-radius $border-radius;
+  box-shadow: $shadow-lg;
   transition: top $transition-fast;
 
   &:focus,
   &:focus-visible {
     top: 0;
-    outline: 3px solid $color-focus-outline;
-    outline-offset: 2px;
+    outline: 3px solid $color-focus-outline !important;
+    outline-offset: 3px !important;
   }
 }
 
-// 4. Foco Visível Global (WCAG 2.1 AAA)
-// Reforça o indicador de foco em qualquer elemento interativo, garantindo
-// contraste mínimo mesmo sobre fundos customizados (accessibility-bar, cards
-// escuros de métricas, badges, etc.).
+/* --------------------------------------------------------------------------
+   4. INDICADOR DE FOCO VISÍVEL GLOBAL (WCAG 2.1 AAA)
+   -------------------------------------------------------------------------- */
 a,
 button,
 input,
@@ -67,16 +72,127 @@ select,
 textarea,
 [tabindex] {
   &:focus-visible {
-    outline: 3px solid $color-focus-outline;
-    outline-offset: 2px;
+    outline: 3px solid $color-focus-outline !important;
+    outline-offset: 3px !important;
   }
 }
 
-// 5. Redução de Movimento (WCAG 2.1 AAA — sensibilidade labiríntica/vestibular)
-// Aqui cobrimos só a preferência de sistema (prefers-reduced-motion). O
-// toggle manual do botão "Animação Off" (classe .reduce-motion) está
-// centralizado em _accessibility.scss, junto com as demais classes de
-// acessibilidade — evita duas fontes de verdade com valores diferentes.
+/* --------------------------------------------------------------------------
+   5. NAVBAR MODERNA & FLUIDA
+   -------------------------------------------------------------------------- */
+.navbar {
+  background-color: $color-surface-light;
+  box-shadow: $shadow-sm;
+  padding: 0.85rem 1.5rem;
+  transition: background-color $transition-normal, box-shadow $transition-normal;
+
+  .nav-link {
+    font-weight: 600;
+    color: $color-text-muted;
+    padding: 0.5rem 1rem;
+    border-radius: $border-radius-sm;
+    transition: color $transition-fast, background-color $transition-fast;
+
+    &:hover {
+      color: $color-text-light;
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    &.active {
+      color: $color-text-light;
+      font-weight: 700;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 1rem;
+        right: 1rem;
+        height: 3px;
+        background-color: $color-focus-outline;
+        border-radius: $border-radius-pill;
+      }
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. HERO SECTION & IMPLANTAÇÃO VANTA.JS
+   -------------------------------------------------------------------------- */
+.hero-section {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    $color-hero-gradient-start 0%,
+    $color-hero-gradient-end 100%
+  );
+  color: $color-hero-text;
+  padding: 4.5rem 0;
+  overflow: hidden;
+
+  #vanta-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7. RODAPÉ SOFISTICADO (FOOTER)
+   -------------------------------------------------------------------------- */
+footer {
+  margin-top: auto;
+  background-color: $color-footer-bg;
+  color: $color-footer-text;
+  padding: 2.5rem 0 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+
+  a {
+    color: $color-footer-link;
+    text-decoration: none;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      text-decoration: underline;
+      opacity: 0.9;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. UTILITÁRIOS DE TIPOGRAFIA & MODAIS
+   -------------------------------------------------------------------------- */
+.text-xs {
+  font-size: 0.75rem !important;
+}
+
+.text-xxs {
+  font-size: 0.6875rem !important;
+}
+
+.modal-content {
+  border-radius: $border-radius-lg;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: $shadow-lg;
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   9. PREFERÊNCIA DE SISTEMA: REDUÇÃO DE MOVIMENTO (WCAG AAA)
+   -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -89,80 +205,5 @@ textarea,
 
   #vanta-bg {
     display: none !important;
-  }
-}
-
-// 6. Utilitário de Tipografia
-// Usado em várias páginas (badges, legendas, rótulos de KPI) e não existe
-// nativamente no Bootstrap 5.
-.text-xs {
-  font-size: 0.75rem;
-}
-
-// 7. Navbar Acessível
-.navbar {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-
-  .nav-link {
-    font-weight: 500;
-    transition: color $transition-fast;
-
-    &.active {
-      font-weight: 700;
-      border-bottom: 2px solid currentColor;
-    }
-  }
-}
-
-// 8. Hero & Vanta.js Container
-.hero-section {
-  position: relative;
-  background: linear-gradient(
-    135deg,
-    $color-hero-gradient-start 0%,
-    $color-hero-gradient-end 100%
-  );
-  color: $color-hero-text;
-  padding: 3rem 0;
-  overflow: hidden;
-
-  #vanta-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-  }
-
-  .hero-content {
-    position: relative;
-    z-index: 1;
-  }
-}
-
-// 9. Modais e Animações
-.modal-header {
-  border-bottom-width: 2px;
-}
-
-// 10. Rodapé Acessível
-footer {
-  margin-top: auto;
-  background-color: $color-footer-bg;
-  color: $color-footer-text;
-
-  a {
-    color: $color-footer-link;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-
-    &:focus-visible {
-      outline: 3px solid $color-focus-outline;
-      outline-offset: 2px;
-    }
   }
 }

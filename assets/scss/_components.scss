@@ -1,23 +1,23 @@
-@import 'variables';
+@use 'sass:color';
+@use 'variables' as *;
 
-// ==========================================
-// COMPONENTES & BADGES COM PSICOLOGIA DAS CORES
-// ==========================================
-//
-// NOTA DE MODERNIZAÇÃO (não bloqueante): lighten() é uma função legada do
-// Sass (module system global), também no caminho de depreciação do Dart Sass
-// em favor de sass:color (color.adjust/color.scale). Deixo como está por ora,
-// para migrar junto com o @import quando revisarmos todos os parciais.
+// ==========================================================================
+// PARKGESTÃO - COMPONENTES SOFISTICADOS, INTERATIVOS & ACESSÍVEIS (WCAG AAA)
+// ==========================================================================
 
-// Badges (Sempre Cor + Ícone + Texto para Acessibilidade)
+/* --------------------------------------------------------------------------
+   1. BADGES & STATUS (Psicologia das Cores + Acessibilidade)
+   -------------------------------------------------------------------------- */
 .badge-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.4em 0.75em;
-  font-size: 0.85rem;
-  font-weight: 600;
+  gap: 0.4rem;
+  padding: 0.4em 0.85em;
+  font-size: 0.825rem;
+  font-weight: 700;
   border-radius: 50rem;
+  letter-spacing: 0.02em;
+  transition: transform $transition-fast, box-shadow $transition-fast;
 
   i {
     font-size: 0.85rem;
@@ -51,153 +51,353 @@
   }
 }
 
-// Grid de Vagas no Dashboard / Mapa Visual
-//
-// IMPORTANTE (WCAG 1.4.1 — uso de cor): a cor de fundo do card é só um reforço
-// visual rápido. Ela NUNCA pode ser a única forma de indicar o status. Cada
-// .vaga-card deve conter, no HTML, um .badge-status (ícone + texto) mostrando
-// o status por extenso — não confie apenas no tom de fundo abaixo.
+/* --------------------------------------------------------------------------
+   2. CARDS DE KPI / DASHBOARD (Design Moderno, Imersivo & Interativo)
+   -------------------------------------------------------------------------- */
+.card-kpi,
+.kpi-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important; // Substitui as bordas duras por acabamento fino
+  border-radius: 1.25rem !important;
+  padding: 1.35rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05),
+    0 2px 6px -2px rgba(0, 0, 0, 0.02);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease;
+  overflow: hidden;
+  z-index: 1;
+
+  // Efeito de iluminação radial fluida no fundo
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle,
+      rgba(0, 0, 0, 0.03) 0%,
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  // Micro-interação ao passar o mouse
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.08),
+      0 8px 12px -4px rgba(0, 0, 0, 0.03) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+
+    &::before {
+      opacity: 1;
+    }
+
+    .kpi-icon-bubble {
+      transform: scale(1.1) rotate(4deg);
+    }
+  }
+
+  // Tipografia do Card
+  .kpi-label {
+    font-size: 0.775rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 0.4rem;
+  }
+
+  .kpi-value {
+    font-size: 2.125rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+  }
+
+  .kpi-subtext {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  // Bolhas de Ícones com Efeito Glow (Soft Bubbles)
+  .kpi-icon-bubble {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  // Variantes de Cores para KPIs
+  &.kpi-success {
+    .kpi-value {
+      color: #0d652d;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #e6f4ea 0%, #ceebd5 100%);
+      color: #0d652d;
+      box-shadow: 0 4px 14px rgba(13, 101, 45, 0.18);
+    }
+  }
+
+  &.kpi-danger {
+    .kpi-value {
+      color: #c5221f;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #fce8e6 0%, #fad2cf 100%);
+      color: #c5221f;
+      box-shadow: 0 4px 14px rgba(197, 34, 31, 0.18);
+    }
+  }
+
+  &.kpi-warning {
+    .kpi-value {
+      color: #b06000;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #fef7e0 0%, #feefc3 100%);
+      color: #b06000;
+      box-shadow: 0 4px 14px rgba(176, 96, 0, 0.18);
+    }
+  }
+
+  &.kpi-primary {
+    .kpi-value {
+      color: #1a73e8;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+      color: #1a73e8;
+      box-shadow: 0 4px 14px rgba(26, 115, 232, 0.18);
+    }
+  }
+
+  &.kpi-secondary {
+    .kpi-value {
+      color: #334155;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      color: #334155;
+      box-shadow: 0 4px 14px rgba(51, 65, 85, 0.15);
+    }
+  }
+
+  &.kpi-info {
+    .kpi-value {
+      color: #0284c7;
+    }
+    .kpi-icon-bubble {
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      color: #0284c7;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.18);
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. GRID DE VAGAS (Mapa Visual Interativo & Responsivo)
+   -------------------------------------------------------------------------- */
 .vagas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1rem;
+  gap: 1.25rem;
 
   .vaga-card {
-    border-radius: 0.75rem;
+    position: relative;
+    border-radius: 1rem;
     padding: 1.25rem 1rem;
     text-align: center;
     border: 2px solid transparent;
-    transition: transform $transition-fast, box-shadow $transition-fast;
+    transition: transform $transition-fast, box-shadow $transition-fast,
+      border-color $transition-fast;
 
-    // Elevação de hover/foco só deve aparecer se o card for de fato
-    // interativo (role="button"/"link" + tabindex). Um card puramente
-    // decorativo com esse efeito sugere uma ação que não existe.
+    // Micro-interações em vagas clicáveis
     &.is-interativo {
       cursor: pointer;
 
-      &:hover,
-      &:focus-visible {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
       }
 
       &:focus-visible {
-        outline: 3px solid $color-focus-outline;
-        outline-offset: 2px;
+        outline: 3px solid $color-focus-outline !important;
+        outline-offset: 3px !important;
+        transform: translateY(-3px);
       }
     }
 
+    // Variantes de Cor das Vagas usando módulo moderno de cores do Sass
     &.vaga-livre {
-      background-color: lighten($color-sucesso, 15%);
-      border-color: $color-sucesso;
+      background-color: color.adjust($color-sucesso, $lightness: 28%);
+      border-color: color.adjust($color-sucesso, $lightness: 10%);
       color: $color-sucesso-text;
     }
 
     &.vaga-ocupada {
-      background-color: lighten($color-alerta, 15%);
-      border-color: $color-alerta;
+      background-color: color.adjust($color-alerta, $lightness: 24%);
+      border-color: color.adjust($color-alerta, $lightness: 8%);
       color: $color-alerta-text;
     }
 
     &.vaga-manutencao {
-      background-color: lighten($color-pendente, 10%);
-      border-color: $color-pendente;
+      background-color: color.adjust($color-pendente, $lightness: 22%);
+      border-color: color.adjust($color-pendente, $lightness: 5%);
       color: $color-pendente-text;
     }
 
     .vaga-codigo {
       font-size: 1.5rem;
-      font-weight: 700;
+      font-weight: 800;
+      line-height: 1.2;
       margin-bottom: 0.25rem;
     }
 
     .vaga-tipo {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+      opacity: 0.85;
+      margin-bottom: 0.6rem;
     }
 
-    // Badge de status dentro do card — ver nota WCAG 1.4.1 acima. Reaproveita
-    // as mesmas cores/ícones definidos em .badge-status, só ajustando o
-    // tamanho para caber dentro do card.
     .badge-status {
-      font-size: 0.7rem;
-      padding: 0.3em 0.6em;
+      font-size: 0.725rem;
+      padding: 0.3em 0.65em;
     }
   }
 }
 
-// Painel "Grafana Dark" (página de Métricas)
-//
-// Contraste verificado: $color-text-dark (#f8f9fa) sobre $color-surface-dark
-// (#1e1e1e) passa de 15:1. O rótulo semi-transparente do KPI
-// (rgba(255,255,255,.65) sobre a mesma superfície) dá ~7.69:1 — ainda dentro
-// do mínimo AAA (7:1) para texto normal.
+/* --------------------------------------------------------------------------
+   4. PAINEL DE METRICAS DARK (TEMA ESCURO - GRAFANA STYLE)
+   -------------------------------------------------------------------------- */
 .metrics-dark-panel {
   background-color: $color-bg-dark;
   color: $color-text-dark;
-  min-height: calc(100vh - 250px); // aprox. altura descontando navbar/footer
+  min-height: calc(100vh - 250px);
+  padding-bottom: 2rem;
 }
 
-.metrics-kpi-card {
+.metrics-kpi-card,
+.metrics-chart-card {
   background-color: $color-surface-dark;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  transition: border-color $transition-fast;
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
 }
 
 .metrics-kpi-label {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .metrics-kpi-value {
   color: $color-text-dark;
+  font-weight: 800;
 }
 
 .metrics-chart-card {
-  background-color: $color-surface-dark;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
   .card-header {
     background-color: transparent;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 700;
   }
 
-  // Tabela de dados alternativa (acessível) dentro do <details>/.collapse
   .table-dark {
     --bs-table-bg: transparent;
   }
 }
 
-// Cards de KPI do Dashboard (index.html)
-.card-kpi {
-  border-radius: $border-radius;
-}
-
-// Widget de Acessibilidade Flutuante
-//
-// PERGUNTA PARA A EQUIPE: nenhuma página revisada até agora referencia esta
-// classe — a barra de acessibilidade atual é fixa no topo (.accessibility-bar).
-// Este botão flutuante é para uma versão mobile/colapsada dela? Mantive o
-// componente e só corrigi o foco por teclado; me avisem se for descartável.
+/* --------------------------------------------------------------------------
+   5. WIDGET DE ACESSIBILIDADE FLUTUANTE & FOCO
+   -------------------------------------------------------------------------- */
 .accessibility-widget {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
   z-index: 1050;
 
   .btn-accessibility-toggle {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    background-color: #0f172a;
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.35rem;
+    transition: transform $transition-fast, background-color $transition-fast;
+
+    &:hover {
+      transform: scale(1.1);
+      background-color: #1e293b;
+    }
 
     &:focus-visible {
-      outline: 3px solid $color-focus-outline;
-      outline-offset: 2px;
+      outline: 3px solid $color-focus-outline !important;
+      outline-offset: 3px !important;
     }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. SUPORTE A ALTO CONTRASTE & REDUÇÃO DE MOVIMENTO (WCAG AAA)
+   -------------------------------------------------------------------------- */
+body.high-contrast {
+  .card-kpi,
+  .kpi-card {
+    background-color: #000000 !important;
+    border: 2px solid #ffffff !important;
+
+    .kpi-label,
+    .kpi-value,
+    .kpi-subtext {
+      color: #ffffff !important;
+    }
+
+    .kpi-icon-bubble {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-kpi,
+  .kpi-card,
+  .kpi-icon-bubble,
+  .vaga-card,
+  .btn-accessibility-toggle {
+    transition: none !important;
+    transform: none !important;
   }
 }
