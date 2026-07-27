@@ -8,15 +8,31 @@
         content="Sistema de Gestão de Estacionamento Acessível e Seguro. Conforme com WCAG 2.1 AAA e LGPD.">
     <title>Dashboard | Gestão de Estacionamento</title>
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"></script>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="assets/css/style.css">
+
+    <!--
+        NOTA DE SEGURANÇA (SAST):
+        Não incluí hashes "integrity" (SRI) fixos nos CDNs acima/abaixo porque um hash
+        incorreto quebra o carregamento do recurso silenciosamente. Antes de subir para
+        produção, gere os hashes reais em https://www.srihash.org/ para cada versão
+        exata usada (Bootstrap 5.3.2, FontAwesome 6.4.0, Vanta, SweetAlert2) e adicione
+        o atributo integrity="sha384-..." em cada tag.
+    -->
+
+    <!-- Three.js + Vanta.js (efeito único, carregado uma só vez, com defer) -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.topology.min.js"></script>
 </head>
 
 <body>
@@ -26,31 +42,33 @@
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
     <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
-        role="region" aria-label="Acessibilidade">
+        role="region" aria-label="Barra de Acessibilidade">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" title="Aumentar Fonte"
-                aria-label="Aumentar Fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" title="Diminuir Fonte"
-                aria-label="Diminuir Fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" title="Restaurar Fonte"
-                aria-label="Restaurar Fonte">A</button>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" title="Alternar Alto Contraste"
-                aria-label="Alto Contraste">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
                 <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" title="Modo Fonte Dislexia"
-                aria-label="Modo Dislexia">
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
                 <i class="fas fa-font" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white"
-                title="Reduzir Animações" aria-label="Reduzir Animações">
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
                 <i class="fas fa-running" aria-hidden="true"></i> Animação Off
             </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
             <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Filtro para Daltonismo">
+                aria-label="Selecionar filtro para daltonismo">
                 <option value="normal">Daltonismo: Normal</option>
                 <option value="protanopia">Protanopia</option>
                 <option value="deuteranopia">Deuteranopia</option>
@@ -67,8 +85,18 @@
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
+
+                <!-- Indicador de Status da API -->
+                <div id="api-status-indicator"
+                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
+                    aria-live="polite">
+                    <span id="api-status-dot" class="rounded-circle bg-secondary"
+                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                    <span id="api-status-text">Verificando servidor…</span>
+                </div>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -77,8 +105,8 @@
                                     class="fas fa-chart-line me-1" aria-hidden="true"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="paginas/tickets.html"><i
                                     class="fas fa-ticket-alt me-1" aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/vagas.html"><i class="fas fa-car me-1"
-                                    aria-hidden="true"></i> Vagas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="paginas/vagas-tarifas.html"><i
+                                    class="fas fa-car me-1" aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="paginas/mensalistas.html"><i
                                     class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
                         <li class="nav-item"><a class="nav-link" href="paginas/metricas.html"><i
@@ -93,7 +121,7 @@
 
     <!-- HERO BANNER COM VANTA.JS -->
     <section class="hero-section text-center text-white" aria-labelledby="hero-title">
-        <div id="vanta-bg"></div>
+        <div id="vanta-bg" aria-hidden="true"></div>
         <div class="container hero-content py-4">
             <h1 id="hero-title" class="display-5 fw-bold mb-2">Painel de Controle Principal</h1>
             <p class="lead mb-0">Gestão inteligente, acessível e em tempo real para o seu estacionamento.</p>
@@ -102,14 +130,28 @@
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main id="main-content" class="container py-4">
-        <!-- CARDS KPI -->
-        <div class="row g-3 mb-4">
+
+        <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
+        <div id="dashboard-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <span id="dashboard-error-text">Não foi possível carregar os dados do painel. Verifique sua conexão e tente
+                novamente.</span>
+            <button id="btn-retry-dashboard" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+            </button>
+        </div>
+
+        <!-- CARDS KPI: contagem de vagas por status -->
+        <h2 class="h6 text-uppercase text-muted fw-bold mb-2">Vagas por status</h2>
+        <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="card card-kpi border-start border-success border-4 shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted text-sm fw-semibold d-block">VAGAS LIVRES</span>
-                            <h2 id="kpi-vagas-livres" class="mb-0 fw-bold text-success">--</h2>
+                            <h2 id="kpi-vagas-livres" class="mb-0 fw-bold text-success">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
                         </div>
                         <div class="bg-success-subtle p-3 rounded-circle text-success fs-3">
                             <i class="fas fa-check-circle" aria-hidden="true"></i>
@@ -123,7 +165,9 @@
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted text-sm fw-semibold d-block">VAGAS OCUPADAS</span>
-                            <h2 id="kpi-vagas-ocupadas" class="mb-0 fw-bold text-danger">--</h2>
+                            <h2 id="kpi-vagas-ocupadas" class="mb-0 fw-bold text-danger">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
                         </div>
                         <div class="bg-danger-subtle p-3 rounded-circle text-danger fs-3">
                             <i class="fas fa-car-side" aria-hidden="true"></i>
@@ -133,11 +177,49 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
+                <div class="card card-kpi border-start border-secondary border-4 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted text-sm fw-semibold d-block">EM MANUTENÇÃO</span>
+                            <h2 id="kpi-vagas-manutencao" class="mb-0 fw-bold text-secondary">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
+                        </div>
+                        <div class="bg-secondary-subtle p-3 rounded-circle text-secondary fs-3">
+                            <i class="fas fa-tools" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card card-kpi border-start border-primary border-4 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted text-sm fw-semibold d-block">TAXA DE OCUPAÇÃO</span>
+                            <h2 id="kpi-taxa-ocupacao" class="mb-0 fw-bold text-primary">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
+                        </div>
+                        <div class="bg-primary-subtle p-3 rounded-circle text-primary fs-3">
+                            <i class="fas fa-percent" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARDS KPI: financeiro e operação -->
+        <h2 class="h6 text-uppercase text-muted fw-bold mb-2">Financeiro &amp; operação</h2>
+        <div class="row g-3 mb-4" aria-live="polite">
+            <div class="col-12 col-sm-6 col-md-3">
                 <div class="card card-kpi border-start border-warning border-4 shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted text-sm fw-semibold d-block">TICKETS ABERTOS</span>
-                            <h2 id="kpi-tickets-abertos" class="mb-0 fw-bold text-warning">--</h2>
+                            <h2 id="kpi-tickets-abertos" class="mb-0 fw-bold text-warning">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
                         </div>
                         <div class="bg-warning-subtle p-3 rounded-circle text-warning fs-3">
                             <i class="fas fa-clock" aria-hidden="true"></i>
@@ -150,11 +232,45 @@
                 <div class="card card-kpi border-start border-primary border-4 shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted text-sm fw-semibold d-block">FATURAMENTO HOJE</span>
-                            <h2 id="kpi-faturamento" class="mb-0 fw-bold text-primary">R$ --</h2>
+                            <span class="text-muted text-sm fw-semibold d-block">FATURAMENTO TOTAL</span>
+                            <h2 id="kpi-faturamento" class="mb-0 fw-bold text-primary">
+                                <span class="placeholder-glow"><span class="placeholder col-8"></span></span>
+                            </h2>
                         </div>
                         <div class="bg-primary-subtle p-3 rounded-circle text-primary fs-3">
                             <i class="fas fa-coins" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card card-kpi border-start border-info border-4 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted text-sm fw-semibold d-block">TICKET MÉDIO</span>
+                            <h2 id="kpi-ticket-medio" class="mb-0 fw-bold text-info">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
+                        </div>
+                        <div class="bg-info-subtle p-3 rounded-circle text-info fs-3">
+                            <i class="fas fa-receipt" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card card-kpi border-start border-dark border-4 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted text-sm fw-semibold d-block">TEMPO MÉDIO DE PERMANÊNCIA</span>
+                            <h2 id="kpi-tempo-medio" class="mb-0 fw-bold text-dark">
+                                <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
+                            </h2>
+                        </div>
+                        <div class="bg-dark-subtle p-3 rounded-circle text-dark fs-3">
+                            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
@@ -170,7 +286,10 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" aria-label="Tabela de Tickets Ativos">
+                    <table class="table table-hover align-middle mb-0" role="table"
+                        aria-label="Tickets ativos no momento">
+                        <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, tipo de
+                            veículo, vaga, horário de entrada e cliente associado.</caption>
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">Placa</th>
@@ -181,9 +300,13 @@
                                 <th scope="col">Ação</th>
                             </tr>
                         </thead>
-                        <tbody id="tbody-tickets-recentes">
+                        <tbody id="tbody-tickets-recentes" aria-live="polite" aria-busy="true">
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Carregando dados...</td>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"
+                                        aria-hidden="true"></span>
+                                    Carregando dados...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -192,28 +315,54 @@
         </div>
     </main>
 
-    <!-- FOOTER -->
+    <!-- FOOTER ACESSÍVEL -->
     <footer class="py-4 text-center border-top">
         <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; 2026 ParkGestão — Sistema de Gestão de Estacionamento Acessível.</p>
-            <p class="mb-0"><i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i> Em conformidade com
-                WCAG 2.1 AAA e LGPD.</p>
+            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
+            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
+            <p class="mb-1">
+                <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                Em conformidade com WCAG 2.1 AAA e LGPD.
+            </p>
+            <p class="mb-0">
+                <a href="paginas/sobre.html#privacidade" class="link-secondary me-3">Política de Privacidade</a>
+                <a href="paginas/sobre.html#contato" class="link-secondary">Contato</a>
+            </p>
         </div>
     </footer>
 
-    <!-- DEPENDÊNCIAS DE SCRIPTS EXTERNOS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.waves.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
 
-    <!-- MÓDULOS INTERNOS DA APLICAÇÃO -->
-    <script src="assets/js/modules/accessibility.js"></script>
-    <script src="assets/js/modules/lgpd.js"></script>
-    <script src="assets/js/modules/api.js"></script>
-    <script src="assets/js/pages/dashboard.js"></script>
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/vanta-init.js"></script>
+    <!-- DEPENDÊNCIAS DE SCRIPTS EXTERNOS (carregadas uma única vez, com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <!-- MÓDULOS INTERNOS DA APLICAÇÃO (ordem importa: acessibilidade/LGPD/api antes das páginas) -->
+    <script defer src="assets/js/modules/accessibility.js"></script>
+    <script defer src="assets/js/modules/lgpd.js"></script>
+    <script defer src="assets/js/modules/api.js"></script>
+    <script defer src="assets/js/modules/vanta-init.js"></script>
+    <script defer src="assets/js/pages/dashboard.js"></script>
+    <script defer src="assets/js/main.js"></script>
+
+    <script>
+        // Ano dinâmico no footer + init do VLibras
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
 </body>
 
 </html>

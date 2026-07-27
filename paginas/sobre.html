@@ -8,12 +8,22 @@
         content="Sobre o ParkGestão - Sistema de Gestão de Estacionamento Acessível e em conformidade com a LGPD">
     <title>Sobre o Projeto | ParkGestão</title>
 
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="../assets/css/style.css">
+
+    <!--
+        NOTA DE SEGURANÇA (SAST): hashes SRI ("integrity") não foram fixados aqui de
+        propósito — gere-os em https://www.srihash.org/ para as versões exatas usadas
+        antes de subir para produção, e adicione integrity="sha384-..." em cada tag.
+    -->
 </head>
 
 <body>
@@ -23,31 +33,33 @@
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
     <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
-        role="region" aria-label="Acessibilidade">
+        role="region" aria-label="Barra de Acessibilidade">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" title="Aumentar Fonte"
-                aria-label="Aumentar Fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" title="Diminuir Fonte"
-                aria-label="Diminuir Fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" title="Restaurar Fonte"
-                aria-label="Restaurar Fonte">A</button>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" title="Alternar Alto Contraste"
-                aria-label="Alto Contraste">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
                 <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" title="Modo Fonte Dislexia"
-                aria-label="Modo Dislexia">
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
                 <i class="fas fa-font" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white"
-                title="Reduzir Animações" aria-label="Reduzir Animações">
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
                 <i class="fas fa-running" aria-hidden="true"></i> Animação Off
             </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
             <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Filtro para Daltonismo">
+                aria-label="Selecionar filtro para daltonismo">
                 <option value="normal">Daltonismo: Normal</option>
                 <option value="protanopia">Protanopia</option>
                 <option value="deuteranopia">Deuteranopia</option>
@@ -64,8 +76,18 @@
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
+
+                <!-- Indicador de Status da API -->
+                <div id="api-status-indicator"
+                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
+                    aria-live="polite">
+                    <span id="api-status-dot" class="rounded-circle bg-secondary"
+                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                    <span id="api-status-text">Verificando servidor…</span>
+                </div>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -74,8 +96,8 @@
                                     aria-hidden="true"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
                                     aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link" href="vagas.html"><i class="fas fa-car me-1"
-                                    aria-hidden="true"></i> Vagas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
+                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i class="fas fa-id-card me-1"
                                     aria-hidden="true"></i> Mensalistas</a></li>
                         <li class="nav-item"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
@@ -93,21 +115,34 @@
         <!-- CABEÇALHO DA PÁGINA -->
         <div class="bg-primary text-white rounded-3 p-4 p-md-5 mb-4 shadow-sm">
             <div class="max-w-700">
-                <span class="badge bg-warning text-dark mb-2 fw-bold"><i class="fas fa-universal-access me-1"></i>
-                    Acessibilidade WCAG 2.1 AA</span>
+                <span class="badge bg-warning text-dark mb-2 fw-bold">
+                    <i class="fas fa-universal-access me-1" aria-hidden="true"></i> Acessibilidade WCAG 2.1 AAA
+                </span>
                 <h1 class="display-5 fw-bold mb-3">Sobre o ParkGestão</h1>
                 <p class="lead mb-0">Uma plataforma moderna, intuitiva e plenamente acessível para a gestão completa de
                     rotativos, mensalistas, ocupação de vagas e indicadores financeiros.</p>
             </div>
         </div>
 
+        <!-- NAVEGAÇÃO RÁPIDA ENTRE SEÇÕES DA PÁGINA -->
+        <nav aria-label="Navegação nesta página" class="mb-4">
+            <ul class="nav nav-pills flex-wrap gap-2">
+                <li class="nav-item"><a class="nav-link border" href="#proposito">Propósito</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#acessibilidade">Acessibilidade</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#regras-negocio">Regras de Negócio</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#privacidade">Privacidade (LGPD)</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#contato">Contato</a></li>
+            </ul>
+        </nav>
+
         <div class="row g-4">
             <!-- PILARES DO PROJETO -->
             <div class="col-lg-8">
-                <section class="card shadow-sm mb-4">
+                <section id="proposito" class="card shadow-sm mb-4">
                     <div class="card-body p-4">
-                        <h2 class="h4 fw-bold text-primary mb-3"><i class="fas fa-bullseye me-2"></i>Propósito e
-                            Objetivos</h2>
+                        <h2 class="h4 fw-bold text-primary mb-3">
+                            <i class="fas fa-bullseye me-2" aria-hidden="true"></i>Propósito e Objetivos
+                        </h2>
                         <p>O <strong>ParkGestão</strong> foi concebido para resolver os desafios do dia a dia de
                             operadores de estacionamento através de uma interface web responsiva, rápida e focada em
                             inclusão digital. O sistema integra controle de fluxo em tempo real, emissão e encerramento
@@ -115,89 +150,151 @@
                     </div>
                 </section>
 
-                <section class="card shadow-sm mb-4">
+                <section id="acessibilidade" class="card shadow-sm mb-4">
                     <div class="card-body p-4">
-                        <h2 class="h4 fw-bold text-success mb-3"><i class="fas fa-universal-access me-2"></i>Recursos de
-                            Acessibilidade (WCAG 2.1)</h2>
+                        <h2 class="h4 fw-bold text-success mb-3">
+                            <i class="fas fa-universal-access me-2" aria-hidden="true"></i>Recursos de Acessibilidade
+                            (WCAG 2.1 AAA)
+                        </h2>
                         <p>Para garantir que qualquer operador, independentemente de suas capacidades visuais ou
                             motoras, consiga utilizar a plataforma de forma autônoma, foram integradas as seguintes
                             funcionalidades de acessibilidade universal:</p>
                         <ul class="list-group list-group-flush mb-3">
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
                                 <strong>Ajuste Dinâmico de Fonte:</strong> Controles A+, A- e Reset mantendo proporções
-                                tipográficas.</li>
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
+                                tipográficas.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
                                 <strong>Alto Contraste:</strong> Tema escuro de alto contraste otimizado para baixa
-                                visão.</li>
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
-                                <strong>Filtros para Daltonismo:</strong> Protanopia, Deuteranopia e Tritanopia via SVG
-                                filters nativos.</li>
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
+                                visão.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Filtros para Daltonismo:</strong> Protanopia, Deuteranopia e Tritanopia via
+                                filtros CSS/SVG.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
                                 <strong>Fonte para Dislexia:</strong> Tipografia OpenDyslexic alternativa para melhor
-                                legibilidade.</li>
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
+                                legibilidade.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
                                 <strong>Redução de Movimento:</strong> Respeito ao padrão
-                                <code>prefers-reduced-motion</code>.</li>
-                            <li class="list-group-item bg-transparent"><i class="fas fa-check text-success me-2"></i>
-                                <strong>Navegação por Teclado e Screen Readers:</strong> Marcação semântica HTML5,
-                                atributos WAI-ARIA e Skip Links.</li>
+                                <code>prefers-reduced-motion</code> e botão manual para pausar animações.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Navegação por Teclado e Leitores de Tela:</strong> Marcação semântica HTML5,
+                                atributos WAI-ARIA, <code>aria-live</code> em conteúdo dinâmico e Skip Links.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Tradução em Libras:</strong> Widget VLibras integrado em todas as páginas.
+                            </li>
+                        </ul>
+
+                        <h3 class="h6 fw-bold text-muted text-uppercase mt-4">Como testamos</h3>
+                        <p class="mb-0 text-sm">
+                            A navegação completa por teclado (tabulação visível, sem armadilhas de foco) e a leitura de
+                            telas foram verificadas com os leitores de tela <strong>NVDA</strong> (Windows) e
+                            <strong>VoiceOver</strong> (macOS/iOS), além da checagem de contraste de cores com a
+                            ferramenta <strong>WebAIM Contrast Checker</strong> para atingir a relação mínima de 7:1
+                            exigida pelo nível AAA em texto normal.
+                        </p>
+                    </div>
+                </section>
+
+                <section id="regras-negocio" class="card shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h4 fw-bold text-primary mb-3">
+                            <i class="fas fa-scale-balanced me-2" aria-hidden="true"></i>Regras de Negócio
+                        </h2>
+                        <p>Principais regras aplicadas pelo sistema, para transparência de quem opera ou audita a
+                            plataforma:</p>
+                        <ul class="mb-0">
+                            <li class="mb-2">Não é possível abrir um ticket para uma vaga que já esteja "ocupada"; o
+                                status da vaga é definido automaticamente pelo sistema, nunca manualmente.</li>
+                            <li class="mb-2">Ao abrir um ticket com sucesso, a vaga correspondente muda automaticamente
+                                para "ocupada"; ao fechar, ela volta para "livre".</li>
+                            <li class="mb-2">Se o veículo pertencer a um mensalista com status "ativo", o valor cobrado
+                                ao fechar o ticket é sempre <strong>R$ 0,00</strong>, independentemente da tarifa ou do
+                                tempo de permanência.</li>
+                            <li class="mb-2">Para veículos avulsos, o valor é calculado com base no valor da primeira
+                                hora somado às horas adicionais da tarifa selecionada.</li>
+                            <li class="mb-2">Mensalistas não são excluídos fisicamente do sistema — apenas inativados —
+                                para preservar o histórico de tickets associados.</li>
+                            <li class="mb-2">CPF e placa de mensalistas não podem ser duplicados no cadastro.</li>
+                            <li>Vagas e tarifas com tickets "abertos" vinculados não podem ser excluídas até que esses
+                                tickets sejam fechados.</li>
                         </ul>
                     </div>
                 </section>
 
-                <section class="card shadow-sm">
+                <section id="privacidade" class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h2 class="h4 fw-bold text-info mb-3"><i class="fas fa-shield-alt me-2"></i>Conformidade com a
-                            LGPD</h2>
-                        <p class="mb-0">Em atenção à Lei Geral de Proteção de Dados (Lei nº 13.709/2018), os dados
-                            pessoais de clientes e mensalistas (como CPF e número de telefone) são submetidos a técnicas
-                            de mascaramento de dados nas visualizações gerais, restringindo a exibição integral apenas
-                            às rotinas necessárias de cobrança e cadastro.</p>
+                        <h2 class="h4 fw-bold text-info mb-3">
+                            <i class="fas fa-shield-alt me-2" aria-hidden="true"></i>Conformidade com a LGPD
+                        </h2>
+                        <p>Em atenção à Lei Geral de Proteção de Dados (Lei nº 13.709/2018), os dados pessoais de
+                            mensalistas (nome, CPF, placa e telefone) são coletados apenas mediante
+                            <strong>consentimento explícito (opt-in)</strong>, exibido em um banner ao primeiro acesso
+                            ao sistema.
+                        </p>
+                        <p>Dados sensíveis como CPF são exibidos de forma mascarada nas listagens gerais, sendo exibidos
+                            por completo apenas nas rotinas específicas de cadastro e cobrança que exigem essa
+                            informação.</p>
+                        <p class="mb-0">Enquanto titular dos dados, o mensalista pode solicitar a qualquer momento:
+                            acesso às informações armazenadas, correção de dados incorretos, ou exclusão/inativação do
+                            cadastro, através dos canais de contato informados abaixo.</p>
                     </div>
                 </section>
             </div>
 
-            <!-- SIDEBAR COM TECNOLOGIAS -->
+            <!-- SIDEBAR COM TECNOLOGIAS E CONTATO -->
             <div class="col-lg-4">
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-white py-3">
-                        <h2 class="h5 mb-0 fw-semibold"><i class="fas fa-code me-2 text-primary"></i>Stack Tecnológica
+                        <h2 class="h5 mb-0 fw-semibold">
+                            <i class="fas fa-code me-2 text-primary" aria-hidden="true"></i>Stack Tecnológica
                         </h2>
                     </div>
                     <div class="card-body">
                         <ul class="list-unstyled mb-0">
                             <li class="mb-3 d-flex align-items-center">
-                                <i class="fab fa-html5 text-danger fs-3 me-3"></i>
+                                <i class="fab fa-html5 text-danger fs-3 me-3" aria-hidden="true"></i>
                                 <div>
                                     <strong>HTML5 Semântico</strong>
                                     <div class="text-xs text-muted">Estruturação e WAI-ARIA</div>
                                 </div>
                             </li>
                             <li class="mb-3 d-flex align-items-center">
-                                <i class="fab fa-css3-alt text-primary fs-3 me-3"></i>
+                                <i class="fab fa-css3-alt text-primary fs-3 me-3" aria-hidden="true"></i>
                                 <div>
-                                    <strong>Bootstrap 5 & Custom CSS</strong>
+                                    <strong>Bootstrap 5 &amp; Custom CSS</strong>
                                     <div class="text-xs text-muted">Design System e Responsividade</div>
                                 </div>
                             </li>
                             <li class="mb-3 d-flex align-items-center">
-                                <i class="fab fa-js text-warning fs-3 me-3"></i>
+                                <i class="fab fa-js text-warning fs-3 me-3" aria-hidden="true"></i>
                                 <div>
                                     <strong>JavaScript ES6+</strong>
                                     <div class="text-xs text-muted">Arquitetura modular client-side</div>
                                 </div>
                             </li>
                             <li class="mb-3 d-flex align-items-center">
-                                <i class="fas fa-server text-secondary fs-3 me-3"></i>
+                                <i class="fas fa-server text-secondary fs-3 me-3" aria-hidden="true"></i>
                                 <div>
                                     <strong>JSON Server (REST API)</strong>
                                     <div class="text-xs text-muted">Backend simulado via HTTP</div>
                                 </div>
                             </li>
                             <li class="d-flex align-items-center">
-                                <i class="fas fa-chart-line text-success fs-3 me-3"></i>
+                                <i class="fas fa-chart-line text-success fs-3 me-3" aria-hidden="true"></i>
                                 <div>
-                                    <strong>Chart.js & SweetAlert2</strong>
+                                    <strong>Chart.js &amp; SweetAlert2</strong>
                                     <div class="text-xs text-muted">Gráficos e modais interativos</div>
                                 </div>
                             </li>
@@ -205,26 +302,78 @@
                     </div>
                 </div>
 
-                <div class="card bg-light border-0 p-3 shadow-sm text-center">
-                    <i class="fas fa-heart text-danger fs-2 mb-2"></i>
-                    <p class="small text-muted mb-0">Desenvolvido com foco em acessibilidade, usabilidade e alta
-                        performance para a gestão de estacionamentos.</p>
+                <!-- DADOS DA AUTORA / CONTATO -->
+                <div id="contato" class="card bg-light border-0 p-3 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-heart text-danger fs-2 mb-2" aria-hidden="true"></i>
+                        <h2 class="h6 fw-bold mb-1">Desenvolvido por Bruna Coelho</h2>
+                        <p class="small text-muted mb-3">Projeto acadêmico com foco em acessibilidade, usabilidade e
+                            segurança para a gestão de estacionamentos.</p>
+                        <ul class="list-unstyled small mb-0 text-start">
+                            <li class="mb-2">
+                                <i class="fas fa-envelope text-primary me-2" aria-hidden="true"></i>
+                                <a href="mailto:contato@parkgestao.com.br"
+                                    class="link-secondary">contato@parkgestao.com.br</a>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fab fa-github text-dark me-2" aria-hidden="true"></i>
+                                <a href="https://github.com/" class="link-secondary" target="_blank"
+                                    rel="noopener noreferrer">
+                                    Repositório no GitHub <span class="visually-hidden">(abre em nova aba)</span>
+                                </a>
+                            </li>
+                            <li>
+                                <i class="fab fa-linkedin text-primary me-2" aria-hidden="true"></i>
+                                <a href="https://www.linkedin.com/" class="link-secondary" target="_blank"
+                                    rel="noopener noreferrer">
+                                    LinkedIn <span class="visually-hidden">(abre em nova aba)</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- FOOTER -->
+    <!-- FOOTER ACESSÍVEL -->
     <footer class="py-4 text-center border-top mt-5">
         <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; 2026 ParkGestão — Sistema de Gestão de Estacionamento Acessível.</p>
+            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
+            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
+            <p class="mb-0">
+                <a href="#privacidade" class="link-secondary me-3">Política de Privacidade</a>
+                <a href="#contato" class="link-secondary">Contato</a>
+            </p>
         </div>
     </footer>
 
-    <!-- DEPENDÊNCIAS DE SCRIPT -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- MÓDULO DE ACESSIBILIDADE -->
-    <script src="../assets/js/modules/accessibility.js"></script>
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+
+    <!-- DEPENDÊNCIAS (carregadas uma única vez, com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <!-- MÓDULOS INTERNOS -->
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/modules/api.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
 </body>
 
 </html>

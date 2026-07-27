@@ -4,15 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Mapa e Gestão Visual de Vagas do Estacionamento - ParkGestão">
-    <title>Mapa de Vagas | ParkGestão</title>
+    <meta name="description" content="Gestão de Vagas e Tarifas do Estacionamento - ParkGestão">
+    <title>Vagas &amp; Tarifas | ParkGestão</title>
+
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
 
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="../assets/css/style.css">
+
+    <!--
+        NOTA DE SEGURANÇA (SAST): hashes SRI ("integrity") não foram fixados aqui de
+        propósito — gere-os em https://www.srihash.org/ para as versões exatas usadas
+        antes de subir para produção, e adicione integrity="sha384-..." em cada tag.
+    -->
 </head>
 
 <body>
@@ -22,31 +32,33 @@
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
     <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
-        role="region" aria-label="Acessibilidade">
+        role="region" aria-label="Barra de Acessibilidade">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" title="Aumentar Fonte"
-                aria-label="Aumentar Fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" title="Diminuir Fonte"
-                aria-label="Diminuir Fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" title="Restaurar Fonte"
-                aria-label="Restaurar Fonte">A</button>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" title="Alternar Alto Contraste"
-                aria-label="Alto Contraste">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
                 <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" title="Modo Fonte Dislexia"
-                aria-label="Modo Dislexia">
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
                 <i class="fas fa-font" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white"
-                title="Reduzir Animações" aria-label="Reduzir Animações">
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
                 <i class="fas fa-running" aria-hidden="true"></i> Animação Off
             </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
             <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Filtro para Daltonismo">
+                aria-label="Selecionar filtro para daltonismo">
                 <option value="normal">Daltonismo: Normal</option>
                 <option value="protanopia">Protanopia</option>
                 <option value="deuteranopia">Deuteranopia</option>
@@ -63,8 +75,18 @@
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
+
+                <!-- Indicador de Status da API -->
+                <div id="api-status-indicator"
+                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
+                    aria-live="polite">
+                    <span id="api-status-dot" class="rounded-circle bg-secondary"
+                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                    <span id="api-status-text">Verificando servidor…</span>
+                </div>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -73,8 +95,8 @@
                                     aria-hidden="true"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
                                     aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link active" aria-current="page" href="vagas.html"><i
-                                    class="fas fa-car me-1" aria-hidden="true"></i> Vagas</a></li>
+                        <li class="nav-item"><a class="nav-link active" aria-current="page" href="vagas-tarifas.html">
+                                <i class="fas fa-car me-1" aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i class="fas fa-id-card me-1"
                                     aria-hidden="true"></i> Mensalistas</a></li>
                         <li class="nav-item"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
@@ -89,65 +111,317 @@
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main id="main-content" class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
-                <h1 class="h3 fw-bold mb-0"><i class="fas fa-th-large text-primary me-2"></i>Mapa Visual de Vagas</h1>
-                <p class="text-muted mb-0">Acompanhe a ocupação do patio em tempo real por setor e categoria.</p>
+                <h1 class="h3 fw-bold mb-0"><i class="fas fa-th-large text-primary me-2" aria-hidden="true"></i>Vagas
+                    &amp; Tarifas</h1>
+                <p class="text-muted mb-0">Acompanhe a ocupação do pátio e gerencie vagas e tabela de preços.</p>
             </div>
         </div>
 
-        <!-- FILTROS E LEGENDA -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <!-- Filtros por tipo -->
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-sm">Filtrar por Categoria:</span>
-                    <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto"
-                        aria-label="Filtrar por tipo de vaga">
-                        <option value="TODOS">Todas as Categorias</option>
-                        <option value="Carro">Carros</option>
-                        <option value="Moto">Motos</option>
-                        <option value="PCD">PCD / Acessível</option>
-                        <option value="Idoso">Idoso</option>
-                    </select>
+        <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
+        <div id="page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <span id="page-error-text">Não foi possível carregar os dados. Verifique sua conexão e tente
+                novamente.</span>
+            <button id="btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+            </button>
+        </div>
+
+        <!-- ABAS: MAPA / VAGAS / TARIFAS -->
+        <ul class="nav nav-tabs mb-4" id="vagasTarifasTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-mapa-btn" data-bs-toggle="tab" data-bs-target="#tab-mapa"
+                    type="button" role="tab" aria-controls="tab-mapa" aria-selected="true">
+                    <i class="fas fa-map-marked-alt me-1" aria-hidden="true"></i> Mapa Visual
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-vagas-btn" data-bs-toggle="tab" data-bs-target="#tab-vagas"
+                    type="button" role="tab" aria-controls="tab-vagas" aria-selected="false">
+                    <i class="fas fa-list me-1" aria-hidden="true"></i> Gestão de Vagas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-tarifas-btn" data-bs-toggle="tab" data-bs-target="#tab-tarifas"
+                    type="button" role="tab" aria-controls="tab-tarifas" aria-selected="false">
+                    <i class="fas fa-tags me-1" aria-hidden="true"></i> Tarifas
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="vagasTarifasTabContent">
+
+            <!-- ABA 1: MAPA VISUAL -->
+            <div class="tab-pane fade show active" id="tab-mapa" role="tabpanel" aria-labelledby="tab-mapa-btn"
+                tabindex="0">
+                <!-- FILTROS E LEGENDA -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="filtro-tipo-vaga" class="fw-bold text-sm mb-0">Filtrar por Categoria:</label>
+                            <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto"
+                                aria-label="Filtrar por tipo de vaga">
+                                <option value="TODOS">Todas as Categorias</option>
+                                <option value="comum">Comum</option>
+                                <option value="coberta">Coberta</option>
+                                <option value="mensalista">Mensalista</option>
+                            </select>
+                        </div>
+
+                        <!-- Legenda com Acessibilidade (Cor + Ícone + Texto) -->
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <span class="badge-status status-livre"><i class="fas fa-check-circle"
+                                    aria-hidden="true"></i>
+                                Livre</span>
+                            <span class="badge-status status-ocupada"><i class="fas fa-car" aria-hidden="true"></i>
+                                Ocupada</span>
+                            <span class="badge-status status-pendente"><i class="fas fa-tools" aria-hidden="true"></i>
+                                Manutenção</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Legenda com Acessibilidade (Cor + Ícone + Texto) -->
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <span class="badge-status status-livre"><i class="fas fa-check-circle" aria-hidden="true"></i>
-                        Livre</span>
-                    <span class="badge-status status-ocupada"><i class="fas fa-car" aria-hidden="true"></i>
-                        Ocupada</span>
-                    <span class="badge-status status-pendente"><i class="fas fa-tools" aria-hidden="true"></i>
-                        Manutenção</span>
+                <!-- GRID VISUAL DAS VAGAS -->
+                <section aria-label="Grid de Vagas do Estacionamento">
+                    <div id="grid-mapa-vagas" class="vagas-grid" aria-live="polite" aria-busy="true">
+                        <div class="text-center py-5 text-muted w-100">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Carregando mapa do estacionamento...
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ABA 2: GESTÃO DE VAGAS -->
+            <div class="tab-pane fade" id="tab-vagas" role="tabpanel" aria-labelledby="tab-vagas-btn" tabindex="0">
+                <div class="card shadow-sm">
+                    <div
+                        class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-list text-primary me-2"
+                                aria-hidden="true"></i>Listagem de Vagas</h2>
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalVaga" id="btn-nova-vaga">
+                            <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Vaga
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" role="table"
+                                aria-label="Tabela de vagas cadastradas">
+                                <caption class="visually-hidden">Lista de vagas com número, tipo e status, com ações de
+                                    editar e excluir.</caption>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Número</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-vagas" aria-live="polite" aria-busy="true">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"
+                                                aria-hidden="true"></span>
+                                            Carregando vagas...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA 3: TARIFAS -->
+            <div class="tab-pane fade" id="tab-tarifas" role="tabpanel" aria-labelledby="tab-tarifas-btn" tabindex="0">
+                <div class="card shadow-sm">
+                    <div
+                        class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-tags text-primary me-2"
+                                aria-hidden="true"></i>Tabela de Tarifas</h2>
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalTarifa" id="btn-nova-tarifa">
+                            <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Tarifa
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" role="table"
+                                aria-label="Tabela de tarifas cadastradas">
+                                <caption class="visually-hidden">Lista de tarifas com nome e valor por hora, com ações
+                                    de editar e excluir.</caption>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Nome</th>
+                                        <th scope="col">Valor por Hora</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-tarifas" aria-live="polite" aria-busy="true">
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted">
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"
+                                                aria-hidden="true"></span>
+                                            Carregando tarifas...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- GRID VISUAL DAS VAGAS -->
-        <section aria-label="Grid de Vagas do Estacionamento">
-            <div id="grid-mapa-vagas" class="vagas-grid">
-                <div class="text-center py-5 text-muted w-100">Carregando mapa do estacionamento...</div>
-            </div>
-        </section>
     </main>
 
-    <!-- FOOTER -->
+    <!-- MODAL: CADASTRO/EDIÇÃO DE VAGA -->
+    <div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="form-vaga" novalidate>
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="modalVagaLabel">Nova Vaga</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="vaga-id" name="id">
+
+                        <div class="mb-3">
+                            <label for="vaga-numero" class="form-label">Número da vaga <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="vaga-numero" name="numero" required
+                                aria-describedby="vaga-numero-feedback">
+                            <div id="vaga-numero-feedback" class="invalid-feedback">
+                                Informe um número de vaga único (este campo não pode ficar vazio nem repetido).
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="vaga-tipo" class="form-label">Tipo <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <select class="form-select" id="vaga-tipo" name="tipo" required>
+                                <option value="" selected disabled>Selecione...</option>
+                                <option value="comum">Comum</option>
+                                <option value="coberta">Coberta</option>
+                                <option value="mensalista">Mensalista</option>
+                            </select>
+                            <div class="invalid-feedback">Selecione o tipo da vaga.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="vaga-status" class="form-label">Status <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <select class="form-select" id="vaga-status" name="status" required>
+                                <option value="" selected disabled>Selecione...</option>
+                                <option value="livre">Livre</option>
+                                <option value="manutencao">Manutenção</option>
+                            </select>
+                            <div class="form-text">
+                                <i class="fas fa-circle-info me-1" aria-hidden="true"></i>
+                                O status "Ocupada" é definido automaticamente pelo sistema ao abrir um ticket e não pode
+                                ser selecionado aqui.
+                            </div>
+                            <div class="invalid-feedback">Selecione o status da vaga.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-vaga">
+                            <i class="fas fa-save me-1" aria-hidden="true"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRO/EDIÇÃO DE TARIFA -->
+    <div class="modal fade" id="modalTarifa" tabindex="-1" aria-labelledby="modalTarifaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="form-tarifa" novalidate>
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="modalTarifaLabel">Nova Tarifa</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="tarifa-id" name="id">
+
+                        <div class="mb-3">
+                            <label for="tarifa-nome" class="form-label">Nome <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="tarifa-nome" name="nome" required
+                                placeholder="Ex.: Hora Normal, Diária" aria-describedby="tarifa-nome-feedback">
+                            <div id="tarifa-nome-feedback" class="invalid-feedback">
+                                Informe um nome para a tarifa.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tarifa-valor" class="form-label">Valor por hora (R$) <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <input type="number" class="form-control" id="tarifa-valor" name="valorHora" required
+                                min="0.01" step="0.01" inputmode="decimal" aria-describedby="tarifa-valor-feedback">
+                            <div id="tarifa-valor-feedback" class="invalid-feedback">
+                                O valor por hora deve ser um número maior que zero.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-tarifa">
+                            <i class="fas fa-save me-1" aria-hidden="true"></i> Salvar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER ACESSÍVEL -->
     <footer class="py-4 text-center border-top mt-5">
         <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; 2026 ParkGestão — Sistema de Gestão de Estacionamento Acessível.</p>
+            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
+            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
+            <p class="mb-0">
+                <a href="sobre.html#privacidade" class="link-secondary me-3">Política de Privacidade</a>
+                <a href="sobre.html#contato" class="link-secondary">Contato</a>
+            </p>
         </div>
     </footer>
 
-    <!-- DEPENDÊNCIAS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
 
-    <!-- MÓDULOS INTERNOS -->
-    <script src="../assets/js/modules/accessibility.js"></script>
-    <script src="../assets/js/modules/lgpd.js"></script>
-    <script src="../assets/js/modules/api.js"></script>
-    <script src="../assets/js/pages/vagas.js"></script>
+    <!-- DEPENDÊNCIAS (carregadas uma única vez, com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <!-- MÓDULOS INTERNOS (ordem importa) -->
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/modules/api.js"></script>
+    <script defer src="../assets/js/pages/vagas.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
 </body>
 
 </html>

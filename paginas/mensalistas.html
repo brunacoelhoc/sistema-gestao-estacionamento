@@ -7,12 +7,22 @@
     <meta name="description" content="Gestão de Mensalistas do Estacionamento com Conformidade LGPD - ParkGestão">
     <title>Gestão de Mensalistas | ParkGestão</title>
 
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="../assets/css/style.css">
+
+    <!--
+        NOTA DE SEGURANÇA (SAST): hashes SRI ("integrity") não foram fixados aqui de
+        propósito — gere-os em https://www.srihash.org/ para as versões exatas usadas
+        antes de subir para produção, e adicione integrity="sha384-..." em cada tag.
+    -->
 </head>
 
 <body>
@@ -22,31 +32,33 @@
 
     <!-- BARRA DE ACESSIBILIDADE WCAG -->
     <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
-        role="region" aria-label="Acessibilidade">
+        role="region" aria-label="Barra de Acessibilidade">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
-            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" title="Aumentar Fonte"
-                aria-label="Aumentar Fonte">A+</button>
-            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" title="Diminuir Fonte"
-                aria-label="Diminuir Fonte">A-</button>
-            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" title="Restaurar Fonte"
-                aria-label="Restaurar Fonte">A</button>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" title="Alternar Alto Contraste"
-                aria-label="Alto Contraste">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
                 <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
             </button>
-            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" title="Modo Fonte Dislexia"
-                aria-label="Modo Dislexia">
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
                 <i class="fas fa-font" aria-hidden="true"></i> Dislexia
             </button>
-            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white"
-                title="Reduzir Animações" aria-label="Reduzir Animações">
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
                 <i class="fas fa-running" aria-hidden="true"></i> Animação Off
             </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
             <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
-                aria-label="Filtro para Daltonismo">
+                aria-label="Selecionar filtro para daltonismo">
                 <option value="normal">Daltonismo: Normal</option>
                 <option value="protanopia">Protanopia</option>
                 <option value="deuteranopia">Deuteranopia</option>
@@ -63,8 +75,18 @@
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
+
+                <!-- Indicador de Status da API -->
+                <div id="api-status-indicator"
+                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
+                    aria-live="polite">
+                    <span id="api-status-dot" class="rounded-circle bg-secondary"
+                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                    <span id="api-status-text">Verificando servidor…</span>
+                </div>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -73,8 +95,8 @@
                                     aria-hidden="true"></i> Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
                                     aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link" href="vagas.html"><i class="fas fa-car me-1"
-                                    aria-hidden="true"></i> Vagas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
+                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link active" aria-current="page" href="mensalistas.html"><i
                                     class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
                         <li class="nav-item"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
@@ -89,40 +111,72 @@
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main id="main-content" class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
-                <h1 class="h3 fw-bold mb-0"><i class="fas fa-address-card text-primary me-2"></i>Gestão de Mensalistas
+                <h1 class="h3 fw-bold mb-0">
+                    <i class="fas fa-address-card text-primary me-2" aria-hidden="true"></i>Gestão de Mensalistas
                 </h1>
                 <p class="text-muted mb-0">Cadastre e acompanhe os clientes com contratos mensais fixos.</p>
             </div>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMensalista">
-                <i class="fas fa-user-plus me-1"></i> Cadastrar Mensalista
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalMensalista"
+                id="btn-cadastrar-mensalista">
+                <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Cadastrar Mensalista
+            </button>
+        </div>
+
+        <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
+        <div id="page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <span id="page-error-text">Não foi possível carregar os mensalistas. Verifique sua conexão e tente
+                novamente.</span>
+            <button id="btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
             </button>
         </div>
 
         <!-- TABELA DE MENSALISTAS -->
         <div class="card shadow-sm">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h2 class="h5 mb-0 fw-semibold">Clientes Cadastrados</h2>
-                <input type="text" id="input-busca-mensalista" class="form-control form-control-sm w-auto"
-                    placeholder="Buscar por nome ou placa..." aria-label="Buscar mensalista">
+                <div class="d-flex gap-2 flex-wrap">
+                    <label for="filtro-status-mensalista" class="visually-hidden">Filtrar por status</label>
+                    <select id="filtro-status-mensalista" class="form-select form-select-sm w-auto"
+                        aria-label="Filtrar mensalistas por status">
+                        <option value="TODOS">Todos os status</option>
+                        <option value="ativo">Somente Ativos</option>
+                        <option value="inativo">Somente Inativos</option>
+                    </select>
+                    <label for="input-busca-mensalista" class="visually-hidden">Buscar mensalista por nome ou
+                        placa</label>
+                    <input type="text" id="input-busca-mensalista" class="form-control form-control-sm"
+                        placeholder="Buscar por nome ou placa..." aria-label="Buscar mensalista por nome ou placa"
+                        autocomplete="off">
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" aria-label="Tabela de Mensalistas">
+                    <table class="table table-hover align-middle mb-0" role="table" aria-label="Tabela de mensalistas">
+                        <caption class="visually-hidden">
+                            Lista de mensalistas com nome, CPF (mascarado), telefone, placa do veículo e situação.
+                            Mensalistas não podem ser excluídos, apenas inativados ou reativados.
+                        </caption>
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">Nome</th>
-                                <th scope="col">CPF (LGPD)</th>
+                                <th scope="col">CPF</th>
                                 <th scope="col">Telefone</th>
                                 <th scope="col">Placa do Veículo</th>
-                                <th scope="col">Status</th>
+                                <th scope="col">Situação</th>
                                 <th scope="col">Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="tbody-mensalistas">
+                        <tbody id="tbody-mensalistas" aria-live="polite" aria-busy="true">
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Carregando mensalistas...</td>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"
+                                        aria-hidden="true"></span>
+                                    Carregando mensalistas...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -137,43 +191,66 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="modalMensalistaLabel"><i
-                            class="fas fa-id-card text-primary me-2"></i>Cadastrar Mensalista</h2>
+                    <h2 class="modal-title fs-5" id="modalMensalistaLabel">
+                        <i class="fas fa-id-card text-primary me-2" aria-hidden="true"></i>Cadastrar Mensalista
+                    </h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
-                <form id="form-mensalista">
-                    <input type="hidden" id="mensalista-id">
+                <form id="form-mensalista" novalidate>
+                    <input type="hidden" id="mensalista-id" name="id">
                     <div class="modal-body">
+
                         <div class="mb-3">
                             <label for="mensalista-nome" class="form-label fw-semibold">Nome Completo <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="mensalista-nome" required>
+                                    class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="mensalista-nome" name="nome" required
+                                aria-describedby="mensalista-nome-feedback">
+                            <div id="mensalista-nome-feedback" class="invalid-feedback">
+                                Informe o nome completo do mensalista.
+                            </div>
                         </div>
+
                         <div class="mb-3">
-                            <label for="mensalista-cpf" class="form-label fw-semibold">CPF <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="mensalista-cpf" placeholder="000.000.000-00"
-                                required>
+                            <label for="mensalista-cpf" class="form-label fw-semibold">CPF <span class="text-danger"
+                                    aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="mensalista-cpf" name="cpf"
+                                placeholder="000.000.000-00" inputmode="numeric" maxlength="14"
+                                pattern="^\d{3}\.\d{3}\.\d{3}-\d{2}$" required
+                                aria-describedby="mensalista-cpf-help mensalista-cpf-feedback">
+                            <div id="mensalista-cpf-help" class="form-text">
+                                Apenas a estrutura de 11 números é validada (sem verificação de dígito verificador).
+                            </div>
+                            <div id="mensalista-cpf-feedback" class="invalid-feedback">
+                                Informe um CPF válido no formato 000.000.000-00. Este CPF não pode estar duplicado.
+                            </div>
                         </div>
+
                         <div class="mb-3">
-                            <label for="mensalista-telefone" class="form-label fw-semibold">Telefone / WhatsApp <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="mensalista-telefone"
-                                placeholder="(11) 99999-9999" required>
+                            <label for="mensalista-telefone" class="form-label fw-semibold">Telefone / WhatsApp
+                                <span class="text-muted fw-normal">(opcional)</span></label>
+                            <input type="text" class="form-control" id="mensalista-telefone" name="telefone"
+                                placeholder="(11) 99999-9999" inputmode="tel">
                         </div>
+
                         <div class="mb-3">
                             <label for="mensalista-placa" class="form-label fw-semibold">Placa do Veículo <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-uppercase" id="mensalista-placa"
-                                placeholder="ABC1D23" maxlength="8" required>
+                                    class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control text-uppercase" id="mensalista-placa" name="placa"
+                                placeholder="ABC1D23 ou ABC-1234" maxlength="8" required
+                                pattern="^[A-Za-z]{3}-?\d[A-Za-z0-9]\d{2}$"
+                                aria-describedby="mensalista-placa-help mensalista-placa-feedback">
+                            <div id="mensalista-placa-help" class="form-text">
+                                Formato Mercosul (ABC1D23) ou antigo (ABC-1234).
+                            </div>
+                            <div id="mensalista-placa-feedback" class="invalid-feedback">
+                                Informe uma placa válida. Esta placa não pode estar duplicada.
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="mensalista-status" class="form-label fw-semibold">Status do Contrato <span
-                                    class="text-danger">*</span></label>
-                            <select class="form-select" id="mensalista-status" required>
-                                <option value="Ativo">Ativo</option>
-                                <option value="Inativo">Inativo</option>
-                            </select>
+
+                        <div class="form-text mb-3">
+                            <i class="fas fa-circle-info me-1" aria-hidden="true"></i>
+                            Todo mensalista é cadastrado como <strong>Ativo</strong> por padrão. O status só pode ser
+                            alterado depois, pelos botões "Inativar"/"Reativar" na listagem.
                         </div>
 
                         <!-- AVISO LGPD -->
@@ -187,30 +264,56 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Salvar
-                            Mensalista</button>
+                        <button type="submit" class="btn btn-primary" id="btn-salvar-mensalista">
+                            <i class="fas fa-save me-1" aria-hidden="true"></i> Salvar Mensalista
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- FOOTER -->
+    <!-- FOOTER ACESSÍVEL -->
     <footer class="py-4 text-center border-top mt-5">
         <div class="container text-muted text-sm">
-            <p class="mb-1">&copy; 2026 ParkGestão — Sistema de Gestão de Estacionamento Acessível.</p>
+            <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
+            <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
+            <p class="mb-0">
+                <a href="sobre.html#privacidade" class="link-secondary me-3">Política de Privacidade</a>
+                <a href="sobre.html#contato" class="link-secondary">Contato</a>
+            </p>
         </div>
     </footer>
 
-    <!-- DEPENDÊNCIAS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
 
-    <!-- MÓDULOS INTERNOS -->
-    <script src="../assets/js/modules/accessibility.js"></script>
-    <script src="../assets/js/modules/lgpd.js"></script>
-    <script src="../assets/js/modules/api.js"></script>
-    <script src="../assets/js/pages/mensalistas.js"></script>
+    <!-- DEPENDÊNCIAS (carregadas uma única vez, com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <!-- MÓDULOS INTERNOS (ordem importa) -->
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/modules/api.js"></script>
+    <script defer src="../assets/js/pages/mensalistas.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
 </body>
 
 </html>
