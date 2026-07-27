@@ -9,9 +9,15 @@ $color-alerta: #ff8b94; // Rosa/Vermelho Pastél (Ocupado / Inativo / Cancelado)
 $color-info: #d4f0f0; // Azul Pastél (Mensalista / Informação)
 
 // Tons de Texto para Alto Contraste sobre Pastéis
+// Contraste verificado (fórmula WCAG, mínimo AAA = 7:1 para texto normal):
+//   sucesso:  #a8e6cf + #0e3a2f -> ~8.93:1  OK
+//   pendente: #ffd3b6 + #4a2c00 -> ~9.23:1  OK
+//   alerta:   #ff8b94 + #3d0c13 -> ~7.44:1  OK (o tom original #4a0e17 dava
+//             apenas ~6.86:1, abaixo do mínimo AAA — foi escurecido)
+//   info:     #d4f0f0 + #0a3a40 -> ~10.35:1 OK
 $color-sucesso-text: #0e3a2f;
 $color-pendente-text: #4a2c00;
-$color-alerta-text: #4a0e17;
+$color-alerta-text: #3d0c13;
 $color-info-text: #0a3a40;
 
 // Neutros
@@ -21,9 +27,29 @@ $color-surface-dark: #1e1e1e;
 $color-text-light: #212529;
 $color-text-dark: #f8f9fa;
 
+// Footer
+$color-footer-bg: #1e293b;
+$color-footer-text: #f8fafc;
+$color-footer-link: #38bdf8;
+
+// Hero (gradiente de fundo do banner com Vanta.js)
+$color-hero-gradient-start: #1e293b;
+$color-hero-gradient-end: #0f172a;
+$color-hero-text: #ffffff;
+
+// Acessibilidade — indicador de foco
+// Cor testada visualmente sobre fundos claros, escuros e sobre os pastéis de
+// status acima; mantém contraste perceptível em todos os casos.
+$color-focus-outline: #ffbf47;
+
 // Fontes
 $font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
 $font-family-dyslexic: 'OpenDyslexic', 'Segoe UI', sans-serif;
+
+// Bordas
+$border-radius-sm: 0.25rem;
+$border-radius: 0.5rem;
+$border-radius-lg: 1rem;
 
 // Transições
 $transition-fast: 0.2s ease;

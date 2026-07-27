@@ -1,6 +1,23 @@
+@import 'variables';
+
 // ==========================================
 // CLASSES DE ACESSIBILIDADE (WCAG 2.1 AAA)
 // ==========================================
+
+// 0. Fonte para Dislexia (OpenDyslexic)
+//
+// IMPORTANTE: $font-family-dyslexic só troca a fonte de fato se o navegador
+// conseguir carregar "OpenDyslexic". Sem este @font-face, o toggle de
+// dislexia muda apenas espaçamento/altura de linha, mas a fonte cai sempre
+// no fallback (Segoe UI). Ajuste a URL abaixo para o CDN/hospedagem
+// definitiva escolhida pela equipe (verificar licença de uso da fonte).
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 // 1. Alto Contraste
 body.high-contrast {
@@ -31,44 +48,88 @@ body.high-contrast {
 }
 
 // 2. Modo OpenDyslexic / Dislexia
+//
+// ATENÇÃO (bug corrigido): o seletor abaixo troca a fonte de TODO texto
+// dentro de body.dyslexic-font, inclusive de ícones do FontAwesome — que
+// funcionam trocando font-family para renderizar seus glifos. Sem a exceção
+// abaixo, todo ícone <i class="fas ..."> vira um caractere quebrado assim
+// que o modo dislexia é ativado.
 body.dyslexic-font {
   font-family: $font-family-dyslexic !important;
   letter-spacing: 0.05em !important;
   word-spacing: 0.1em !important;
   line-height: 1.6 !important;
+
+  // Restaura a fonte de ícones do FontAwesome (todas as variantes usadas no projeto).
+  .fa,
+  .fas,
+  .far,
+  .fal,
+  .fad,
+  .fab,
+  [class^="fa-"],
+  [class*=" fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands' !important;
+  }
 }
 
 // 3. Filtros para Daltonismo (CSS Filters)
+//
+// ATENÇÃO — LIMITAÇÃO CONHECIDA (precisa de ajuste estrutural no HTML):
+// aplicar `filter` no <body> faz com que ele passe a ser o "containing
+// block" de qualquer elemento com `position: fixed` dentro dele (é assim
+// que a spec de CSS define filter/transform/backdrop-filter). Isso quebra
+// modais do Bootstrap e o widget flutuante de acessibilidade quando um
+// filtro de daltonismo estiver ativo — eles deixam de ficar fixos na tela e
+// passam a se mover junto com o scroll da página.
+//
+// Correção recomendada (fora do escopo deste arquivo CSS): mover a classe
+// de daltonismo do <body> para um <div> wrapper que envolva só o conteúdo
+// rolável (header + main + footer), deixando modais e o widget flutuante
+// FORA desse wrapper. O accessibility.js precisaria alternar a classe nesse
+// wrapper em vez de no body. Posso implementar isso se vocês quiserem.
+//
+// Os filtros agora apontam para um arquivo SVG externo em vez de data-URI
+// embutido no CSS, por robustez entre navegadores (Safari é inconsistente
+// com filtros SVG via data-URI direto na regra CSS).
 body.protanopia {
-  filter: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="protanopia"><feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#protanopia');
+  filter: url('../img/color-blind-filters.svg#protanopia');
 }
 
 body.deuteranopia {
-  filter: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0, 0.7, 0.3, 0, 0, 0, 0, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#deuteranopia');
+  filter: url('../img/color-blind-filters.svg#deuteranopia');
 }
 
 body.tritanopia {
-  filter: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="tritanopia"><feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0, 0, 0.433, 0.567, 0, 0, 0, 0.475, 0.525, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#tritanopia');
+  filter: url('../img/color-blind-filters.svg#tritanopia');
 }
 
-// 4. Redução de Movimento (Sensibilidade Labiríntica)
-body.reduce-motion {
+// 4. Redução de Movimento (Sensibilidade Labiríntica/Vestibular)
+//
+// Cobre o toggle manual ("Animação Off"). A preferência de sistema
+// (prefers-reduced-motion: reduce) já é tratada globalmente em main.scss —
+// mantida só aqui para não duplicar regras com valores diferentes entre
+// arquivos.
+body.reduce-motion,
+html.reduce-motion {
+
   *,
   *::before,
   *::after {
-    animation-duration: 0.001s !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001s !important;
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
+  }
+
+  // Vanta.js é uma animação 3D contínua — não faz sentido "desacelerar",
+  // precisa ser totalmente removida da tela.
+  #vanta-bg {
+    display: none !important;
   }
 }
 
 // Focus Visível para Navegação por Teclado
-a:focus,
-button:focus,
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 3px solid #005fcc !important;
-  outline-offset: 2px !important;
-}
+//
+// NOTA: o outline global de foco agora vive centralizado em main.scss
+// (:focus-visible + $color-focus-outline), para evitar duas cores de
+// outline conflitantes definidas com !important em arquivos diferentes.

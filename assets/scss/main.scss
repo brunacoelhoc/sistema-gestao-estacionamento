@@ -1,6 +1,12 @@
 // ==========================================
 // ARQUIVO PRINCIPAL MASTER SCSS
 // ==========================================
+//
+// NOTA DE MODERNIZAÇÃO (não bloqueante):
+// @import é oficialmente depreciado pelo Dart Sass e será removido em versão
+// futura. Quando revisarmos _variables.scss / _accessibility.scss /
+// _components.scss, vale migrar todo o projeto para @use/@forward de uma vez
+// (evita quebrar a referência às variáveis no meio do caminho).
 
 // 1. Importação dos Módulos
 @import 'variables';
@@ -8,6 +14,10 @@
 @import 'components';
 
 // 2. Estilos Globais
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   min-height: 100vh;
@@ -22,7 +32,74 @@ main {
   flex: 1;
 }
 
-// 3. Navbar Acessível
+// 3. Skip Link (Acessibilidade de Teclado)
+// Fica visualmente oculto até receber foco via TAB — é o primeiro elemento
+// focável da página e precisa ter alto contraste quando aparece.
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0.5rem;
+  z-index: 1080; // acima da accessibility-bar e da navbar
+  padding: 0.75rem 1.25rem;
+  background-color: #000000;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 0 0 $border-radius-sm $border-radius-sm;
+  transition: top $transition-fast;
+
+  &:focus,
+  &:focus-visible {
+    top: 0;
+    outline: 3px solid $color-focus-outline;
+    outline-offset: 2px;
+  }
+}
+
+// 4. Foco Visível Global (WCAG 2.1 AAA)
+// Reforça o indicador de foco em qualquer elemento interativo, garantindo
+// contraste mínimo mesmo sobre fundos customizados (accessibility-bar, cards
+// escuros de métricas, badges, etc.).
+a,
+button,
+input,
+select,
+textarea,
+[tabindex] {
+  &:focus-visible {
+    outline: 3px solid $color-focus-outline;
+    outline-offset: 2px;
+  }
+}
+
+// 5. Redução de Movimento (WCAG 2.1 AAA — sensibilidade labiríntica/vestibular)
+// Aqui cobrimos só a preferência de sistema (prefers-reduced-motion). O
+// toggle manual do botão "Animação Off" (classe .reduce-motion) está
+// centralizado em _accessibility.scss, junto com as demais classes de
+// acessibilidade — evita duas fontes de verdade com valores diferentes.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  #vanta-bg {
+    display: none !important;
+  }
+}
+
+// 6. Utilitário de Tipografia
+// Usado em várias páginas (badges, legendas, rótulos de KPI) e não existe
+// nativamente no Bootstrap 5.
+.text-xs {
+  font-size: 0.75rem;
+}
+
+// 7. Navbar Acessível
 .navbar {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
@@ -37,11 +114,15 @@ main {
   }
 }
 
-// 4. Hero & Vanta.js Container
+// 8. Hero & Vanta.js Container
 .hero-section {
   position: relative;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    $color-hero-gradient-start 0%,
+    $color-hero-gradient-end 100%
+  );
+  color: $color-hero-text;
   padding: 3rem 0;
   overflow: hidden;
 
@@ -60,23 +141,28 @@ main {
   }
 }
 
-// 5. Modais e Animações
+// 9. Modais e Animações
 .modal-header {
   border-bottom-width: 2px;
 }
 
-// 6. Rodapé Acessível
+// 10. Rodapé Acessível
 footer {
   margin-top: auto;
-  background-color: #1e293b;
-  color: #f8fafc;
+  background-color: $color-footer-bg;
+  color: $color-footer-text;
 
   a {
-    color: #38bdf8;
+    color: $color-footer-link;
     text-decoration: none;
 
     &:hover {
       text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 3px solid $color-focus-outline;
+      outline-offset: 2px;
     }
   }
 }
