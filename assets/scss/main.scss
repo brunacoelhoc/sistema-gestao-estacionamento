@@ -1,0 +1,82 @@
+// ==========================================
+// ARQUIVO PRINCIPAL MASTER SCSS
+// ==========================================
+
+// 1. Importação dos Módulos
+@import 'variables';
+@import 'accessibility';
+@import 'components';
+
+// 2. Estilos Globais
+html,
+body {
+  min-height: 100vh;
+  font-family: $font-family-base;
+  background-color: $color-bg-light;
+  color: $color-text-light;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+// 3. Navbar Acessível
+.navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  .nav-link {
+    font-weight: 500;
+    transition: color $transition-fast;
+
+    &.active {
+      font-weight: 700;
+      border-bottom: 2px solid currentColor;
+    }
+  }
+}
+
+// 4. Hero & Vanta.js Container
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  padding: 3rem 0;
+  overflow: hidden;
+
+  #vanta-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// 5. Modais e Animações
+.modal-header {
+  border-bottom-width: 2px;
+}
+
+// 6. Rodapé Acessível
+footer {
+  margin-top: auto;
+  background-color: #1e293b;
+  color: #f8fafc;
+
+  a {
+    color: #38bdf8;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

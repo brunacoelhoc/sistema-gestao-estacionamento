@@ -1,0 +1,30 @@
+// ==========================================
+// PALETA DE CORES PASTÉIS & TEMAS (WCAG AAA)
+// ==========================================
+
+// Cores de Status (Psicologia das Cores)
+$color-sucesso: #a8e6cf; // Verde Pastél (Livre / Ativo)
+$color-pendente: #ffd3b6; // Amarelo Pastél (Em Aberto / Pendente)
+$color-alerta: #ff8b94; // Rosa/Vermelho Pastél (Ocupado / Inativo / Cancelado)
+$color-info: #d4f0f0; // Azul Pastél (Mensalista / Informação)
+
+// Tons de Texto para Alto Contraste sobre Pastéis
+$color-sucesso-text: #0e3a2f;
+$color-pendente-text: #4a2c00;
+$color-alerta-text: #4a0e17;
+$color-info-text: #0a3a40;
+
+// Neutros
+$color-bg-light: #f8f9fa;
+$color-bg-dark: #121212;
+$color-surface-dark: #1e1e1e;
+$color-text-light: #212529;
+$color-text-dark: #f8f9fa;
+
+// Fontes
+$font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+$font-family-dyslexic: 'OpenDyslexic', 'Segoe UI', sans-serif;
+
+// Transições
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease;

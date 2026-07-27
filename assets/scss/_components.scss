@@ -1,0 +1,108 @@
+@import 'variables';
+
+// ==========================================
+// COMPONENTES & BADGES COM PSICOLOGIA DAS CORES
+// ==========================================
+
+// Badges (Sempre Cor + Ícone + Texto para Acessibilidade)
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4em 0.75em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 50rem;
+
+  i {
+    font-size: 0.85rem;
+  }
+
+  &.status-livre,
+  &.status-ativo {
+    background-color: $color-sucesso;
+    color: $color-sucesso-text;
+  }
+
+  &.status-pendente,
+  &.status-aberto {
+    background-color: $color-pendente;
+    color: $color-pendente-text;
+  }
+
+  &.status-ocupada,
+  &.status-inativo,
+  &.status-cancelado {
+    background-color: $color-alerta;
+    color: $color-alerta-text;
+  }
+
+  &.status-mensalista,
+  &.status-pago {
+    background-color: $color-info;
+    color: $color-info-text;
+  }
+}
+
+// Grid de Vagas no Dashboard
+.vagas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+
+  .vaga-card {
+    border-radius: 0.75rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: transform $transition-fast, box-shadow $transition-fast;
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    &.vaga-livre {
+      background-color: lighten($color-sucesso, 15%);
+      border-color: $color-sucesso;
+      color: $color-sucesso-text;
+    }
+
+    &.vaga-ocupada {
+      background-color: lighten($color-alerta, 15%);
+      border-color: $color-alerta;
+      color: $color-alerta-text;
+    }
+
+    .vaga-codigo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .vaga-tipo {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+// Widget de Acessibilidade Flutuante
+.accessibility-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1050;
+
+  .btn-accessibility-toggle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+}
