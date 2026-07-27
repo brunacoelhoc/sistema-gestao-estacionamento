@@ -1,173 +1,375 @@
-/* ==========================================================================
-   ParkGestão - Estilos Globais e Acessibilidade (WCAG 2.1 AA)
-   ========================================================================== */
-
-/* 1. VARIÁVEIS DE TEMA E CORES */
-:root {
-    --primary-color: #0d6efd;
-    --secondary-color: #6c757d;
-    --success-color: #198754;
-    --info-color: #0dcaf0;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --light-bg: #f8f9fa;
-    --dark-bg: #212529;
-
-    --body-bg: #f4f6f9;
-    --text-color: #212529;
-    --card-bg: #ffffff;
-    --border-color: #dee2e6;
-
-    --font-base: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-dyslexic: "OpenDyslexic", "Comic Sans MS", sans-serif;
-    --font-current: var(--font-base);
-    --font-size-root: 100%;
+@font-face {
+    font-family: "OpenDyslexic";
+    src: url("https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
 }
 
-/* 2. BASE & RESET */
+body.high-contrast {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .card,
+body.high-contrast .modal-content,
+body.high-contrast .navbar,
+body.high-contrast .table {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+}
+
+body.high-contrast a,
+body.high-contrast .btn-link {
+    color: #ffff00 !important;
+    text-decoration: underline !important;
+}
+
+body.high-contrast .btn-primary {
+    background-color: #ffff00 !important;
+    color: #000000 !important;
+    border-color: #ffffff !important;
+    font-weight: bold;
+}
+
+body.dyslexic-font {
+    font-family: "OpenDyslexic", "Segoe UI", sans-serif !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.1em !important;
+    line-height: 1.6 !important;
+}
+
+body.dyslexic-font .fa,
+body.dyslexic-font .fas,
+body.dyslexic-font .far,
+body.dyslexic-font .fal,
+body.dyslexic-font .fad,
+body.dyslexic-font .fab,
+body.dyslexic-font [class^=fa-],
+body.dyslexic-font [class*=" fa-"] {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+}
+
+body.protanopia {
+    filter: url("../img/color-blind-filters.svg#protanopia");
+}
+
+body.deuteranopia {
+    filter: url("../img/color-blind-filters.svg#deuteranopia");
+}
+
+body.tritanopia {
+    filter: url("../img/color-blind-filters.svg#tritanopia");
+}
+
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after,
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+}
+
+body.reduce-motion #vanta-bg,
+html.reduce-motion #vanta-bg {
+    display: none !important;
+}
+
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4em 0.75em;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 50rem;
+}
+
+.badge-status i {
+    font-size: 0.85rem;
+}
+
+.badge-status.status-livre,
+.badge-status.status-ativo {
+    background-color: #a8e6cf;
+    color: #0e3a2f;
+}
+
+.badge-status.status-pendente,
+.badge-status.status-aberto,
+.badge-status.status-manutencao {
+    background-color: #ffd3b6;
+    color: #4a2c00;
+}
+
+.badge-status.status-ocupada,
+.badge-status.status-inativo,
+.badge-status.status-cancelado {
+    background-color: #ff8b94;
+    color: #3d0c13;
+}
+
+.badge-status.status-mensalista,
+.badge-status.status-pago,
+.badge-status.status-fechado {
+    background-color: #d4f0f0;
+    color: #0a3a40;
+}
+
+.vagas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.vagas-grid .vaga-card {
+    border-radius: 0.75rem;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vagas-grid .vaga-card.is-interativo {
+    cursor: pointer;
+}
+
+.vagas-grid .vaga-card.is-interativo:hover,
+.vagas-grid .vaga-card.is-interativo:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.vagas-grid .vaga-card.is-interativo:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
+.vagas-grid .vaga-card.vaga-livre {
+    background-color: rgb(89.1859243697%, 96.8925070028%, 94.0336134454%);
+    border-color: #a8e6cf;
+    color: #0e3a2f;
+}
+
+.vagas-grid .vaga-card.vaga-ocupada {
+    background-color: rgb(100%, 84.5098039216%, 85.7116294794%);
+    border-color: #ff8b94;
+    color: #3d0c13;
+}
+
+.vagas-grid .vaga-card.vaga-manutencao {
+    background-color: rgb(100%, 94.7998925598%, 91.3725490196%);
+    border-color: #ffd3b6;
+    color: #4a2c00;
+}
+
+.vagas-grid .vaga-card .vaga-codigo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.vagas-grid .vaga-card .vaga-tipo {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.vagas-grid .vaga-card .badge-status {
+    font-size: 0.7rem;
+    padding: 0.3em 0.6em;
+}
+
+.metrics-dark-panel {
+    background-color: #121212;
+    color: #f8f9fa;
+    min-height: calc(100vh - 250px);
+}
+
+.metrics-kpi-card {
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metrics-kpi-label {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.metrics-kpi-value {
+    color: #f8f9fa;
+}
+
+.metrics-chart-card {
+    background-color: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metrics-chart-card .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metrics-chart-card .table-dark {
+    --bs-table-bg: transparent;
+}
+
+.card-kpi {
+    border-radius: 0.5rem;
+}
+
+.accessibility-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+
+.accessibility-widget .btn-accessibility-toggle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.accessibility-widget .btn-accessibility-toggle:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
 html {
-    font-size: var(--font-size-root);
     scroll-behavior: smooth;
 }
 
+html,
 body {
-    font-family: var(--font-current);
-    background-color: var(--body-bg);
-    color: var(--text-color);
     min-height: 100vh;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background-color: #f8f9fa;
+    color: #212529;
     display: flex;
     flex-direction: column;
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 main {
-    flex: 1 0 auto;
+    flex: 1;
 }
 
-/* Skip Link para navegação rápida via teclado (WCAG 2.4.1) */
 .skip-link {
     position: absolute;
-    top: -40px;
-    left: 10px;
-    background: var(--warning-color);
-    color: #000;
-    padding: 8px 16px;
-    z-index: 1050;
-    font-weight: bold;
-    border-radius: 0 0 4px 4px;
+    top: -100%;
+    left: 0.5rem;
+    z-index: 1080;
+    padding: 0.75rem 1.25rem;
+    background-color: #000000;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 0 0 0.25rem 0.25rem;
     transition: top 0.2s ease;
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.skip-link:focus-visible {
     top: 0;
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
 }
 
-/* 3. BARRA DE ACESSIBILIDADE WCAG */
-.accessibility-bar {
-    font-size: 0.85rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 1030;
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    #vanta-bg {
+        display: none !important;
+    }
 }
 
 .text-xs {
     font-size: 0.75rem;
 }
 
-/* 4. MODOS DE ACESSIBILIDADE */
-
-/* Alto Contraste */
-body.high-contrast {
-    --body-bg: #000000;
-    --text-color: #ffffff;
-    --card-bg: #121212;
-    --border-color: #444444;
-    --primary-color: #ffff00;
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-body.high-contrast .card {
-    background-color: var(--card-bg);
-    border: 2px solid var(--border-color) !important;
-    color: #ffffff;
+.navbar .nav-link {
+    font-weight: 500;
+    transition: color 0.2s ease;
 }
 
-body.high-contrast .table {
-    color: #ffffff;
-    border-color: var(--border-color);
+.navbar .nav-link.active {
+    font-weight: 700;
+    border-bottom: 2px solid currentColor;
 }
 
-body.high-contrast .bg-light {
-    background-color: #1e1e1e !important;
-    color: #ffffff !important;
-}
-
-/* Fonte para Dislexia */
-body.dyslexic-mode {
-    --font-current: var(--font-dyslexic);
-    letter-spacing: 0.05em;
-    word-spacing: 0.1em;
-    line-height: 1.6;
-}
-
-/* Redução de Animações */
-body.reduce-motion *,
-body.reduce-motion *::before,
-body.reduce-motion *::after {
-    animation: none !important;
-    transition: none !important;
-}
-
-/* 5. FILTROS PARA DALTONISMO */
-body.protanopia-filter {
-    filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="protanopia"><feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#protanopia');
-}
-
-body.deuteranopia-filter {
-    filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0, 0.7, 0.3, 0, 0, 0, 0, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#deuteranopia');
-}
-
-body.tritanopia-filter {
-    filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="tritanopia"><feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0, 0, 0.433, 0.567, 0, 0, 0, 0.475, 0.525, 0, 0, 0, 0, 0, 1, 0"/></filter></svg>#tritanopia');
-}
-
-/* 6. COMPONENTES DAS VAGAS DO PÁTIO */
-.vaga-card {
-    border-radius: 8px;
-    border: 2px solid var(--border-color);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    min-height: 120px;
-}
-
-.vaga-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.vaga-card.livre {
-    border-color: var(--success-color);
-    background-color: rgba(25, 135, 84, 0.05);
-}
-
-.vaga-card.ocupada {
-    border-color: var(--danger-color);
-    background-color: rgba(220, 53, 69, 0.05);
-}
-
-.vaga-card.manutencao {
-    border-color: var(--warning-color);
-    background-color: rgba(255, 193, 7, 0.05);
-}
-
-.vaga-card.reservada {
-    border-color: var(--info-color);
-    background-color: rgba(13, 202, 240, 0.05);
-}
-
-/* 7. UTILITÁRIOS */
-.max-w-700 {
-    max-width: 700px;
-}
-
-.vanta-container {
+.hero-section {
     position: relative;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #ffffff;
+    padding: 3rem 0;
     overflow: hidden;
+}
+
+.hero-section #vanta-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.hero-section .hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.modal-header {
+    border-bottom-width: 2px;
+}
+
+footer {
+    margin-top: auto;
+    background-color: #1e293b;
+    color: #f8fafc;
+}
+
+footer a {
+    color: #38bdf8;
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+footer a:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
 }

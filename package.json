@@ -1,16 +1,22 @@
 {
-  "name": "projeto",
+  "name": "parkgestao",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Sistema de Gestão de Estacionamento acessível (WCAG 2.1 AAA) e em conformidade com a LGPD.",
+  "author": "Bruna Coelho",
+  "license": "UNLICENSED",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "json-server --watch db.json --port 3001",
+    "sass:build": "sass assets/scss/main.scss:assets/css/style.css --no-source-map --style=compressed",
+    "sass:watch": "sass assets/scss/main.scss:assets/css/style.css --no-source-map --style=expanded --watch",
+    "dev": "concurrently -n SERVER,SASS -c blue,magenta \"npm:server\" \"npm:sass:watch\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
-    "json-server": "^1.0.0-beta.15"
+    "concurrently": "^10.0.4",
+    "json-server": "^0.17.4",
+    "sass": "^1.102.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

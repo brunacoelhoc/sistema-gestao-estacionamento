@@ -128,6 +128,51 @@
   }
 }
 
+// Painel "Grafana Dark" (página de Métricas)
+//
+// Contraste verificado: $color-text-dark (#f8f9fa) sobre $color-surface-dark
+// (#1e1e1e) passa de 15:1. O rótulo semi-transparente do KPI
+// (rgba(255,255,255,.65) sobre a mesma superfície) dá ~7.69:1 — ainda dentro
+// do mínimo AAA (7:1) para texto normal.
+.metrics-dark-panel {
+  background-color: $color-bg-dark;
+  color: $color-text-dark;
+  min-height: calc(100vh - 250px); // aprox. altura descontando navbar/footer
+}
+
+.metrics-kpi-card {
+  background-color: $color-surface-dark;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metrics-kpi-label {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.metrics-kpi-value {
+  color: $color-text-dark;
+}
+
+.metrics-chart-card {
+  background-color: $color-surface-dark;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  // Tabela de dados alternativa (acessível) dentro do <details>/.collapse
+  .table-dark {
+    --bs-table-bg: transparent;
+  }
+}
+
+// Cards de KPI do Dashboard (index.html)
+.card-kpi {
+  border-radius: $border-radius;
+}
+
 // Widget de Acessibilidade Flutuante
 //
 // PERGUNTA PARA A EQUIPE: nenhuma página revisada até agora referencia esta

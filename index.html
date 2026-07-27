@@ -32,7 +32,7 @@
 
     <!-- Three.js + Vanta.js (efeito único, carregado uma só vez, com defer) -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.topology.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.waves.min.js"></script>
 </head>
 
 <body>
@@ -288,12 +288,11 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" role="table"
                         aria-label="Tickets ativos no momento">
-                        <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, tipo de
-                            veículo, vaga, horário de entrada e cliente associado.</caption>
+                        <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, vaga, horário
+                            de entrada e cliente associado.</caption>
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">Placa</th>
-                                <th scope="col">Tipo Veículo</th>
                                 <th scope="col">Vaga</th>
                                 <th scope="col">Entrada</th>
                                 <th scope="col">Cliente</th>
@@ -302,7 +301,7 @@
                         </thead>
                         <tbody id="tbody-tickets-recentes" aria-live="polite" aria-busy="true">
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
+                                <td colspan="5" class="text-center py-4 text-muted">
                                     <span class="spinner-border spinner-border-sm me-2" role="status"
                                         aria-hidden="true"></span>
                                     Carregando dados...
