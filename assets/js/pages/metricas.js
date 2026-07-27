@@ -1,16 +1,13 @@
 /**
  * Lógica da Página de Métricas e Relatórios
- * Cálculo de KPIs e renderização de gráficos acessíveis com Chart.js.
+ * Cálculo de KPIs, tabelas acessíveis e renderização de gráficos interativos com Chart.js.
  */
 
 let chartOcupacaoHorario = null
 let chartReceitaMensal = null
 let chartCategorias = null
 
-// Paleta pastel do projeto (mantida em sincronia manual com
-// assets/scss/_variables.scss — não há uma fonte única compartilhada entre
-// Sass e JS neste projeto, então qualquer mudança de cor lá precisa ser
-// replicada aqui também).
+// Paleta de cores do projeto para os gráficos
 const PALETA = {
   sucesso: '#a8e6cf',
   pendente: '#ffd3b6',
@@ -22,14 +19,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   configurarTemaDarkDoChartJs()
   await carregarEProcessarMetricas()
 
+  // Botão de tentar novamente do banner de erro
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
     carregarEProcessarMetricas()
   })
 })
 
-// Ajusta as cores padrão do Chart.js para leitura confortável sobre o painel
-// escuro ("Grafana Dark") — sem isso, texto/grade ficam quase invisíveis.
+// Ajusta as cores padrão do Chart.js para leitura confortável sobre o tema escuro
 function configurarTemaDarkDoChartJs () {
+  if (typeof Chart === 'undefined') return
   Chart.defaults.color = 'rgba(255, 255, 255, 0.75)'
   Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)'
 }
@@ -48,10 +46,14 @@ async function carregarEProcessarMetricas () {
       ApiService.getMensalistas()
     ])
 
-    atualizarKPIs(vagas, tickets, mensalistas)
-    renderizarGraficoOcupacaoHorario(tickets)
-    renderizarGraficoReceitaMensal(tickets)
-    renderizarGraficoCategorias(vagas)
+    const vagasLista = vagas || []
+    const ticketsLista = tickets || []
+    const mensalistasLista = mensalistas || []
+
+    atualizarKPIs(vagasLista, ticketsLista, mensalistasLista)
+    renderizarGraficoOcupacaoHorario(ticketsLista)
+    renderizarGraficoReceitaMensal(ticketsLista)
+    renderizarGraficoCategorias(vagasLista)
   } catch (error) {
     console.error('Erro ao carregar dados de métricas:', error)
 
@@ -69,52 +71,63 @@ async function carregarEProcessarMetricas () {
   }
 }
 
-// Atualiza os cards superiores de indicadores de desempenho
+// Atualiza os cards superiores de indicadores de desempenho (KPIs)
 function atualizarKPIs (vagas, tickets, mensalistas) {
   const ticketsFechados = tickets.filter(
     t => (t.status || '').toLowerCase() === 'fechado'
   )
 
-  // Total de atendimentos (todos os tickets já emitidos, abertos ou fechados)
-  document.getElementById('metric-total-atendimentos').innerText =
-    tickets.length
+  // Total de atendimentos (todos os tickets já emitidos)
+  const elTotalAtendimentos = document.getElementById(
+    'metric-total-atendimentos'
+  )
+  if (elTotalAtendimentos) elTotalAtendimentos.innerText = tickets.length
 
-  // Total de mensalistas cadastrados (ativos + inativos)
-  document.getElementById('metric-total-mensalistas').innerText =
-    mensalistas.length
+  // Total de mensalistas cadastrados
+  const elTotalMensalistas = document.getElementById('metric-total-mensalistas')
+  if (elTotalMensalistas) elTotalMensalistas.innerText = mensalistas.length
 
-  // Receita DO MÊS ATUAL — soma o valorTotal dos tickets fechados cuja
-  // dataSaida caiu no mês/ano corrente.
+  // Receita do Mês Atual
   const agora = new Date()
   const receitaDoMes = ticketsFechados
     .filter(t => {
       if (!t.dataSaida) return false
       const d = new Date(t.dataSaida)
       return (
+        !isNaN(d) &&
         d.getMonth() === agora.getMonth() &&
         d.getFullYear() === agora.getFullYear()
       )
     })
     .reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0)
 
-  document.getElementById('metric-receita-total').innerText = `R$ ${receitaDoMes
-    .toFixed(2)
-    .replace('.', ',')}`
+  const elReceitaTotal = document.getElementById('metric-receita-total')
+  if (elReceitaTotal) {
+    elReceitaTotal.innerText = `R$ ${receitaDoMes.toFixed(2).replace('.', ',')}`
+  }
 
-  // Tempo médio de permanência — diferença real entre dataSaida e
-  // dataEntrada dos tickets fechados, em horas e minutos.
-  document.getElementById('metric-tempo-medio').innerText =
-    calcularTempoMedioPermanencia(ticketsFechados)
+  // Tempo médio de permanência
+  const elTempoMedio = document.getElementById('metric-tempo-medio')
+  if (elTempoMedio) {
+    elTempoMedio.innerText = calcularTempoMedioPermanencia(ticketsFechados)
+  }
 }
 
+// Calcula o tempo médio de permanência dos veículos
 function calcularTempoMedioPermanencia (ticketsFechados) {
-  const validos = ticketsFechados.filter(t => t.dataEntrada && t.dataSaida)
-  if (validos.length === 0) return 'Nenhum dado disponível'
+  const validos = ticketsFechados.filter(t => {
+    if (!t.dataEntrada || !t.dataSaida) return false
+    const dEntrada = new Date(t.dataEntrada)
+    const dSaida = new Date(t.dataSaida)
+    return !isNaN(dEntrada) && !isNaN(dSaida) && dSaida >= dEntrada
+  })
+
+  if (validos.length === 0) return '0h 0m'
 
   const totalMs = validos.reduce((acc, t) => {
     const entrada = new Date(t.dataEntrada)
     const saida = new Date(t.dataSaida)
-    return acc + Math.max(0, saida - entrada)
+    return acc + (saida - entrada)
   }, 0)
 
   const mediaMs = totalMs / validos.length
@@ -125,28 +138,20 @@ function calcularTempoMedioPermanencia (ticketsFechados) {
   return `${horas}h ${minutos}m`
 }
 
-// Gráfico: Ocupação por Horário
-//
-// DECISÃO DE MODELAGEM (documentar para a equipe): reconstruir quantas vagas
-// estavam ocupadas SIMULTANEAMENTE em cada hora exigiria um modelo de
-// intervalos (checar sobreposição de todos os tickets ativos naquele
-// horário, em algum dia de referência). Isso é bem mais complexo e ambíguo
-// sem uma data específica escolhida. Como proxy mais simples e diretamente
-// calculável a partir dos dados, uso aqui "entradas por horário do dia"
-// (quantos tickets começaram em cada hora, somando todo o histórico). Se a
-// equipe quiser o modelo de ocupação simultânea de verdade, precisamos
-// decidir um dia de referência (ex.: "hoje") e me avisar.
+// Gráfico: Ocupação por Horário de Entrada
 function renderizarGraficoOcupacaoHorario (tickets) {
-  const ctx = document
-    .getElementById('chart-ocupacao-horario')
-    ?.getContext('2d')
-  if (!ctx) return
+  const canvas = document.getElementById('chart-ocupacao-horario')
+  if (!canvas || typeof Chart === 'undefined') return
+  const ctx = canvas.getContext('2d')
 
   const contagemPorHora = new Array(24).fill(0)
   tickets.forEach(t => {
     if (!t.dataEntrada) return
-    const hora = new Date(t.dataEntrada).getHours()
-    contagemPorHora[hora]++
+    const d = new Date(t.dataEntrada)
+    if (!isNaN(d)) {
+      const hora = d.getHours()
+      contagemPorHora[hora]++
+    }
   })
 
   const labels = contagemPorHora.map(
@@ -180,12 +185,15 @@ function renderizarGraficoOcupacaoHorario (tickets) {
     }
   })
 
-  // Alternativa textual acessível (WCAG 1.1.1)
+  // Tabela acessível (WCAG 1.1.1)
   const tbody = document.getElementById('tbody-ocupacao-horario')
   if (tbody) {
     tbody.innerHTML = labels
       .map(
-        (label, i) => `<tr><td>${label}</td><td>${contagemPorHora[i]}</td></tr>`
+        (label, i) =>
+          `<tr><td>${ApiService.sanitizeText(label)}</td><td>${
+            contagemPorHora[i]
+          }</td></tr>`
       )
       .join('')
   }
@@ -193,23 +201,25 @@ function renderizarGraficoOcupacaoHorario (tickets) {
 
 // Gráfico: Receita Mensal
 function renderizarGraficoReceitaMensal (tickets) {
-  const ctx = document.getElementById('chart-receita-mensal')?.getContext('2d')
-  if (!ctx) return
+  const canvas = document.getElementById('chart-receita-mensal')
+  if (!canvas || typeof Chart === 'undefined') return
+  const ctx = canvas.getContext('2d')
 
   const ticketsFechados = tickets.filter(
     t => (t.status || '').toLowerCase() === 'fechado' && t.dataSaida
   )
 
-  // Agrupa por ano-mês (chave "AAAA-MM") para ordenar corretamente
   const totaisPorMes = {}
   ticketsFechados.forEach(t => {
     const d = new Date(t.dataSaida)
-    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      '0'
-    )}`
-    totaisPorMes[chave] =
-      (totaisPorMes[chave] || 0) + (Number(t.valorTotal) || 0)
+    if (!isNaN(d)) {
+      const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        '0'
+      )}`
+      totaisPorMes[chave] =
+        (totaisPorMes[chave] || 0) + (Number(t.valorTotal) || 0)
+    }
   })
 
   const chavesOrdenadas = Object.keys(totaisPorMes).sort()
@@ -227,6 +237,7 @@ function renderizarGraficoReceitaMensal (tickets) {
     'Nov',
     'Dez'
   ]
+
   const labels = chavesOrdenadas.map(chave => {
     const [ano, mes] = chave.split('-')
     return `${nomesMes[Number(mes) - 1]}/${ano.slice(2)}`
@@ -254,7 +265,10 @@ function renderizarGraficoReceitaMensal (tickets) {
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { callback: value => `R$ ${value}` }
+          ticks: {
+            callback: value =>
+              `R$ ${Number(value).toFixed(2).replace('.', ',')}`
+          }
         }
       },
       plugins: { legend: { display: false } }
@@ -263,26 +277,31 @@ function renderizarGraficoReceitaMensal (tickets) {
 
   const tbody = document.getElementById('tbody-receita-mensal')
   if (tbody) {
-    tbody.innerHTML = labels
-      .map(
-        (label, i) =>
-          `<tr><td>${label}</td><td>R$ ${valores[i]
-            .toFixed(2)
-            .replace('.', ',')}</td></tr>`
-      )
-      .join('')
+    tbody.innerHTML =
+      labels.length > 0
+        ? labels
+            .map(
+              (label, i) =>
+                `<tr><td>${ApiService.sanitizeText(label)}</td><td>R$ ${valores[
+                  i
+                ]
+                  .toFixed(2)
+                  .replace('.', ',')}</td></tr>`
+            )
+            .join('')
+        : '<tr><td colspan="2" class="text-center text-muted">Nenhum dado registrado</td></tr>'
   }
 }
 
-// Gráfico: Ocupação por Categoria — mostra vagas OCUPADAS por tipo (não o
-// inventário total), já que o título do card promete "ocupação".
+// Gráfico: Distribuição/Ocupação por Categoria de Vaga
 function renderizarGraficoCategorias (vagas) {
-  const ctx = document.getElementById('chart-categorias')?.getContext('2d')
-  if (!ctx) return
+  const canvas = document.getElementById('chart-categorias')
+  if (!canvas || typeof Chart === 'undefined') return
+  const ctx = canvas.getContext('2d')
 
   const porTipo = {}
   vagas.forEach(v => {
-    const tipo = v.tipo || 'outro'
+    const tipo = (v.tipo || 'Outros').toUpperCase()
     if (!porTipo[tipo]) porTipo[tipo] = { ocupadas: 0, total: 0 }
     porTipo[tipo].total++
     if ((v.status || '').toLowerCase() === 'ocupada') porTipo[tipo].ocupadas++
@@ -300,8 +319,8 @@ function renderizarGraficoCategorias (vagas) {
       labels: labels.length > 0 ? labels : ['Sem dados'],
       datasets: [
         {
-          label: 'Vagas ocupadas',
-          data: dataOcupadas.length > 0 ? dataOcupadas : [1],
+          label: 'Vagas Ocupadas',
+          data: dataOcupadas.length > 0 ? dataOcupadas : [0],
           backgroundColor: cores,
           borderWidth: 2,
           borderColor: '#1e1e1e'
@@ -322,11 +341,16 @@ function renderizarGraficoCategorias (vagas) {
 
   const tbody = document.getElementById('tbody-ocupacao-categoria')
   if (tbody) {
-    tbody.innerHTML = labels
-      .map(
-        tipo =>
-          `<tr><td>${tipo}</td><td>${porTipo[tipo].ocupadas}</td><td>${porTipo[tipo].total}</td></tr>`
-      )
-      .join('')
+    tbody.innerHTML =
+      labels.length > 0
+        ? labels
+            .map(
+              tipo =>
+                `<tr><td>${ApiService.sanitizeText(tipo)}</td><td>${
+                  porTipo[tipo].ocupadas
+                }</td><td>${porTipo[tipo].total}</td></tr>`
+            )
+            .join('')
+        : '<tr><td colspan="3" class="text-center text-muted">Nenhuma vaga cadastrada</td></tr>'
   }
 }

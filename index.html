@@ -21,17 +21,6 @@
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="assets/css/style.css">
 
-    <link rel="icon" type="image/svg+xml" href="projeto/assets/img/favicon.svg">
-
-    <!--
-        NOTA DE SEGURANÇA (SAST):
-        Não incluí hashes "integrity" (SRI) fixos nos CDNs acima/abaixo porque um hash
-        incorreto quebra o carregamento do recurso silenciosamente. Antes de subir para
-        produção, gere os hashes reais em https://www.srihash.org/ para cada versão
-        exata usada (Bootstrap 5.3.2, FontAwesome 6.4.0, Vanta, SweetAlert2) e adicione
-        o atributo integrity="sha384-..." em cada tag.
-    -->
-
     <!-- Three.js + Vanta.js (efeito único, carregado uma só vez, com defer) -->
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
@@ -143,8 +132,26 @@
             </button>
         </div>
 
+        <!-- SEÇÃO COM FILTRO E CARDS DE VAGAS -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2 gap-2">
+            <h2 class="h6 text-uppercase text-muted fw-bold mb-0">Vagas por status</h2>
+
+            <!-- FILTRO POR TIPO DE VAGA (REQUISITO 2.7) -->
+            <div class="d-flex align-items-center gap-2">
+                <label for="filtro-tipo-vaga" class="form-label text-sm text-muted mb-0 fw-semibold">
+                    <i class="fas fa-filter me-1" aria-hidden="true"></i>Filtrar tipo:
+                </label>
+                <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto shadow-sm"
+                    aria-label="Filtrar métricas por tipo de vaga">
+                    <option value="todos">Todos os tipos</option>
+                    <option value="comum">Comum</option>
+                    <option value="coberta">Coberta</option>
+                    <option value="mensalista">Mensalista</option>
+                </select>
+            </div>
+        </div>
+
         <!-- CARDS KPI: contagem de vagas por status -->
-        <h2 class="h6 text-uppercase text-muted fw-bold mb-2">Vagas por status</h2>
         <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="card card-kpi border-start border-success border-4 shadow-sm h-100">
@@ -251,7 +258,7 @@
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted text-sm fw-semibold d-block">TICKET MÉDIO</span>
-                            <h2 id="kpi-ticket-medio" class="mb-0 fw-bold text-info">
+                            <h2 id="kpi-ticket-medio" class="mb-0 fw-bold text-info fs-4">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
                             </h2>
                         </div>
@@ -267,7 +274,7 @@
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted text-sm fw-semibold d-block">TEMPO MÉDIO DE PERMANÊNCIA</span>
-                            <h2 id="kpi-tempo-medio" class="mb-0 fw-bold text-dark">
+                            <h2 id="kpi-tempo-medio" class="mb-0 fw-bold text-dark fs-4">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
                             </h2>
                         </div>
@@ -279,45 +286,90 @@
             </div>
         </div>
 
-        <!-- TABELA DE ATIVIDADES RECENTES -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
-                <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-list-alt text-primary me-2"
-                        aria-hidden="true"></i> Tickets Ativos no Momento</h2>
-                <a href="paginas/tickets.html" class="btn btn-outline-primary btn-sm">Ver Todos</a>
+        <div class="row g-4">
+            <!-- TABELA DE ATIVIDADES RECENTES -->
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                        <h2 class="h5 mb-0 fw-bold text-dark">
+                            <i class="fas fa-list-alt text-primary me-2" aria-hidden="true"></i> Tickets Ativos no
+                            Momento
+                        </h2>
+                        <a href="paginas/tickets.html" class="btn btn-outline-primary btn-sm">Ver Todos</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" role="table"
+                                aria-label="Tickets ativos no momento">
+                                <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, vaga,
+                                    horário
+                                    de entrada e cliente associado.</caption>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Placa</th>
+                                        <th scope="col">Vaga</th>
+                                        <th scope="col">Entrada</th>
+                                        <th scope="col">Cliente</th>
+                                        <th scope="col">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-tickets-recentes" aria-live="polite" aria-busy="true">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"
+                                                aria-hidden="true"></span>
+                                            Carregando dados...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" role="table"
-                        aria-label="Tickets ativos no momento">
-                        <caption class="visually-hidden">Lista de tickets atualmente abertos, com placa, vaga, horário
-                            de entrada e cliente associado.</caption>
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Placa</th>
-                                <th scope="col">Vaga</th>
-                                <th scope="col">Entrada</th>
-                                <th scope="col">Cliente</th>
-                                <th scope="col">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-tickets-recentes" aria-live="polite" aria-busy="true">
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"
-                                        aria-hidden="true"></span>
-                                    Carregando dados...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <!-- RANKING DAS VAGAS MAIS UTILIZADAS (REQUISITO 2.6) -->
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h2 class="h5 mb-0 fw-bold text-dark">
+                            <i class="fas fa-trophy text-warning me-2" aria-hidden="true"></i> Ranking de Uso das Vagas
+                        </h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0"
+                                aria-label="Ranking de utilização das vagas">
+                                <caption class="visually-hidden">Ranking ordenado das vagas mais utilizadas por
+                                    quantidade de tickets associados.</caption>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" style="width: 60px;">#</th>
+                                        <th scope="col">Vaga</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col" class="text-end">Uso Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-ranking-vagas" aria-live="polite">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"
+                                                aria-hidden="true"></span>
+                                            Carregando ranking...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
     </main>
 
     <!-- FOOTER ACESSÍVEL -->
-    <footer class="py-4 text-center border-top">
+    <footer class="py-4 text-center border-top mt-4">
         <div class="container text-muted text-sm">
             <p class="mb-1">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.</p>
             <p class="mb-2">Projeto Estacionamento | Acessibilidade WCAG 2.1 AAA &amp; LGPD.</p>
@@ -347,7 +399,7 @@
         referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
 
-    <!-- MÓDULOS INTERNOS DA APLICAÇÃO (ordem importa: acessibilidade/LGPD/api antes das páginas) -->
+    <!-- MÓDULOS INTERNOS DA APLICAÇÃO -->
     <script defer src="assets/js/modules/accessibility.js"></script>
     <script defer src="assets/js/modules/lgpd.js"></script>
     <script defer src="assets/js/modules/api.js"></script>

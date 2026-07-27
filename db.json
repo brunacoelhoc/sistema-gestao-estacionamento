@@ -1,79 +1,93 @@
 {
-    "mensalistas": [
-        {
-            "id": "1",
-            "nome": "Carlos Eduardo Silva",
-            "cpf": "123.456.789-00",
-            "placa": "ABC1D23",
-            "status": "Ativo",
-            "telefone": "(11) 98765-4321"
-        },
-        {
-            "id": "2",
-            "nome": "Mariana Oliveira",
-            "cpf": "987.654.321-11",
-            "placa": "XYZ9876",
-            "status": "Inativo",
-            "telefone": "(11) 91234-5678"
-        }
-    ],
-    "vagas": [
-        {
-            "id": "1",
-            "codigo": "A-01",
-            "tipo": "Carro",
-            "status": "Ocupada"
-        },
-        {
-            "id": "2",
-            "codigo": "A-02",
-            "tipo": "Carro",
-            "status": "Livre"
-        },
-        {
-            "id": "3",
-            "codigo": "M-01",
-            "tipo": "Moto",
-            "status": "Livre"
-        },
-        {
-            "id": "4",
-            "codigo": "PCD-01",
-            "tipo": "Deficiente",
-            "status": "Livre"
-        },
-        {
-            "id": "5",
-            "codigo": "I-01",
-            "tipo": "Idoso",
-            "status": "Livre"
-        }
-    ],
-    "tarifas": [
-        {
-            "id": "1",
-            "tipoVeiculo": "Carro",
-            "valorHora": 10.0,
-            "valorAdicional": 5.0
-        },
-        {
-            "id": "2",
-            "tipoVeiculo": "Moto",
-            "valorHora": 6.0,
-            "valorAdicional": 3.0
-        }
-    ],
-    "tickets": [
-        {
-            "id": "1001",
-            "placa": "ABC1D23",
-            "tipoVeiculo": "Carro",
-            "vagaId": "1",
-            "mensalistaId": "1",
-            "dataEntrada": "2026-07-27T08:00:00.000Z",
-            "dataSaida": null,
-            "valorTotal": null,
-            "status": "Aberto"
-        }
-    ]
+  "mensalistas": [
+    {
+      "id": "1",
+      "nome": "Carlos Eduardo Silva",
+      "cpf": "123.456.789-00",
+      "placa": "ABC1D23",
+      "status": "Ativo",
+      "telefone": "(11) 98765-4321"
+    },
+    {
+      "id": "2",
+      "nome": "Mariana Oliveira",
+      "cpf": "987.654.321-11",
+      "placa": "XYZ9876",
+      "status": "Inativo",
+      "telefone": "(11) 91234-5678"
+    },
+    {
+      "nome": "Bruna Coelho",
+      "cpf": "453.448.398-80",
+      "placa": "ABC1D25",
+      "ativo": true,
+      "telefone": "(11) 94469-7788",
+      "id": "nsERumW5iEs"
+    }
+  ],
+  "vagas": [
+    {
+      "id": "1",
+      "codigo": "A-01",
+      "tipo": "Carro",
+      "status": "Ocupada"
+    },
+    {
+      "id": "2",
+      "codigo": "A-02",
+      "tipo": "Carro",
+      "status": "livre"
+    },
+    {
+      "id": "3",
+      "codigo": "M-01",
+      "tipo": "Moto",
+      "status": "Livre"
+    },
+    {
+      "id": "4",
+      "codigo": "PCD-01",
+      "tipo": "Deficiente",
+      "status": "Livre"
+    },
+    {
+      "id": "5",
+      "codigo": "I-01",
+      "tipo": "Idoso",
+      "status": "Livre"
+    }
+  ],
+  "tarifas": [
+    {
+      "id": "2",
+      "tipoVeiculo": "Moto",
+      "valorHora": 6,
+      "valorAdicional": 3
+    }
+  ],
+  "tickets": [
+    {
+      "id": "1001",
+      "placa": "ABC1D23",
+      "tipoVeiculo": "Carro",
+      "vagaId": "1",
+      "mensalistaId": "1",
+      "dataEntrada": "2026-07-27T08:00:00.000Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "Aberto"
+    },
+    {
+      "placa": "DCB2A34",
+      "vagaId": "2",
+      "tarifaId": null,
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T16:52:59.727Z",
+      "dataSaida": "2026-07-27T16:53:20.987Z",
+      "valorTotal": 10,
+      "status": "fechado",
+      "id": "FRghW-LQ3e4"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
 }

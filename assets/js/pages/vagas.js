@@ -1,26 +1,27 @@
 /**
- * Lógica da Página de Mapa Visual de Vagas
- * Renderização dinâmica do grid e alternância de status.
+ * Lógica da Página de Vagas & Tarifas
+ * Renderização dinâmica do mapa, tabelas de gestão, validações e regras de negócio.
  */
 
 let todasVagas = []
+let todosTickets = []
+let todasTarifas = []
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await carregarMapaVagas()
+  await carregarTodosOsDados()
 
-  // Evento do filtro de categoria
+  // Evento do filtro por tipo/categoria no Mapa Visual
   document.getElementById('filtro-tipo-vaga')?.addEventListener('change', e => {
     filtrarVagasPorTipo(e.target.value)
   })
 
-  // Botão "Tentar novamente" do banner de erro global da página
+  // Botão "Tentar novamente" em caso de erro na página
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
-    carregarMapaVagas()
+    carregarTodosOsDados()
   })
 })
 
-// Mapeamento único de status -> classe do card, classe do badge, ícone e texto.
-// Mantém tudo em UM lugar para não repetir (e desalinhar) essa lógica em vários pontos.
+// Mapeamento de status da vaga
 const STATUS_VAGA = {
   livre: {
     cardClass: 'vaga-livre',
@@ -39,60 +40,80 @@ const STATUS_VAGA = {
     badgeClass: 'status-manutencao',
     icon: 'fa-tools',
     texto: 'Manutenção'
+  },
+  manutenção: {
+    cardClass: 'vaga-manutencao',
+    badgeClass: 'status-manutencao',
+    icon: 'fa-tools',
+    texto: 'Manutenção'
   }
 }
 
-// Busca as vagas na API
-async function carregarMapaVagas () {
-  const gridContainer = document.getElementById('grid-mapa-vagas')
+// Carrega Vagas, Tickets e Tarifas da API
+async function carregarTodosOsDados () {
   const pageError = document.getElementById('page-error')
-  const pageErrorText = document.getElementById('page-error-text')
-
   pageError?.classList.add('d-none')
-  gridContainer?.setAttribute('aria-busy', 'true')
 
   try {
-    todasVagas = await ApiService.getVagas()
-    renderizarGridVagas(todasVagas)
-  } catch (error) {
-    console.error('Erro ao carregar mapa de vagas:', error)
+    const [vagas, tickets, tarifas] = await Promise.all([
+      typeof ApiService !== 'undefined' && ApiService.getVagas
+        ? ApiService.getVagas()
+        : Promise.resolve([]),
+      typeof ApiService !== 'undefined' && ApiService.getTickets
+        ? ApiService.getTickets()
+        : Promise.resolve([]),
+      typeof ApiService !== 'undefined' && ApiService.getTarifas
+        ? ApiService.getTarifas()
+        : Promise.resolve([])
+    ])
 
-    if (pageError && pageErrorText) {
-      pageErrorText.textContent =
-        'Não foi possível carregar o mapa de vagas. Verifique sua conexão e tente novamente.'
+    todasVagas = vagas || []
+    todosTickets = tickets || []
+    todasTarifas = tarifas || []
+
+    // Renderiza a aba ativa (Mapa Visual e Tabelas de Gestão)
+    renderizarGridVagas(todasVagas)
+    renderizarTabelaVagas(todasVagas)
+    renderizarTabelaTarifas(todasTarifas)
+  } catch (error) {
+    console.error('Erro ao carregar dados de Vagas e Tarifas:', error)
+
+    if (pageError) {
       pageError.classList.remove('d-none')
     }
 
-    Swal.fire({
-      icon: 'error',
-      title: 'Erro de Conexão',
-      text: 'Não foi possível carregar o mapa de vagas do servidor.'
-    })
-  } finally {
-    gridContainer?.setAttribute('aria-busy', 'false')
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro de Conexão',
+        text: 'Não foi possível carregar os dados do servidor.'
+      })
+    }
   }
 }
 
-// Renderiza o Grid de Vagas
+/* ==========================================================================
+   1. MAPA VISUAL DE VAGAS
+   ========================================================================== */
+
 function renderizarGridVagas (vagasList) {
   const gridContainer = document.getElementById('grid-mapa-vagas')
+  if (!gridContainer) return
   gridContainer.innerHTML = ''
 
   if (!vagasList || vagasList.length === 0) {
-    const vazio = document.createElement('div')
-    vazio.className = 'text-center py-5 text-muted'
-    vazio.style.gridColumn = '1 / -1' // ocupa a linha inteira do grid
-    vazio.innerHTML =
-      '<i class="fas fa-search me-2" aria-hidden="true"></i>Nenhuma vaga encontrada para esta categoria.'
-    gridContainer.appendChild(vazio)
+    gridContainer.innerHTML = `
+      <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+        <i class="fas fa-search me-2" aria-hidden="true"></i>Nenhuma vaga encontrada para esta categoria.
+      </div>
+    `
     return
   }
 
   vagasList.forEach(vaga => {
-    // Normaliza para minúsculo — o db.json é a fonte de verdade, mas isso
-    // protege contra pequenas inconsistências de digitação nos dados.
-    const statusKey = (vaga.status || '').toLowerCase()
-    const info = STATUS_VAGA[statusKey] || STATUS_VAGA.livre
+    const rawStatus = (vaga.status || 'livre').toLowerCase()
+    const info = STATUS_VAGA[rawStatus] || STATUS_VAGA.livre
+    const numeroVaga = vaga.codigo || vaga.numero || vaga.id
 
     const card = document.createElement('div')
     card.className = `vaga-card ${info.cardClass} is-interativo shadow-sm position-relative`
@@ -100,21 +121,19 @@ function renderizarGridVagas (vagasList) {
     card.setAttribute('tabindex', '0')
     card.setAttribute(
       'aria-label',
-      `Vaga ${vaga.codigo}, categoria ${vaga.tipo}, status ${info.texto}`
+      `Vaga ${numeroVaga}, tipo ${vaga.tipo}, status ${info.texto}`
     )
 
-    const localizacaoHtml = vaga.localizacao
-      ? `<div class="small mt-1 text-opacity-75">${ApiService.sanitizeText(
-          vaga.localizacao
-        )}</div>`
-      : ''
+    const sanitize =
+      typeof ApiService !== 'undefined'
+        ? ApiService.sanitizeText
+        : str => str || ''
 
     card.innerHTML = `
-      <div class="vaga-codigo">${ApiService.sanitizeText(vaga.codigo)}</div>
-      <div class="vaga-tipo fw-semibold">${ApiService.sanitizeText(
-        vaga.tipo
+      <div class="vaga-codigo">${sanitize(numeroVaga)}</div>
+      <div class="vaga-tipo fw-semibold text-uppercase">${sanitize(
+        vaga.tipo || 'comum'
       )}</div>
-      ${localizacaoHtml}
       <div class="mt-2">
         <span class="badge-status ${info.badgeClass}">
           <i class="fas ${info.icon}" aria-hidden="true"></i> ${info.texto}
@@ -122,11 +141,7 @@ function renderizarGridVagas (vagasList) {
       </div>
     `
 
-    // Clique com mouse
     card.addEventListener('click', () => abrirOpcoesVaga(vaga))
-
-    // Ativação por teclado (Enter/Espaço) — um <div role="button"> não
-    // recebe isso de graça como um <button> nativo receberia.
     card.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault()
@@ -138,85 +153,470 @@ function renderizarGridVagas (vagasList) {
   })
 }
 
-// Filtra vagas por tipo/categoria
 function filtrarVagasPorTipo (tipo) {
-  if (tipo === 'TODOS') {
+  const tipoFormatado = (tipo || '').trim().toLowerCase()
+  if (
+    !tipoFormatado ||
+    tipoFormatado === 'todas' ||
+    tipoFormatado === 'todos'
+  ) {
     renderizarGridVagas(todasVagas)
   } else {
     const filtradas = todasVagas.filter(
-      v => v.tipo.toLowerCase() === tipo.toLowerCase()
+      v => (v.tipo || '').toLowerCase() === tipoFormatado
     )
     renderizarGridVagas(filtradas)
   }
 }
 
-// Opções rápidas ao clicar na vaga
+/* ==========================================================================
+   2. GESTÃO DE VAGAS (TABELA)
+   ========================================================================== */
+
+function renderizarTabelaVagas (vagas) {
+  const tbody =
+    document.getElementById('tabela-vagas-body') ||
+    document.querySelector('#tabela-vagas tbody') ||
+    document.getElementById('listagem-vagas-body') ||
+    document.querySelector('table tbody')
+
+  if (!tbody) return
+
+  const sanitize =
+    typeof ApiService !== 'undefined'
+      ? ApiService.sanitizeText
+      : str => str || ''
+
+  if (!vagas || vagas.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhuma vaga cadastrada.</td></tr>'
+    return
+  }
+
+  tbody.innerHTML = vagas
+    .map(vaga => {
+      const numero = vaga.codigo || vaga.numero || vaga.id
+      const tipo = vaga.tipo || 'comum'
+      const status = vaga.status || 'livre'
+
+      return `
+      <tr>
+        <td class="fw-bold">${sanitize(numero)}</td>
+        <td class="text-capitalize">${sanitize(tipo)}</td>
+        <td><span class="badge status-${status.toLowerCase()}">${sanitize(
+        status
+      )}</span></td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary me-1" onclick="editarVaga('${
+            vaga.id
+          }')">
+            <i class="fas fa-edit"></i> Editar
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="excluirVaga('${
+            vaga.id
+          }')">
+            <i class="fas fa-trash"></i> Excluir
+          </button>
+        </td>
+      </tr>
+    `
+    })
+    .join('')
+}
+
+/* ==========================================================================
+   3. TABELA DE TARIFAS
+   ========================================================================== */
+
+/* ==========================================================================
+   3. TABELA DE TARIFAS (CORRIGIDA)
+   ========================================================================== */
+
+function renderizarTabelaTarifas (tarifas) {
+  // Busca por todos os IDs e estruturas comuns que o HTML pode ter
+  const tbody =
+    document.getElementById('tabela-tarifas-body') ||
+    document.querySelector('#tabela-tarifas tbody') ||
+    document.getElementById('listagem-tarifas-body') ||
+    document.querySelector('#tarifas-body') ||
+    document.querySelectorAll('table tbody')[1] || // Seleciona a segunda tabela da página
+    document.querySelector('.table-tarifas tbody')
+
+  if (!tbody) {
+    console.warn(
+      '[Tarifas] Container/tbody da tabela de tarifas não foi encontrado no HTML.'
+    )
+    return
+  }
+
+  const sanitize =
+    typeof ApiService !== 'undefined'
+      ? ApiService.sanitizeText
+      : str => str || ''
+
+  if (!tarifas || tarifas.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="3" class="text-center py-4 text-muted">Nenhuma tarifa cadastrada.</td></tr>'
+    return
+  }
+
+  tbody.innerHTML = tarifas
+    .map(tarifa => {
+      const nome = tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral'
+      const valor = Number(tarifa.valorHora || tarifa.valor || 0)
+        .toFixed(2)
+        .replace('.', ',')
+
+      return `
+        <tr>
+          <td class="fw-bold">${sanitize(nome)}</td>
+          <td>R$ ${valor} / h</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editarTarifa('${
+              tarifa.id
+            }')">
+              <i class="fas fa-edit"></i> Editar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="excluirTarifa('${
+              tarifa.id
+            }')">
+              <i class="fas fa-trash"></i> Excluir
+            </button>
+          </td>
+        </tr>
+      `
+    })
+    .join('')
+}
+
+/* ==========================================================================
+   4. REGRAS DE NEGÓCIO E AÇÕES DE EDIÇÃO E EXCLUSÃO
+   ========================================================================== */
+
+function possuiTicketAberto (vagaId) {
+  return todosTickets.some(
+    ticket =>
+      String(ticket.vagaId) === String(vagaId) &&
+      (ticket.status || '').toLowerCase() === 'aberto'
+  )
+}
+
+// EDIÇÃO DE VAGA
+async function editarVaga (vagaId) {
+  const vaga = todasVagas.find(v => String(v.id) === String(vagaId))
+  if (!vaga) return
+
+  if (possuiTicketAberto(vagaId)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Vaga Ocupada',
+      text: 'Esta vaga possui um ticket em aberto e não pode ter suas informações editadas agora.'
+    })
+    return
+  }
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Editar Vaga',
+    html: `
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Código/Número da Vaga</label>
+        <input id="swal-input-codigo" class="form-control" value="${
+          vaga.codigo || vaga.numero || vaga.id
+        }">
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Tipo de Veículo</label>
+        <select id="swal-input-tipo" class="form-select">
+          <option value="carro" ${
+            vaga.tipo === 'carro' ? 'selected' : ''
+          }>Carro</option>
+          <option value="moto" ${
+            vaga.tipo === 'moto' ? 'selected' : ''
+          }>Moto</option>
+          <option value="deficiente" ${
+            vaga.tipo === 'deficiente' ? 'selected' : ''
+          }>Deficiente</option>
+          <option value="idoso" ${
+            vaga.tipo === 'idoso' ? 'selected' : ''
+          }>Idoso</option>
+        </select>
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Salvar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      return {
+        codigo: document.getElementById('swal-input-codigo').value,
+        tipo: document.getElementById('swal-input-tipo').value
+      }
+    }
+  })
+
+  if (formValues) {
+    try {
+      await ApiService.updateVaga(vagaId, formValues)
+      Swal.fire({
+        icon: 'success',
+        title: 'Vaga atualizada!',
+        timer: 1500,
+        showConfirmButton: false
+      })
+      await carregarTodosOsDados()
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao atualizar',
+        text: error.message
+      })
+    }
+  }
+}
+
+// EDIÇÃO DE TARIFA
+async function editarTarifa (tarifaId) {
+  const tarifa = todasTarifas.find(t => String(t.id) === String(tarifaId))
+  if (!tarifa) return
+
+  // Identifica a categoria atual (normalizando maiúsculas/minúsculas)
+  const catAtual = (tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral')
+    .toLowerCase()
+    .trim()
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Editar Tarifa',
+    html: `
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Categoria / Tipo</label>
+        <select id="swal-input-categoria" class="form-select">
+          <option value="Carro" ${
+            catAtual === 'carro' ? 'selected' : ''
+          }>Carro</option>
+          <option value="Moto" ${
+            catAtual === 'moto' ? 'selected' : ''
+          }>Moto</option>
+          <option value="Deficiente" ${
+            catAtual === 'deficiente' || catAtual === 'pcd' ? 'selected' : ''
+          }>Deficiente (PCD)</option>
+          <option value="Idoso" ${
+            catAtual === 'idoso' ? 'selected' : ''
+          }>Idoso</option>
+          <option value="Geral" ${
+            catAtual === 'geral' ? 'selected' : ''
+          }>Geral / Padrão</option>
+        </select>
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Valor da Hora (R$)</label>
+        <input id="swal-input-valor" type="number" step="0.50" class="form-control" value="${
+          tarifa.valorHora || tarifa.valor || 0
+        }">
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Salvar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const categoria = document.getElementById('swal-input-categoria').value
+      const valorHora = Number(
+        document.getElementById('swal-input-valor').value
+      )
+
+      if (isNaN(valorHora) || valorHora < 0) {
+        Swal.showValidationMessage('Informe um valor válido por hora.')
+        return false
+      }
+
+      return { categoria, valorHora }
+    }
+  })
+
+  if (formValues) {
+    try {
+      await ApiService.updateTarifa(tarifaId, formValues)
+      Swal.fire({
+        icon: 'success',
+        title: 'Tarifa atualizada!',
+        timer: 1500,
+        showConfirmButton: false
+      })
+      await carregarTodosOsDados()
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao atualizar tarifa',
+        text: error.message || 'Falha ao salvar no servidor.'
+      })
+    }
+  }
+}
+
 async function abrirOpcoesVaga (vaga) {
   const statusKey = (vaga.status || '').toLowerCase()
+  const numeroVaga = vaga.codigo || vaga.numero || vaga.id
+  const sanitize =
+    typeof ApiService !== 'undefined'
+      ? ApiService.sanitizeText
+      : str => str || ''
 
-  // Regra de negócio: o status "ocupada" só pode mudar automaticamente, ao
-  // fechar o ticket correspondente (ver paginas/tickets.html). Por isso,
-  // uma vaga ocupada só mostra informações aqui — sem ação de alterar status.
-  if (statusKey === 'ocupada') {
-    await Swal.fire({
-      title: `Vaga ${ApiService.sanitizeText(vaga.codigo)}`,
-      html: `
-        <p class="mb-1"><strong>Tipo:</strong> ${ApiService.sanitizeText(
-          vaga.tipo
-        )}</p>
-        <p class="mb-0"><strong>Status Atual:</strong> Ocupada</p>
-        <p class="text-muted small mt-2 mb-0">
-          Para liberar esta vaga, feche o ticket correspondente na tela de Tickets.
-        </p>
-      `,
-      icon: 'info',
-      confirmButtonText: 'Fechar'
-    })
+  if (possuiTicketAberto(vaga.id) || statusKey === 'ocupada') {
+    if (typeof Swal !== 'undefined') {
+      await Swal.fire({
+        title: `Vaga ${sanitize(numeroVaga)}`,
+        html: `
+          <p class="mb-1"><strong>Tipo:</strong> ${sanitize(vaga.tipo)}</p>
+          <p class="mb-0"><strong>Status Atual:</strong> <span class="badge bg-danger">Ocupada</span></p>
+          <p class="text-muted small mt-2 mb-0">
+            <i class="fas fa-exclamation-circle text-warning me-1"></i>
+            Existe um ticket aberto para esta vaga. Para alterar o status ou liberar a vaga, encerre o ticket na tela de Tickets.
+          </p>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Entendido'
+      })
+    }
     return
   }
 
   const vaiParaManutencao = statusKey === 'livre'
   const novoStatus = vaiParaManutencao ? 'manutencao' : 'livre'
 
-  const result = await Swal.fire({
-    title: `Vaga ${ApiService.sanitizeText(vaga.codigo)}`,
-    html: `
-      <p class="mb-1"><strong>Tipo:</strong> ${ApiService.sanitizeText(
-        vaga.tipo
-      )}</p>
-      <p class="mb-0"><strong>Status Atual:</strong> ${
-        STATUS_VAGA[statusKey]?.texto || 'Livre'
-      }</p>
-    `,
-    icon: 'info',
-    showCancelButton: true,
-    confirmButtonText: vaiParaManutencao
-      ? 'Marcar em Manutenção'
-      : 'Liberar (marcar como Livre)',
-    // Cores derivadas da paleta do projeto (tons escuros, não os pastéis
-    // claros — pastel puro como fundo sólido de botão dá baixo contraste
-    // com o texto branco padrão do SweetAlert2, ~1.4:1).
-    confirmButtonColor: vaiParaManutencao ? '#4a2c00' : '#0e3a2f', // $color-pendente-text / $color-sucesso-text
-    cancelButtonText: 'Fechar'
-  })
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: `Vaga ${sanitize(numeroVaga)}`,
+      html: `
+        <p class="mb-1"><strong>Tipo:</strong> ${sanitize(vaga.tipo)}</p>
+        <p class="mb-0"><strong>Status Atual:</strong> ${
+          STATUS_VAGA[statusKey]?.texto || 'Livre'
+        }</p>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: vaiParaManutencao
+        ? 'Marcar em Manutenção'
+        : 'Liberar Vaga',
+      cancelButtonText: 'Cancelar'
+    })
 
-  if (result.isConfirmed) {
-    try {
-      await ApiService.updateVagaStatus(vaga.id, novoStatus)
-      Swal.fire({
-        icon: 'success',
-        title: 'Status Atualizado!',
-        text: `Vaga ${vaga.codigo} agora está marcada como ${STATUS_VAGA[novoStatus].texto}.`,
-        timer: 1500,
-        showConfirmButton: false
-      })
-      await carregarMapaVagas()
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erro ao atualizar vaga',
-        text: error.message
-      })
+    if (result.isConfirmed) {
+      try {
+        await ApiService.updateVagaStatus(vaga.id, novoStatus)
+        Swal.fire({
+          icon: 'success',
+          title: 'Status Atualizado!',
+          timer: 1500,
+          showConfirmButton: false
+        })
+        await carregarTodosOsDados()
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao atualizar',
+          text: error.message || 'Falha ao comunicar com o servidor.'
+        })
+      }
     }
   }
 }
+
+// EXCLUSÃO DE VAGA
+async function excluirVaga (vagaId) {
+  if (possuiTicketAberto(vagaId)) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Ação Bloqueada',
+        text: 'Esta vaga possui um ticket em aberto e não pode ser excluída no momento.'
+      })
+    }
+    return
+  }
+
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: 'Excluir Vaga?',
+      text: 'Esta ação não poderá ser desfeita.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, excluir',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await ApiService.deleteVaga(vagaId)
+        Swal.fire({
+          icon: 'success',
+          title: 'Vaga excluída com sucesso!',
+          timer: 1500,
+          showConfirmButton: false
+        })
+        await carregarTodosOsDados()
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao excluir vaga',
+          text: error.message
+        })
+      }
+    }
+  }
+}
+
+// EXCLUSÃO DE TARIFA
+async function excluirTarifa (tarifaId) {
+  const temTicketAberto = todosTickets.some(
+    t =>
+      String(t.tarifaId) === String(tarifaId) &&
+      (t.status || '').toLowerCase() === 'aberto'
+  )
+
+  if (temTicketAberto) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Ação Bloqueada',
+        text: 'Esta tarifa está vinculada a um ticket em aberto e não pode ser excluída.'
+      })
+    }
+    return
+  }
+
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: 'Excluir Tarifa?',
+      text: 'Esta ação não poderá ser desfeita.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, excluir',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (result.isConfirmed) {
+      try {
+        await ApiService.deleteTarifa(tarifaId)
+        Swal.fire({
+          icon: 'success',
+          title: 'Tarifa excluída com sucesso!',
+          timer: 1500,
+          showConfirmButton: false
+        })
+        await carregarTodosOsDados()
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao excluir tarifa',
+          text: error.message
+        })
+      }
+    }
+  }
+}
+
+// Expõe explicitamente as funções no escopo global window para chamadas via onclick no HTML
+window.editarVaga = editarVaga
+window.excluirVaga = excluirVaga
+window.editarTarifa = editarTarifa
+window.excluirTarifa = excluirTarifa

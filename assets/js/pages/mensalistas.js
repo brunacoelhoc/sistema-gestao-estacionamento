@@ -1,6 +1,6 @@
 /**
  * Lógica da Página de Gestão de Mensalistas
- * CRUD (sem exclusão física) com conformidade LGPD e filtros.
+ * CRUD (sem exclusão física) com conformidade LGPD, validações e filtros.
  */
 
 let mensalistasCache = []
@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (modalEl) {
     modalMensalistaBS = new bootstrap.Modal(modalEl)
   }
+
+  // Inicializa máscaras e eventos dos inputs
+  initInputMasks()
 
   await carregarMensalistas()
 
@@ -32,6 +35,78 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   modalEl?.addEventListener('hidden.bs.modal', resetFormulario)
 })
+
+// Aplica máscaras e tratamento de input em tempo real
+function initInputMasks () {
+  const cpfInput = document.getElementById('mensalista-cpf')
+  const placaInput = document.getElementById('mensalista-placa')
+  const telInput = document.getElementById('mensalista-telefone')
+
+  cpfInput?.addEventListener('input', e => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length > 11) value = value.slice(0, 11)
+    value = value.replace(/(\d{3})(\d)/, '$1.$2')
+    value = value.replace(/(\d{3})(\d)/, '$1.$2')
+    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    e.target.value = value
+  })
+
+  telInput?.addEventListener('input', e => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length > 11) value = value.slice(0, 11)
+    value = value.replace(/^(\d{2})(\d)/g, '($1) $2')
+    value = value.replace(/(\d)(\d{4})$/, '$1-$2')
+    e.target.value = value
+  })
+
+  placaInput?.addEventListener('input', e => {
+    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (value.length > 7) value = value.slice(0, 7)
+    e.target.value = value
+  })
+}
+
+// Algoritmo de Validação Real de CPF (Compatível com Máscara e Validação de DV)
+function validarCPF (cpf) {
+  // Remove pontos, hífens e qualquer caractere não numérico
+  const cleanCPF = (cpf || '').replace(/\D/g, '')
+
+  // 1. Verifica se tem exatamente 11 dígitos numéricos
+  if (cleanCPF.length !== 11) return false
+
+  // 2. Elimina CPFs com dígitos repetidos (ex: 111.111.111-11)
+  if (/^(\d)\1{10}$/.test(cleanCPF)) return false
+
+  // 3. Validação matemática do 1º Dígito Verificador
+  let soma = 0
+  let resto
+
+  for (let i = 1; i <= 9; i++) {
+    soma += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i)
+  }
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(cleanCPF.substring(9, 10))) return false
+
+  // 4. Validação matemática do 2º Dígito Verificador
+  soma = 0
+  for (let i = 1; i <= 10; i++) {
+    soma += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i)
+  }
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(cleanCPF.substring(10, 11))) return false
+
+  return true
+}
+
+// Algoritmo de Validação de Placa (Mercosul ou Padrão Antigo)
+function validarPlaca (placa) {
+  const cleanPlaca = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const regexAntigo = /^[A-Z]{3}[0-9]{4}$/
+  const regexMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/
+  return regexAntigo.test(cleanPlaca) || regexMercosul.test(cleanPlaca)
+}
 
 // Busca a lista de mensalistas da API
 async function carregarMensalistas () {
@@ -64,7 +139,7 @@ async function carregarMensalistas () {
   }
 }
 
-// Aplica busca por texto + filtro de status juntos
+// Aplica busca por texto + filtro de status
 function aplicarFiltros () {
   const termo = (document.getElementById('input-busca-mensalista')?.value || '')
     .toLowerCase()
@@ -81,21 +156,20 @@ function aplicarFiltros () {
   }
 
   if (termo) {
+    const termoClean = termo.replace(/\D/g, '')
     filtrados = filtrados.filter(
       m =>
         (m.nome || '').toLowerCase().includes(termo) ||
         (m.placa || '').toLowerCase().includes(termo) ||
-        (m.cpf || '').includes(termo)
+        (m.cpf || '').includes(termo) ||
+        (termoClean && (m.cpf || '').replace(/\D/g, '').includes(termoClean))
     )
   }
 
   renderizarTabelaMensalistas(filtrados)
 }
 
-// Mascara um CPF no formato 000.000.000-00 -> ***.***.**0-00, preservando só
-// os últimos dígitos. Usada como fallback caso o LGPDModule não tenha
-// carregado — por segurança/LGPD, o padrão é ESCONDER o dado (falhar
-// fechado), nunca mostrar o CPF completo por acidente.
+// Mascara CPF para LGPD (ex: ***.***.**0-00)
 function mascararCpfFallback (cpf) {
   if (!cpf) return ''
   const digitos = cpf.replace(/\D/g, '')
@@ -132,8 +206,8 @@ function renderizarTabelaMensalistas (lista) {
 
     const ativo = m.ativo === true
     const statusBadge = ativo
-      ? '<span class="badge-status status-ativo"><i class="fas fa-check-circle" aria-hidden="true"></i> Ativo</span>'
-      : '<span class="badge-status status-inativo"><i class="fas fa-ban" aria-hidden="true"></i> Inativo</span>'
+      ? '<span class="badge-status status-ativo"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Ativo</span>'
+      : '<span class="badge-status status-inativo"><i class="fas fa-ban me-1" aria-hidden="true"></i>Inativo</span>'
 
     const btnToggleLabel = ativo ? 'Inativar' : 'Reativar'
     const btnToggleIcon = ativo ? 'fa-user-slash' : 'fa-user-check'
@@ -159,18 +233,13 @@ function renderizarTabelaMensalistas (lista) {
         <button type="button" class="btn btn-sm ${btnToggleClasse} btn-toggle-ativo-mensalista"
           data-id="${m.id}" title="${btnToggleLabel} Mensalista"
           aria-label="${btnToggleLabel} ${ApiService.sanitizeText(m.nome)}">
-          <i class="fas ${btnToggleIcon}" aria-hidden="true"></i> ${btnToggleLabel}
+          <i class="fas ${btnToggleIcon} me-1" aria-hidden="true"></i>${btnToggleLabel}
         </button>
       </td>
     `
-    // NOTA: propositalmente não existe botão de excluir nesta tela — a spec
-    // exige que mensalistas sejam apenas inativados/reativados, nunca
-    // apagados fisicamente, para preservar o histórico de tickets.
-
     tbody.appendChild(tr)
   })
 
-  // Eventos vinculados após o render (evita onclick inline no HTML gerado)
   tbody.querySelectorAll('.btn-editar-mensalista').forEach(btn => {
     btn.addEventListener('click', () =>
       editarMensalista(btn.getAttribute('data-id'))
@@ -183,14 +252,20 @@ function renderizarTabelaMensalistas (lista) {
   })
 }
 
-// Verifica duplicidade de CPF/placa, ignorando o próprio registro em edição
+// Verifica duplicidade de CPF e Placa
 function verificarDuplicidade (cpf, placa, idAtual) {
+  const cpfClean = (cpf || '').replace(/\D/g, '')
+  const placaClean = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+
   const cpfDuplicado = mensalistasCache.some(
-    m => m.id !== idAtual && m.cpf === cpf
+    m =>
+      String(m.id) !== String(idAtual) &&
+      (m.cpf || '').replace(/\D/g, '') === cpfClean
   )
   const placaDuplicada = mensalistasCache.some(
     m =>
-      m.id !== idAtual && (m.placa || '').toUpperCase() === placa.toUpperCase()
+      String(m.id) !== String(idAtual) &&
+      (m.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '') === placaClean
   )
 
   if (cpfDuplicado) return 'Este CPF já está cadastrado para outro mensalista.'
@@ -204,12 +279,6 @@ async function salvarMensalista (e) {
   e.preventDefault()
   const form = e.target
 
-  // Validação nativa (required + pattern de CPF/placa já definidos no HTML)
-  if (!form.checkValidity()) {
-    form.classList.add('was-validated')
-    return
-  }
-
   const id = document.getElementById('mensalista-id').value || null
   const nome = document.getElementById('mensalista-nome').value.trim()
   const cpf = document.getElementById('mensalista-cpf').value.trim()
@@ -219,6 +288,27 @@ async function salvarMensalista (e) {
     .value.trim()
     .toUpperCase()
 
+  // Validação de CPF
+  if (!validarCPF(cpf)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'CPF Inválido',
+      text: 'O CPF informado é inválido. Por favor, verifique os dígitos e tente novamente.'
+    })
+    return
+  }
+
+  // Validação de Placa
+  if (!validarPlaca(placa)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Placa Inválida',
+      text: 'Formato de placa inválido. Utilize o formato Mercosul (ABC1D23) ou antigo (ABC1234).'
+    })
+    return
+  }
+
+  // Validação de Duplicidade
   const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
     Swal.fire({
@@ -230,11 +320,10 @@ async function salvarMensalista (e) {
   }
 
   const btnSalvar = document.getElementById('btn-salvar-mensalista')
-  btnSalvar.disabled = true // anti duplo-clique
+  btnSalvar.disabled = true
 
   try {
     if (id) {
-      // Edição: nunca envia "ativo" — esse campo só muda pelo botão da listagem.
       await ApiService.updateMensalista(id, { nome, cpf, telefone, placa })
       Swal.fire({
         icon: 'success',
@@ -244,7 +333,6 @@ async function salvarMensalista (e) {
         showConfirmButton: false
       })
     } else {
-      // Criação: todo mensalista novo começa ativo, por padrão do sistema.
       await ApiService.createMensalista({
         nome,
         cpf,
@@ -275,7 +363,7 @@ async function salvarMensalista (e) {
   }
 }
 
-// Prepara o modal para edição (nome/CPF/placa/telefone apenas — status não é editável aqui)
+// Prepara o modal para edição
 function editarMensalista (id) {
   const m = mensalistasCache.find(item => String(item.id) === String(id))
   if (!m) return
@@ -291,7 +379,7 @@ function editarMensalista (id) {
   modalMensalistaBS.show()
 }
 
-// Inativa ou reativa um mensalista (nunca exclui fisicamente)
+// Inativa ou reativa um mensalista
 async function alternarAtivoMensalista (id) {
   const m = mensalistasCache.find(item => String(item.id) === String(id))
   if (!m) return
@@ -310,7 +398,7 @@ async function alternarAtivoMensalista (id) {
         )}</strong> voltará a ficar ativo.`,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonColor: ativoAtual ? '#3d0c13' : '#0e3a2f', // $color-alerta-text / $color-sucesso-text
+    confirmButtonColor: ativoAtual ? '#3d0c13' : '#0e3a2f',
     cancelButtonColor: '#6c757d',
     confirmButtonText: ativoAtual ? 'Sim, inativar' : 'Sim, reativar',
     cancelButtonText: 'Cancelar'

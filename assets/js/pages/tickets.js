@@ -1,6 +1,6 @@
 /**
  * Lógica da Página de Tickets
- * Controle de emissão, listagem, busca, paginação e baixa de tickets.
+ * Controle de emissão, listagem, busca, paginação, regras de mensalista e baixa de tickets.
  */
 
 let allTickets = []
@@ -13,23 +13,34 @@ let paginaAtual = 1
 const TICKETS_POR_PAGINA = 10
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initInputMasks()
   await carregarDados()
 
-  // Busca por placa (reseta para a primeira página a cada nova busca)
-  document.getElementById('input-busca-ticket').addEventListener('input', e => {
-    paginaAtual = 1
-    filtrarTickets(e.target.value)
-  })
+  // Busca por placa/vaga (reseta para a primeira página a cada nova busca)
+  document
+    .getElementById('input-busca-ticket')
+    ?.addEventListener('input', () => {
+      paginaAtual = 1
+      filtrarTickets()
+    })
+
+  // Filtro de status do ticket (Todos, Aberto, Fechado)
+  document
+    .getElementById('filtro-status-ticket')
+    ?.addEventListener('change', () => {
+      paginaAtual = 1
+      filtrarTickets()
+    })
 
   // Verificação de mensalista ao digitar a placa no modal de novo ticket
   const inputPlaca = document.getElementById('ticket-placa')
-  inputPlaca.addEventListener('input', e => {
+  inputPlaca?.addEventListener('input', e => {
     verificarMensalistaNaDigitacao(e.target.value)
   })
 
   document
     .getElementById('form-novo-ticket')
-    .addEventListener('submit', criarNovoTicket)
+    ?.addEventListener('submit', criarNovoTicket)
 
   // Botão "Tentar novamente" do banner de erro global da página
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
@@ -45,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderizarPagina()
       }
     })
+
   document
     .getElementById('btn-pagina-proxima')
     ?.addEventListener('click', () => {
@@ -59,7 +71,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
 })
 
-// Carrega os dados necessários das APIs
+// Formatador e máscara simples do input da placa
+function initInputMasks () {
+  const placaInput = document.getElementById('ticket-placa')
+  placaInput?.addEventListener('input', e => {
+    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (value.length > 7) value = value.slice(0, 7)
+    e.target.value = value
+  })
+}
+
+// Algoritmo de Validação de Placa (Mercosul ou Padrão Antigo)
+function validarPlaca (placa) {
+  const cleanPlaca = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const regexAntigo = /^[A-Z]{3}[0-9]{4}$/
+  const regexMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/
+  return regexAntigo.test(cleanPlaca) || regexMercosul.test(cleanPlaca)
+}
+
+// Carrega os dados das APIs
 async function carregarDados () {
   const pageError = document.getElementById('page-error')
   const pageErrorText = document.getElementById('page-error-text')
@@ -70,19 +100,21 @@ async function carregarDados () {
 
   try {
     const [tickets, vagas, mensalistas, tarifas] = await Promise.all([
-      ApiService.getTickets(),
-      ApiService.getVagas(),
-      ApiService.getMensalistas(),
-      ApiService.getTarifas()
+      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
+      ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
+      ApiService.getMensalistas
+        ? ApiService.getMensalistas()
+        : Promise.resolve([]),
+      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([])
     ])
 
-    allTickets = tickets
-    allVagas = vagas
-    allMensalistas = mensalistas
-    allTarifas = tarifas
+    allTickets = tickets || []
+    allVagas = vagas || []
+    allMensalistas = mensalistas || []
+    allTarifas = tarifas || []
 
     paginaAtual = 1
-    filtrarTickets(document.getElementById('input-busca-ticket').value)
+    filtrarTickets()
 
     preencherSelectVagas()
     preencherSelectTarifas()
@@ -93,21 +125,23 @@ async function carregarDados () {
 
     if (pageError && pageErrorText) {
       pageErrorText.textContent =
-        'Não foi possível carregar as informações dos tickets. Verifique sua conexão e tente novamente.'
+        'Não foi possível carregar as informações dos tickets. Verifique sua conexão.'
       pageError.classList.remove('d-none')
     }
 
-    Swal.fire({
-      icon: 'error',
-      title: 'Erro de Conexão',
-      text: 'Não foi possível carregar as informações dos tickets.'
-    })
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro de Conexão',
+        text: 'Não foi possível carregar as informações dos tickets.'
+      })
+    }
   } finally {
     tbody?.setAttribute('aria-busy', 'false')
   }
 }
 
-// Renderiza a página atual da tabela de tickets (a partir de ticketsFiltrados)
+// Renderiza a tabela de tickets paginada
 function renderizarPagina () {
   const tbody = document.getElementById('tbody-tickets')
   const infoEl = document.getElementById('paginacao-info')
@@ -119,6 +153,7 @@ function renderizarPagina () {
     .getElementById('btn-pagina-proxima')
     ?.closest('.page-item')
 
+  if (!tbody) return
   tbody.innerHTML = ''
 
   const total = ticketsFiltrados.length
@@ -127,7 +162,7 @@ function renderizarPagina () {
     tbody.innerHTML = `
       <tr>
         <td colspan="9" class="text-center py-4 text-muted">
-          Nenhum ticket encontrado.
+          <i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum ticket encontrado.
         </td>
       </tr>
     `
@@ -153,7 +188,7 @@ function renderizarPagina () {
   btnAnterior?.classList.toggle('disabled', paginaAtual === 1)
   btnProxima?.classList.toggle('disabled', paginaAtual === totalPaginas)
 
-  // Vincula eventos aos botões de fechamento renderizados nesta página
+  // Adiciona o ouvinte para botões de fechamento de ticket
   tbody.querySelectorAll('.btn-fechar-ticket').forEach(btn => {
     btn.addEventListener('click', async e => {
       const ticketId = e.currentTarget.getAttribute('data-id')
@@ -162,39 +197,52 @@ function renderizarPagina () {
   })
 }
 
-// Renderiza uma linha da tabela — ordem das colunas: ID, Placa, Vaga,
-// Mensalista, Entrada, Saída, Valor Total, Status, Ação (bate com o <thead>).
+// Renderiza uma linha individual da tabela de tickets
 function renderizarLinhaTicket (ticket, tbody) {
-  const vaga = allVagas.find(v => v.id === ticket.vagaId)
-  const codVaga = vaga ? vaga.codigo : ticket.vagaId
+  const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
+  const numeroVaga = vaga
+    ? vaga.codigo || vaga.numero || vaga.id
+    : ticket.vagaId
+  const codVaga = vaga
+    ? `${numeroVaga} (${vaga.tipo || 'comum'})`
+    : ticket.vagaId
 
   const mensalista = ticket.mensalistaId
-    ? allMensalistas.find(m => m.id === ticket.mensalistaId)
+    ? allMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
     : null
-  const nomeMensalista = mensalista ? mensalista.nome : 'Avulso'
+  const nomeMensalista = mensalista
+    ? mensalista.nome || mensalista.nomeCliente
+    : 'Avulso'
 
-  const dataEntradaStr = new Date(ticket.dataEntrada).toLocaleString('pt-BR')
-  const dataSaidaStr = ticket.dataSaida
-    ? new Date(ticket.dataSaida).toLocaleString('pt-BR')
-    : '-'
-
-  const valorStr =
-    ticket.valorTotal !== null && ticket.valorTotal !== undefined
-      ? `R$ ${ticket.valorTotal.toFixed(2).replace('.', ',')}`
+  const dataEntradaStr =
+    ticket.horaEntrada || ticket.dataEntrada
+      ? new Date(ticket.horaEntrada || ticket.dataEntrada).toLocaleString(
+          'pt-BR'
+        )
+      : '-'
+  const dataSaidaStr =
+    ticket.horaSaida || ticket.dataSaida
+      ? new Date(ticket.horaSaida || ticket.dataSaida).toLocaleString('pt-BR')
       : '-'
 
-  const statusKey = (ticket.status || '').toLowerCase()
+  const valorFinal = ticket.valorCobrado ?? ticket.valorTotal
+  const valorStr =
+    valorFinal !== null && valorFinal !== undefined
+      ? `R$ ${Number(valorFinal).toFixed(2).replace('.', ',')}`
+      : '-'
+
+  const statusKey = (ticket.status || 'aberto').toLowerCase()
   const statusBadge =
     statusKey === 'aberto'
-      ? '<span class="badge-status status-aberto"><i class="fas fa-clock" aria-hidden="true"></i> Aberto</span>'
-      : '<span class="badge-status status-fechado"><i class="fas fa-check-circle" aria-hidden="true"></i> Fechado</span>'
+      ? '<span class="badge-status status-aberto"><i class="fas fa-clock me-1" aria-hidden="true"></i>Aberto</span>'
+      : '<span class="badge-status status-fechado"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Fechado</span>'
 
   const btnAcao =
     statusKey === 'aberto'
       ? `<button type="button" class="btn btn-sm btn-outline-danger btn-fechar-ticket" data-id="${ticket.id}">
-           <i class="fas fa-sign-out-alt me-1" aria-hidden="true"></i>Fechar Ticket
-         </button>`
-      : '<span class="text-muted text-xs">Somente leitura</span>'
+         <i class="fas fa-sign-out-alt me-1" aria-hidden="true"></i>Fechar Ticket
+       </button>`
+      : '<span class="text-muted text-xs">Finalizado</span>'
 
   const tr = document.createElement('tr')
   tr.innerHTML = `
@@ -206,88 +254,128 @@ function renderizarLinhaTicket (ticket, tbody) {
     <td>${ApiService.sanitizeText(nomeMensalista)}</td>
     <td><small>${dataEntradaStr}</small></td>
     <td><small>${dataSaidaStr}</small></td>
-    <td class="fw-bold">${valorStr}</td>
+    <td class="fw-bold text-primary">${valorStr}</td>
     <td>${statusBadge}</td>
     <td>${btnAcao}</td>
   `
   tbody.appendChild(tr)
 }
 
-// Filtro por placa — atualiza ticketsFiltrados e re-renderiza a página 1 (ou a atual, se já estava navegando)
-function filtrarTickets (termo) {
-  const termoClean = termo.trim().toUpperCase()
+// Filtro por termo (placa ou código da vaga) e status do ticket
+function filtrarTickets () {
+  const termo = (document.getElementById('input-busca-ticket')?.value || '')
+    .trim()
+    .toUpperCase()
+  const statusFiltro = (
+    document.getElementById('filtro-status-ticket')?.value || 'TODOS'
+  ).toLowerCase()
 
-  // Ordena por data de entrada real (mais recente primeiro) em vez de
-  // depender da ordem de inserção do array retornado pela API.
-  const ordenados = [...allTickets].sort(
-    (a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada)
-  )
+  const ordenados = [...allTickets].sort((a, b) => {
+    const dataA = new Date(a.horaEntrada || a.dataEntrada || 0)
+    const dataB = new Date(b.horaEntrada || b.dataEntrada || 0)
+    return dataB - dataA
+  })
 
-  ticketsFiltrados = termoClean
-    ? ordenados.filter(t => t.placa.toUpperCase().includes(termoClean))
-    : ordenados
+  ticketsFiltrados = ordenados.filter(t => {
+    const combinaStatus =
+      statusFiltro === 'todos' ||
+      (t.status || '').toLowerCase() === statusFiltro
+
+    const vaga = allVagas.find(v => String(v.id) === String(t.vagaId))
+    const codigoVaga = vaga
+      ? String(vaga.codigo || vaga.numero || '').toUpperCase()
+      : ''
+
+    const combinaTermo =
+      !termo ||
+      (t.placa || '').toUpperCase().includes(termo) ||
+      codigoVaga.includes(termo)
+
+    return combinaStatus && combinaTermo
+  })
 
   renderizarPagina()
 }
 
-// Preenche o combo de Vagas com apenas as vagas "livre"
+// Preenche o combo de Vagas (apenas status "livre")
 function preencherSelectVagas () {
   const selectVaga = document.getElementById('ticket-vaga')
+  if (!selectVaga) return
+
   selectVaga.innerHTML =
     '<option value="" selected disabled>Selecione uma vaga livre...</option>'
 
   const vagasLivres = allVagas.filter(
-    v => (v.status || '').toLowerCase() === 'livre'
+    v => (v.status || 'livre').toLowerCase() === 'livre'
   )
 
   vagasLivres.forEach(vaga => {
     const option = document.createElement('option')
     option.value = vaga.id
-    option.textContent = `${vaga.codigo} - ${vaga.tipo}`
+    const num = vaga.codigo || vaga.numero || vaga.id
+    option.textContent = `${num} - ${vaga.tipo || 'comum'}`
     selectVaga.appendChild(option)
   })
 }
 
-// Preenche o combo de Tarifas cadastradas
+// Preenche o combo de Tarifas
 function preencherSelectTarifas () {
   const selectTarifa = document.getElementById('ticket-tarifa')
+  if (!selectTarifa) return
+
   selectTarifa.innerHTML =
     '<option value="" selected disabled>Selecione a tarifa...</option>'
 
   allTarifas.forEach(tarifa => {
     const option = document.createElement('option')
     option.value = tarifa.id
-    option.textContent = `${tarifa.nome} (R$ ${Number(tarifa.valorHora)
+    const nomeTarifa = tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral'
+    const valor = Number(tarifa.valorHora || tarifa.valor || 0)
       .toFixed(2)
-      .replace('.', ',')}/h)`
+      .replace('.', ',')
+    option.textContent = `${nomeTarifa} (R$ ${valor}/h)`
     selectTarifa.appendChild(option)
   })
 }
 
-// Preenche o combo de Mensalistas ativos (opcional — veículo avulso é o padrão)
+// Preenche o combo de Mensalistas Ativos
 function preencherSelectMensalistas () {
   const selectMensalista = document.getElementById('ticket-mensalista')
+  if (!selectMensalista) return
+
   selectMensalista.innerHTML =
     '<option value="">Veículo avulso (sem mensalista)</option>'
 
+  if (!Array.isArray(allMensalistas)) return
+
   allMensalistas
-    .filter(m => m.ativo)
+    .filter(m => {
+      const ehAtivoBool =
+        m.ativo === true || String(m.ativo).toLowerCase() === 'true'
+      const ehAtivoStatus =
+        m.status && String(m.status).toLowerCase() === 'ativo'
+      return ehAtivoBool || ehAtivoStatus
+    })
     .forEach(mensalista => {
       const option = document.createElement('option')
       option.value = mensalista.id
-      option.textContent = `${mensalista.nome} (${mensalista.placa})`
+      const nome = mensalista.nome || mensalista.nomeCliente || 'Mensalista'
+      const placa = mensalista.placa || mensalista.placaVeiculo || 'Sem Placa'
+      option.textContent = `${nome} (${placa})`
       selectMensalista.appendChild(option)
     })
 }
 
-// Mostra/oculta o aviso e desabilita a emissão se não houver vaga livre ou tarifa cadastrada
+// Validação visual de indisponibilidade de Vagas/Tarifas
 function atualizarAvisoFormulario () {
   const avisoDiv = document.getElementById('ticket-form-aviso')
   const avisoTexto = document.getElementById('ticket-form-aviso-texto')
-  const btnEmitir = document.getElementById('btn-emitir-ticket')
+  const btnEmitir =
+    document.getElementById('btn-emitir-ticket') ||
+    document.getElementById('btn-registrar-entrada')
 
   const temVagaLivre = allVagas.some(
-    v => (v.status || '').toLowerCase() === 'livre'
+    v => (v.status || 'livre').toLowerCase() === 'livre'
   )
   const temTarifa = allTarifas.length > 0
 
@@ -306,7 +394,7 @@ function atualizarAvisoFormulario () {
 
   const mensagem = `Não é possível abrir um novo ticket: ${motivos.join(
     ' e '
-  )}. Resolva isso em Vagas & Tarifas antes de continuar.`
+  )}. Cadastre em Vagas & Tarifas para continuar.`
 
   if (avisoDiv && avisoTexto) {
     avisoTexto.textContent = mensagem
@@ -318,10 +406,12 @@ function atualizarAvisoFormulario () {
   }
 }
 
-// Verifica se a placa digitada pertence a um mensalista ativo e pré-seleciona o combo
+// Identifica mensalista ativo dinamicamente durante a digitação
 function verificarMensalistaNaDigitacao (placa) {
   const infoDiv = document.getElementById('mensalista-status-info')
   const selectMensalista = document.getElementById('ticket-mensalista')
+  if (!infoDiv) return
+
   const placaClean = placa.trim().toUpperCase()
 
   if (placaClean.length < 7) {
@@ -329,14 +419,16 @@ function verificarMensalistaNaDigitacao (placa) {
     return
   }
 
-  const mensalistaEncontrado = allMensalistas.find(
-    m => m.ativo && m.placa && m.placa.toUpperCase() === placaClean
-  )
+  const mensalistaEncontrado = allMensalistas.find(m => {
+    const ativo = m.ativo === true || String(m.ativo).toLowerCase() === 'true'
+    const p = (m.placa || m.placaVeiculo || '').toUpperCase()
+    return ativo && p === placaClean
+  })
 
   if (mensalistaEncontrado) {
     infoDiv.innerHTML = `<span class="text-success fw-semibold"><i class="fas fa-check-circle me-1" aria-hidden="true"></i> Mensalista Ativo: ${ApiService.sanitizeText(
-      mensalistaEncontrado.nome
-    )} (isento de tarifa)</span>`
+      mensalistaEncontrado.nome || mensalistaEncontrado.nomeCliente
+    )} (Isento)</span>`
     if (selectMensalista) selectMensalista.value = mensalistaEncontrado.id
   } else {
     infoDiv.innerHTML = `<span class="text-muted"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Veículo avulso (tarifado normalmente)</span>`
@@ -344,80 +436,127 @@ function verificarMensalistaNaDigitacao (placa) {
   }
 }
 
-// Emissão de Novo Ticket
+// Criação de Novo Ticket (Abertura)
 async function criarNovoTicket (e) {
   e.preventDefault()
-  const form = e.target
-
-  // Usa a validação nativa do formulário (required/pattern já definidos no
-  // HTML) em vez de checar campo a campo manualmente — ativa o feedback
-  // visual/ARIA (.invalid-feedback) que já existe na marcação.
-  if (!form.checkValidity()) {
-    form.classList.add('was-validated')
-    return
-  }
 
   const placa = document
     .getElementById('ticket-placa')
-    .value.trim()
+    ?.value.trim()
     .toUpperCase()
-  const vagaId = document.getElementById('ticket-vaga').value
-  const tarifaId = document.getElementById('ticket-tarifa').value
+  const vagaId = document.getElementById('ticket-vaga')?.value
+  const tarifaId = document.getElementById('ticket-tarifa')?.value
   const mensalistaId =
-    document.getElementById('ticket-mensalista').value || null
+    document.getElementById('ticket-mensalista')?.value || null
 
-  const btnSubmit = document.getElementById('btn-registrar-entrada')
-  btnSubmit.disabled = true // evita duplo clique/duplo envio
+  if (!validarPlaca(placa)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Placa Inválida',
+      text: 'Utilize o formato Mercosul (ABC1D23) ou antigo (ABC1234).'
+    })
+    return
+  }
+
+  // Regra: Impede ticket duplo para a mesma placa no pátio
+  const jaAberto = allTickets.some(
+    t =>
+      (t.placa || '').toUpperCase() === placa &&
+      (t.status || 'aberto').toLowerCase() === 'aberto'
+  )
+
+  if (jaAberto) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Veículo no Pátio',
+      text: `A placa ${placa} já possui um ticket aberto registrado.`
+    })
+    return
+  }
+
+  if (!vagaId || !tarifaId) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Campos Obrigatórios',
+      text: 'Por favor, selecione uma vaga e uma tarifa.'
+    })
+    return
+  }
+
+  const btnSubmit =
+    document.getElementById('btn-registrar-entrada') ||
+    document.getElementById('btn-emitir-ticket')
+  if (btnSubmit) btnSubmit.disabled = true
 
   try {
-    await ApiService.criarTicket({
+    const novoTicket = {
       placa,
       vagaId,
       tarifaId,
-      mensalistaId
-    })
+      mensalistaId: mensalistaId || null,
+      horaEntrada: new Date().toISOString(),
+      dataEntrada: new Date().toISOString(),
+      horaSaida: null,
+      dataSaida: null,
+      valorCobrado: null,
+      valorTotal: null,
+      status: 'aberto'
+    }
+
+    if (ApiService.criarTicket) {
+      await ApiService.criarTicket(novoTicket)
+    } else {
+      await ApiService.createTicket(novoTicket)
+    }
+
+    // Regra: Muda status da vaga para "ocupada"
+    if (ApiService.updateVagaStatus) {
+      await ApiService.updateVagaStatus(vagaId, 'ocupada')
+    }
 
     Swal.fire({
       icon: 'success',
       title: 'Ticket Emitido!',
-      text: `Entrada registrada com sucesso para a placa ${placa}.`,
-      timer: 2000,
+      text: `Entrada da placa ${placa} registrada com sucesso.`,
+      timer: 1800,
       showConfirmButton: false
     })
 
-    form.reset()
-    form.classList.remove('was-validated')
-    document.getElementById('mensalista-status-info').innerHTML = ''
-    const modalInstance = bootstrap.Modal.getInstance(
-      document.getElementById('modalNovoTicket')
-    )
-    if (modalInstance) modalInstance.hide()
+    const form = document.getElementById('form-novo-ticket')
+    form?.reset()
+    const infoDiv = document.getElementById('mensalista-status-info')
+    if (infoDiv) infoDiv.innerHTML = ''
+
+    // Fecha o modal via Bootstrap se presente
+    const modalEl =
+      document.getElementById('modalNovoTicket') ||
+      document.getElementById('modal-ticket')
+    if (modalEl && typeof bootstrap !== 'undefined') {
+      const modalInstance = bootstrap.Modal.getInstance(modalEl)
+      modalInstance?.hide()
+    }
 
     await carregarDados()
   } catch (error) {
     Swal.fire({
       icon: 'error',
       title: 'Erro ao emitir ticket',
-      text: error.message
+      text: error.message || 'Falha na comunicação com o servidor.'
     })
   } finally {
-    btnSubmit.disabled = false
+    if (btnSubmit) btnSubmit.disabled = false
   }
 }
 
-// Encerramento/Baixa do Ticket
+// Fechamento de Ticket e Cálculo de Cobrança (Item 5.1 & 5.2)
 async function finalizarTicket (ticketId) {
   const confirmacao = await Swal.fire({
-    title: 'Confirmar Saída?',
-    text: 'O sistema efetuará o cálculo do valor e liberará a vaga automaticamente.',
+    title: 'Fechar Ticket?',
+    text: 'O valor cobrado será calculado e a vaga ficará livre.',
     icon: 'question',
     showCancelButton: true,
-    // Cores derivadas da paleta do projeto (tons escuros, não os pastéis
-    // claros — pastel puro como fundo sólido de botão dá baixo contraste
-    // com o texto branco padrão do SweetAlert2).
-    confirmButtonColor: '#0e3a2f', // $color-sucesso-text
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Sim, dar saída',
+    confirmButtonColor: '#0e3a2f',
+    confirmButtonText: 'Sim, fechar ticket',
     cancelButtonText: 'Cancelar'
   })
 
@@ -426,23 +565,70 @@ async function finalizarTicket (ticketId) {
   const botao = document.querySelector(
     `.btn-fechar-ticket[data-id="${ticketId}"]`
   )
-  if (botao) botao.disabled = true // evita duplo clique
+  if (botao) botao.disabled = true
 
   try {
-    const ticketFinalizado = await ApiService.fecharTicket(ticketId)
-    const valorFinal = ticketFinalizado.valorTotal ?? 0
+    const ticket = allTickets.find(t => String(t.id) === String(ticketId))
+    if (!ticket) throw new Error('Ticket não encontrado.')
+
+    const tarifa = allTarifas.find(
+      t => String(t.id) === String(ticket.tarifaId)
+    )
+    const horaEntrada = new Date(
+      ticket.horaEntrada || ticket.dataEntrada || Date.now()
+    )
+    const horaSaida = new Date()
+
+    let valorCalculado = 0
+
+    // Regra: Mensalista cobrado R$ 0,00 (Item 5.2)
+    if (ticket.mensalistaId) {
+      valorCalculado = 0
+    } else {
+      const valorHora = tarifa
+        ? Number(tarifa.valorHora || tarifa.valor || 0)
+        : 0
+      const diffHoras = (horaSaida - horaEntrada) / (1000 * 60 * 60)
+      const horasPagas = Math.max(1, Math.ceil(diffHoras)) // Fração de hora arredonda pra cima
+      valorCalculado = horasPagas * valorHora
+    }
+
+    const ticketAtualizado = {
+      ...ticket,
+      horaSaida: horaSaida.toISOString(),
+      dataSaida: horaSaida.toISOString(),
+      valorCobrado: valorCalculado,
+      valorTotal: valorCalculado,
+      status: 'fechado'
+    }
+
+    if (ApiService.fecharTicket) {
+      await ApiService.fecharTicket(ticketId, ticketAtualizado)
+    } else if (ApiService.updateTicket) {
+      await ApiService.updateTicket(ticketId, ticketAtualizado)
+    }
+
+    // Regra: Devolve a vaga para o status "livre" (Item 5.1)
+    if (ticket.vagaId && ApiService.updateVagaStatus) {
+      await ApiService.updateVagaStatus(ticket.vagaId, 'livre')
+    }
 
     Swal.fire({
       icon: 'success',
-      title: 'Ticket Finalizado!',
+      title: 'Ticket Encerrado!',
       html: `
         <div class="text-center">
           <p class="mb-1">Placa: <strong>${ApiService.sanitizeText(
-            ticketFinalizado.placa
+            ticket.placa
           )}</strong></p>
-          <p class="fs-4 text-success fw-bold">Valor Total: R$ ${valorFinal
+          <p class="fs-3 text-success fw-bold me-1">R$ ${valorCalculado
             .toFixed(2)
             .replace('.', ',')}</p>
+          ${
+            ticket.mensalistaId
+              ? '<span class="badge bg-info text-dark">Isento (Mensalista)</span>'
+              : ''
+          }
         </div>
       `,
       confirmButtonColor: '#0e3a2f'
@@ -452,8 +638,8 @@ async function finalizarTicket (ticketId) {
   } catch (error) {
     Swal.fire({
       icon: 'error',
-      title: 'Erro ao dar saída',
-      text: error.message
+      title: 'Erro ao fechar ticket',
+      text: error.message || 'Falha ao processar encerramento.'
     })
     if (botao) botao.disabled = false
   }

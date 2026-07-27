@@ -354,22 +354,44 @@ textarea:focus-visible,
     border-bottom-width: 2px;
 }
 
+/* --- RODAPÉ (FOOTER) --- */
 footer {
     margin-top: auto;
     background-color: #1e293b;
     color: #f8fafc;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Força a cor legível em todos os elementos de texto internos do footer */
+footer,
+footer p,
+footer span,
+footer div,
+footer small {
+    color: #f8fafc !important;
+}
+
+/* Sobrescreve classes utilitárias do Bootstrap (como .text-muted) que escurecem o texto */
+footer .text-muted {
+    color: #cbd5e1 !important;
+    /* Cinza claro com alto contraste sobre fundo escuro */
+}
+
+/* Links do rodapé com contraste aprimorado */
 footer a {
     color: #38bdf8;
-    text-decoration: none;
+    text-decoration: underline;
+    /* Mantém o sublinhado visível para acessibilidade */
+    transition: color 0.2s ease-in-out;
 }
 
 footer a:hover {
-    text-decoration: underline;
+    color: #7dd3fc;
+    text-decoration: none;
 }
 
 footer a:focus-visible {
     outline: 3px solid #ffbf47;
-    outline-offset: 2px;
+    outline-offset: 3px;
+    border-radius: 2px;
 }
