@@ -21,7 +21,7 @@ html,
 body {
     min-height: 100vh;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    background-color: #f8f9fa;
+    background-color: #c2c5e7;
     color: #212529;
     display: flex;
     flex-direction: column;

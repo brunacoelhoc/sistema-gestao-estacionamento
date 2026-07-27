@@ -59,7 +59,7 @@
       "id": "3",
       "codigo": "M-01",
       "tipo": "Moto",
-      "status": "ocupada"
+      "status": "livre"
     },
     {
       "id": "4",
@@ -216,9 +216,9 @@
       "tarifaId": "xSl886vckLE",
       "mensalistaId": null,
       "dataEntrada": "2026-07-27T20:03:42.439Z",
-      "dataSaida": null,
-      "valorTotal": null,
-      "status": "aberto",
+      "dataSaida": "2026-07-27T20:32:04.034Z",
+      "valorTotal": 1,
+      "status": "fechado",
       "id": "MJ8O6INPWiI"
     },
     {
