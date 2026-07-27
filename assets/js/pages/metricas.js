@@ -1,27 +1,45 @@
 /**
  * Lógica da Página de Métricas e Relatórios
- * Cálculo de KPIs, tabelas acessíveis e renderização de gráficos interativos com Chart.js.
+ * Cálculo de KPIs, filtro por período, gráficos por meio de pagamento,
+ * tabelas acessíveis e renderização com Chart.js.
  */
 
 let chartOcupacaoHorario = null
 let chartReceitaMensal = null
 let chartCategorias = null
+let chartMeiosPagamento = null
+
+let globalVagas = []
+let globalTickets = []
+let globalMensalistas = []
 
 // Paleta de cores do projeto para os gráficos
 const PALETA = {
   sucesso: '#a8e6cf',
   pendente: '#ffd3b6',
   alerta: '#ff8b94',
-  info: '#d4f0f0'
+  info: '#d4f0f0',
+  pix: '#20c997',
+  credito: '#0d6efd',
+  debito: '#0dcaf0',
+  dinheiro: '#ffc107',
+  isento: '#6c757d'
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   configurarTemaDarkDoChartJs()
-  await carregarEProcessarMetricas()
+  await carregarDadosMetricas()
+
+  // Listener para Filtro por Período
+  document
+    .getElementById('filtro-periodo-metricas')
+    ?.addEventListener('change', () => {
+      processarEMostrarMetricas()
+    })
 
   // Botão de tentar novamente do banner de erro
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
-    carregarEProcessarMetricas()
+    carregarDadosMetricas()
   })
 })
 
@@ -32,8 +50,8 @@ function configurarTemaDarkDoChartJs () {
   Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)'
 }
 
-// Carrega os dados da API e processa as estatísticas
-async function carregarEProcessarMetricas () {
+// Carrega os dados brutos da API
+async function carregarDadosMetricas () {
   const pageError = document.getElementById('page-error')
   const pageErrorText = document.getElementById('page-error-text')
 
@@ -41,19 +59,18 @@ async function carregarEProcessarMetricas () {
 
   try {
     const [vagas, tickets, mensalistas] = await Promise.all([
-      ApiService.getVagas(),
-      ApiService.getTickets(),
-      ApiService.getMensalistas()
+      ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
+      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
+      ApiService.getMensalistas
+        ? ApiService.getMensalistas()
+        : Promise.resolve([])
     ])
 
-    const vagasLista = vagas || []
-    const ticketsLista = tickets || []
-    const mensalistasLista = mensalistas || []
+    globalVagas = vagas || []
+    globalTickets = tickets || []
+    globalMensalistas = mensalistas || []
 
-    atualizarKPIs(vagasLista, ticketsLista, mensalistasLista)
-    renderizarGraficoOcupacaoHorario(ticketsLista)
-    renderizarGraficoReceitaMensal(ticketsLista)
-    renderizarGraficoCategorias(vagasLista)
+    processarEMostrarMetricas()
   } catch (error) {
     console.error('Erro ao carregar dados de métricas:', error)
 
@@ -63,12 +80,62 @@ async function carregarEProcessarMetricas () {
       pageError.classList.remove('d-none')
     }
 
-    Swal.fire({
-      icon: 'error',
-      title: 'Erro ao carregar métricas',
-      text: 'Não foi possível buscar as informações analíticas do servidor.'
-    })
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao carregar métricas',
+        text: 'Não foi possível buscar as informações analíticas do servidor.'
+      })
+    }
   }
+}
+
+// Filtra os tickets com base no período selecionado no dropdown
+function filtrarTicketsPorPeriodo (tickets) {
+  const selectPeriodo = document.getElementById('filtro-periodo-metricas')
+  const periodo = selectPeriodo ? selectPeriodo.value : 'mes_atual'
+
+  const agora = new Date()
+
+  return tickets.filter(t => {
+    const dataRefStr =
+      t.horaSaida || t.dataSaida || t.horaEntrada || t.dataEntrada
+    if (!dataRefStr) return true
+    const d = new Date(dataRefStr)
+    if (isNaN(d)) return true
+
+    switch (periodo) {
+      case '7_dias': {
+        const limite7 = new Date()
+        limite7.setDate(agora.getDate() - 7)
+        return d >= limite7
+      }
+      case '30_dias': {
+        const limite30 = new Date()
+        limite30.setDate(agora.getDate() - 30)
+        return d >= limite30
+      }
+      case 'mes_atual':
+        return (
+          d.getMonth() === agora.getMonth() &&
+          d.getFullYear() === agora.getFullYear()
+        )
+      case 'todos':
+      default:
+        return true
+    }
+  })
+}
+
+// Processa e re-renderiza todos os componentes gráficos
+function processarEMostrarMetricas () {
+  const ticketsFiltrados = filtrarTicketsPorPeriodo(globalTickets)
+
+  atualizarKPIs(globalVagas, ticketsFiltrados, globalMensalistas)
+  renderizarGraficoOcupacaoHorario(ticketsFiltrados)
+  renderizarGraficoReceitaMensal(ticketsFiltrados)
+  renderizarGraficoMeiosPagamento(ticketsFiltrados)
+  renderizarGraficoCategorias(globalVagas)
 }
 
 // Atualiza os cards superiores de indicadores de desempenho (KPIs)
@@ -77,7 +144,7 @@ function atualizarKPIs (vagas, tickets, mensalistas) {
     t => (t.status || '').toLowerCase() === 'fechado'
   )
 
-  // Total de atendimentos (todos os tickets já emitidos)
+  // Total de atendimentos
   const elTotalAtendimentos = document.getElementById(
     'metric-total-atendimentos'
   )
@@ -87,23 +154,15 @@ function atualizarKPIs (vagas, tickets, mensalistas) {
   const elTotalMensalistas = document.getElementById('metric-total-mensalistas')
   if (elTotalMensalistas) elTotalMensalistas.innerText = mensalistas.length
 
-  // Receita do Mês Atual
-  const agora = new Date()
-  const receitaDoMes = ticketsFechados
-    .filter(t => {
-      if (!t.dataSaida) return false
-      const d = new Date(t.dataSaida)
-      return (
-        !isNaN(d) &&
-        d.getMonth() === agora.getMonth() &&
-        d.getFullYear() === agora.getFullYear()
-      )
-    })
-    .reduce((acc, t) => acc + (Number(t.valorTotal) || 0), 0)
+  // Receita do Período
+  const receitaTotal = ticketsFechados.reduce(
+    (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
+    0
+  )
 
   const elReceitaTotal = document.getElementById('metric-receita-total')
   if (elReceitaTotal) {
-    elReceitaTotal.innerText = `R$ ${receitaDoMes.toFixed(2).replace('.', ',')}`
+    elReceitaTotal.innerText = `R$ ${receitaTotal.toFixed(2).replace('.', ',')}`
   }
 
   // Tempo médio de permanência
@@ -116,17 +175,19 @@ function atualizarKPIs (vagas, tickets, mensalistas) {
 // Calcula o tempo médio de permanência dos veículos
 function calcularTempoMedioPermanencia (ticketsFechados) {
   const validos = ticketsFechados.filter(t => {
-    if (!t.dataEntrada || !t.dataSaida) return false
-    const dEntrada = new Date(t.dataEntrada)
-    const dSaida = new Date(t.dataSaida)
+    const ent = t.horaEntrada || t.dataEntrada
+    const sai = t.horaSaida || t.dataSaida
+    if (!ent || !sai) return false
+    const dEntrada = new Date(ent)
+    const dSaida = new Date(sai)
     return !isNaN(dEntrada) && !isNaN(dSaida) && dSaida >= dEntrada
   })
 
   if (validos.length === 0) return '0h 0m'
 
   const totalMs = validos.reduce((acc, t) => {
-    const entrada = new Date(t.dataEntrada)
-    const saida = new Date(t.dataSaida)
+    const entrada = new Date(t.horaEntrada || t.dataEntrada)
+    const saida = new Date(t.horaSaida || t.dataSaida)
     return acc + (saida - entrada)
   }, 0)
 
@@ -146,8 +207,9 @@ function renderizarGraficoOcupacaoHorario (tickets) {
 
   const contagemPorHora = new Array(24).fill(0)
   tickets.forEach(t => {
-    if (!t.dataEntrada) return
-    const d = new Date(t.dataEntrada)
+    const ent = t.horaEntrada || t.dataEntrada
+    if (!ent) return
+    const d = new Date(ent)
     if (!isNaN(d)) {
       const hora = d.getHours()
       contagemPorHora[hora]++
@@ -185,7 +247,6 @@ function renderizarGraficoOcupacaoHorario (tickets) {
     }
   })
 
-  // Tabela acessível (WCAG 1.1.1)
   const tbody = document.getElementById('tbody-ocupacao-horario')
   if (tbody) {
     tbody.innerHTML = labels
@@ -199,26 +260,29 @@ function renderizarGraficoOcupacaoHorario (tickets) {
   }
 }
 
-// Gráfico: Receita Mensal
+// Gráfico: Receita por Período
 function renderizarGraficoReceitaMensal (tickets) {
   const canvas = document.getElementById('chart-receita-mensal')
   if (!canvas || typeof Chart === 'undefined') return
   const ctx = canvas.getContext('2d')
 
   const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado' && t.dataSaida
+    t => (t.status || '').toLowerCase() === 'fechado'
   )
 
   const totaisPorMes = {}
   ticketsFechados.forEach(t => {
-    const d = new Date(t.dataSaida)
+    const sai = t.horaSaida || t.dataSaida
+    if (!sai) return
+    const d = new Date(sai)
     if (!isNaN(d)) {
       const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
         2,
         '0'
       )}`
       totaisPorMes[chave] =
-        (totaisPorMes[chave] || 0) + (Number(t.valorTotal) || 0)
+        (totaisPorMes[chave] || 0) +
+        (Number(t.valorTotal ?? t.valorCobrado) || 0)
     }
   })
 
@@ -293,7 +357,94 @@ function renderizarGraficoReceitaMensal (tickets) {
   }
 }
 
-// Gráfico: Distribuição/Ocupação por Categoria de Vaga
+// NOVO GRÁFICO: Receita / Distribuição por Meio de Pagamento
+function renderizarGraficoMeiosPagamento (tickets) {
+  const canvas = document.getElementById('chart-meios-pagamento')
+  if (!canvas || typeof Chart === 'undefined') return
+  const ctx = canvas.getContext('2d')
+
+  const ticketsFechados = tickets.filter(
+    t => (t.status || '').toLowerCase() === 'fechado'
+  )
+
+  const contagem = {
+    pix: 0,
+    cartao_credito: 0,
+    cartao_debito: 0,
+    dinheiro: 0,
+    isento: 0
+  }
+
+  ticketsFechados.forEach(t => {
+    let forma = (t.formaPagamento || '').toLowerCase()
+    if (!forma && t.mensalistaId) forma = 'isento'
+    if (!forma) forma = 'pix' // Padrão de fallback
+
+    if (contagem[forma] !== undefined) {
+      contagem[forma] += Number(t.valorTotal ?? t.valorCobrado) || 0
+    } else {
+      contagem.pix += Number(t.valorTotal ?? t.valorCobrado) || 0
+    }
+  })
+
+  const labels = [
+    'PIX',
+    'Cartão Crédito',
+    'Cartão Débito',
+    'Dinheiro',
+    'Isento'
+  ]
+  const valores = [
+    contagem.pix,
+    contagem.cartao_credito,
+    contagem.cartao_debito,
+    contagem.dinheiro,
+    contagem.isento
+  ]
+  const cores = [
+    PALETA.pix,
+    PALETA.credito,
+    PALETA.debito,
+    PALETA.dinheiro,
+    PALETA.isento
+  ]
+
+  if (chartMeiosPagamento) chartMeiosPagamento.destroy()
+
+  chartMeiosPagamento = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: valores,
+          backgroundColor: cores,
+          borderWidth: 2,
+          borderColor: '#1e1e1e'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: context => {
+              const val = Number(context.raw || 0)
+              return ` R$ ${val.toFixed(2).replace('.', ',')}`
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+// Gráfico: Distribuição por Categoria de Vaga
 function renderizarGraficoCategorias (vagas) {
   const canvas = document.getElementById('chart-categorias')
   if (!canvas || typeof Chart === 'undefined') return

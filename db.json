@@ -23,6 +23,14 @@
       "ativo": true,
       "telefone": "(11) 94469-7788",
       "id": "nsERumW5iEs"
+    },
+    {
+      "nome": "Oliver Castro",
+      "cpf": "705.627.650-42",
+      "placa": "POI1J34",
+      "ativo": true,
+      "telefone": "(11) 94469-7783",
+      "id": "6uwdDyCT2S0"
     }
   ],
   "vagas": [
@@ -36,13 +44,13 @@
       "id": "2",
       "codigo": "A-02",
       "tipo": "Carro",
-      "status": "livre"
+      "status": "ocupada"
     },
     {
       "id": "3",
       "codigo": "M-01",
       "tipo": "Moto",
-      "status": "Livre"
+      "status": "ocupada"
     },
     {
       "id": "4",
@@ -55,6 +63,24 @@
       "codigo": "I-01",
       "tipo": "Idoso",
       "status": "Livre"
+    },
+    {
+      "codigo": "PCD-02",
+      "tipo": "deficiente",
+      "status": "livre",
+      "id": "Zb2tURs8sMU"
+    },
+    {
+      "codigo": "PCD-01",
+      "tipo": "moto",
+      "status": "livre",
+      "id": "OHVT3htzMKI"
+    },
+    {
+      "codigo": "PCD-02",
+      "tipo": "moto",
+      "status": "livre",
+      "id": "hLYcUFsC9lg"
     }
   ],
   "tarifas": [
@@ -62,7 +88,32 @@
       "id": "2",
       "tipoVeiculo": "Moto",
       "valorHora": 6,
-      "valorAdicional": 3
+      "valorAdicional": 3,
+      "categoria": "Geral"
+    },
+    {
+      "categoria": "Carro",
+      "valorHora": 2,
+      "valorAdicional": 0,
+      "id": "WzpGh4dqXsk"
+    },
+    {
+      "categoria": "Moto",
+      "valorHora": 1,
+      "valorAdicional": 0,
+      "id": "xSl886vckLE"
+    },
+    {
+      "categoria": "PCD",
+      "valorHora": 0.5,
+      "valorAdicional": 0,
+      "id": "wRLv5Y0LitU"
+    },
+    {
+      "categoria": "Caminhão",
+      "valorHora": 8,
+      "valorAdicional": 0,
+      "id": "kYDnLjM_Qws"
     }
   ],
   "tickets": [
@@ -87,6 +138,28 @@
       "valorTotal": 10,
       "status": "fechado",
       "id": "FRghW-LQ3e4"
+    },
+    {
+      "placa": "DCB2A34",
+      "vagaId": "3",
+      "tarifaId": "2",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T18:05:48.219Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "aberto",
+      "id": "MuQIIAMt6nU"
+    },
+    {
+      "placa": "WER3E43",
+      "vagaId": "2",
+      "tarifaId": "2",
+      "mensalistaId": null,
+      "dataEntrada": "2026-07-27T18:06:18.503Z",
+      "dataSaida": null,
+      "valorTotal": null,
+      "status": "aberto",
+      "id": "82_L81CYNuU"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

@@ -1,6 +1,7 @@
 /**
  * Lógica da Página de Vagas & Tarifas
- * Renderização dinâmica do mapa, tabelas de gestão, validações e regras de negócio.
+ * Renderização dinâmica do mapa de pátio, bloqueio/manutenção de vagas,
+ * criação/edição/exclusão de vagas e tarifas com validações e SweetAlert2.
  */
 
 let todasVagas = []
@@ -14,6 +15,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('filtro-tipo-vaga')?.addEventListener('change', e => {
     filtrarVagasPorTipo(e.target.value)
   })
+
+  // Listener para formulários de cadastro na página (caso existam no HTML)
+  document
+    .getElementById('form-nova-tarifa')
+    ?.addEventListener('submit', cadastrarNovaTarifa)
+  document
+    .getElementById('form-nova-vaga')
+    ?.addEventListener('submit', cadastrarNovaVaga)
 
   // Botão "Tentar novamente" em caso de erro na página
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
@@ -49,6 +58,14 @@ const STATUS_VAGA = {
   }
 }
 
+// Helper seguro para sanitização
+function sanitizar (texto) {
+  if (typeof ApiService !== 'undefined' && ApiService.sanitizeText) {
+    return ApiService.sanitizeText(texto)
+  }
+  return texto || ''
+}
+
 // Carrega Vagas, Tickets e Tarifas da API
 async function carregarTodosOsDados () {
   const pageError = document.getElementById('page-error')
@@ -71,16 +88,13 @@ async function carregarTodosOsDados () {
     todosTickets = tickets || []
     todasTarifas = tarifas || []
 
-    // Renderiza a aba ativa (Mapa Visual e Tabelas de Gestão)
     renderizarGridVagas(todasVagas)
     renderizarTabelaVagas(todasVagas)
     renderizarTabelaTarifas(todasTarifas)
   } catch (error) {
     console.error('Erro ao carregar dados de Vagas e Tarifas:', error)
 
-    if (pageError) {
-      pageError.classList.remove('d-none')
-    }
+    if (pageError) pageError.classList.remove('d-none')
 
     if (typeof Swal !== 'undefined') {
       Swal.fire({
@@ -124,14 +138,9 @@ function renderizarGridVagas (vagasList) {
       `Vaga ${numeroVaga}, tipo ${vaga.tipo}, status ${info.texto}`
     )
 
-    const sanitize =
-      typeof ApiService !== 'undefined'
-        ? ApiService.sanitizeText
-        : str => str || ''
-
     card.innerHTML = `
-      <div class="vaga-codigo">${sanitize(numeroVaga)}</div>
-      <div class="vaga-tipo fw-semibold text-uppercase">${sanitize(
+      <div class="vaga-codigo">${sanitizar(numeroVaga)}</div>
+      <div class="vaga-tipo fw-semibold text-uppercase">${sanitizar(
         vaga.tipo || 'comum'
       )}</div>
       <div class="mt-2">
@@ -170,7 +179,268 @@ function filtrarVagasPorTipo (tipo) {
 }
 
 /* ==========================================================================
-   2. GESTÃO DE VAGAS (TABELA)
+   2. INTERAÇÃO E ALTERAÇÃO DE STATUS (MANUTENÇÃO / LIBERAÇÃO)
+   ========================================================================== */
+
+async function abrirOpcoesVaga (vaga) {
+  const statusKey = (vaga.status || '').toLowerCase()
+  const numeroVaga = vaga.codigo || vaga.numero || vaga.id
+
+  if (possuiTicketAberto(vaga.id) || statusKey === 'ocupada') {
+    if (typeof Swal !== 'undefined') {
+      await Swal.fire({
+        title: `Vaga ${sanitizar(numeroVaga)}`,
+        html: `
+          <p class="mb-1"><strong>Tipo:</strong> ${sanitizar(vaga.tipo)}</p>
+          <p class="mb-0"><strong>Status Atual:</strong> <span class="badge bg-danger">Ocupada</span></p>
+          <p class="text-muted small mt-3 mb-0">
+            <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+            Esta vaga possui um veículo estacionado no momento. Para alterá-la, dê saída no ticket primeiro.
+          </p>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Entendido'
+      })
+    }
+    return
+  }
+
+  const vaiParaManutencao = statusKey === 'livre'
+  const novoStatus = vaiParaManutencao ? 'manutencao' : 'livre'
+
+  if (typeof Swal !== 'undefined') {
+    const result = await Swal.fire({
+      title: `Vaga ${sanitizar(numeroVaga)}`,
+      html: `
+        <p class="mb-1"><strong>Tipo:</strong> ${sanitizar(vaga.tipo)}</p>
+        <p class="mb-0"><strong>Status Atual:</strong> <span class="fw-bold">${
+          STATUS_VAGA[statusKey]?.texto || 'Livre'
+        }</span></p>
+        <p class="text-muted small mt-2 mb-0">
+          ${
+            vaiParaManutencao
+              ? 'Deseja bloquear esta vaga para manutenção/reparos?'
+              : 'Deseja liberar esta vaga para novos veículos?'
+          }
+        </p>
+      `,
+      icon: vaiParaManutencao ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonColor: vaiParaManutencao ? '#d33' : '#198754',
+      confirmButtonText: vaiParaManutencao
+        ? '<i class="fas fa-tools me-1"></i> Bloquear (Manutenção)'
+        : '<i class="fas fa-check me-1"></i> Liberar Vaga',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (result.isConfirmed) {
+      try {
+        if (typeof ApiService !== 'undefined' && ApiService.updateVagaStatus) {
+          await ApiService.updateVagaStatus(vaga.id, novoStatus)
+        } else if (typeof ApiService !== 'undefined' && ApiService.updateVaga) {
+          await ApiService.updateVaga(vaga.id, { ...vaga, status: novoStatus })
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: vaiParaManutencao ? 'Vaga em Manutenção!' : 'Vaga Liberada!',
+          timer: 1500,
+          showConfirmButton: false
+        })
+        await carregarTodosOsDados()
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao atualizar status',
+          text: error.message || 'Comportamento inesperado. Tente novamente.'
+        })
+      }
+    }
+  }
+}
+
+/* ==========================================================================
+   3. CADASTRO DE NOVAS TARIFAS E VAGAS
+   ========================================================================== */
+
+// Cadastro via Modal Direta
+async function abrirModalNovaTarifa () {
+  if (typeof Swal === 'undefined') return
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Cadastrar Nova Tarifa',
+    html: `
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Categoria / Tipo <span class="text-danger">*</span></label>
+        <input id="swal-nova-categoria" class="form-control" placeholder="Ex: Carro, Moto, PCD">
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Valor da Hora (R$) <span class="text-danger">*</span></label>
+        <input id="swal-novo-valor" type="number" step="0.50" min="0" class="form-control" placeholder="Ex: 10.00">
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Salvar Tarifa',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const categoria = document
+        .getElementById('swal-nova-categoria')
+        .value.trim()
+      const valorStr = document.getElementById('swal-novo-valor').value.trim()
+      const valorHora = Number(valorStr)
+
+      if (!categoria || valorStr === '' || isNaN(valorHora) || valorHora <= 0) {
+        Swal.showValidationMessage(
+          'Por favor, preencha todos os campos com valores válidos.'
+        )
+        return false
+      }
+
+      return { categoria, valorHora }
+    }
+  })
+
+  if (formValues) {
+    await executarSalvarTarifa(formValues)
+  }
+}
+
+// Cadastro via Form do HTML
+async function cadastrarNovaTarifa (event) {
+  if (event) event.preventDefault()
+
+  const elCategoria =
+    document.getElementById('input-tarifa-categoria') ||
+    document.getElementById('tarifa-categoria')
+  const elValor =
+    document.getElementById('input-tarifa-valor') ||
+    document.getElementById('tarifa-valor')
+
+  const categoria = elCategoria ? elCategoria.value.trim() : ''
+  const valorInput = elValor ? elValor.value.trim() : ''
+  const valorHora = Number(valorInput.replace(',', '.'))
+
+  if (!categoria || valorInput === '' || isNaN(valorHora) || valorHora <= 0) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campos Obrigatórios',
+        text: 'Por favor, preencha todos os campos corretamente antes de salvar a tarifa.'
+      })
+    }
+    return
+  }
+
+  const salvou = await executarSalvarTarifa({ categoria, valorHora })
+  if (salvou) {
+    if (elCategoria) elCategoria.value = ''
+    if (elValor) elValor.value = ''
+  }
+}
+
+// Lógica de Persistência da Tarifa na API
+async function executarSalvarTarifa (dadosTarifa) {
+  try {
+    if (typeof ApiService !== 'undefined') {
+      if (ApiService.createTarifa) {
+        await ApiService.createTarifa(dadosTarifa)
+      } else if (ApiService.saveTarifa) {
+        await ApiService.saveTarifa(dadosTarifa)
+      }
+    }
+
+    if (typeof Swal !== 'undefined') {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Sucesso!',
+        text: 'Tarifa salva com sucesso.',
+        timer: 1800,
+        showConfirmButton: false
+      })
+    }
+
+    await carregarTodosOsDados()
+    return true
+  } catch (error) {
+    console.error('Erro ao salvar tarifa:', error)
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao salvar',
+        text: 'Comportamento inesperado. Tente novamente.'
+      })
+    }
+    return false
+  }
+}
+
+// Modal Rápida para Cadastrar Nova Vaga
+async function abrirModalNovaVaga () {
+  if (typeof Swal === 'undefined') return
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Cadastrar Nova Vaga',
+    html: `
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Código/Número <span class="text-danger">*</span></label>
+        <input id="swal-novo-codigo" class="form-control" placeholder="Ex: A-01, B-12">
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Tipo de Veículo <span class="text-danger">*</span></label>
+        <select id="swal-novo-tipo" class="form-select">
+          <option value="carro">Carro</option>
+          <option value="moto">Moto</option>
+          <option value="deficiente">Deficiente (PCD)</option>
+          <option value="idoso">Idoso</option>
+        </select>
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Cadastrar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const codigo = document.getElementById('swal-novo-codigo').value.trim()
+      const tipo = document.getElementById('swal-novo-tipo').value
+
+      if (!codigo) {
+        Swal.showValidationMessage('Informe o código da vaga.')
+        return false
+      }
+
+      return { codigo, tipo, status: 'livre' }
+    }
+  })
+
+  if (formValues) {
+    try {
+      if (typeof ApiService !== 'undefined' && ApiService.createVaga) {
+        await ApiService.createVaga(formValues)
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Sucesso!',
+        text: 'Vaga cadastrada com sucesso.',
+        timer: 1500,
+        showConfirmButton: false
+      })
+
+      await carregarTodosOsDados()
+    } catch (error) {
+      console.error('Erro ao cadastrar vaga:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao salvar',
+        text: 'Comportamento inesperado. Tente novamente.'
+      })
+    }
+  }
+}
+
+/* ==========================================================================
+   4. GESTÃO DE VAGAS (TABELA)
    ========================================================================== */
 
 function renderizarTabelaVagas (vagas) {
@@ -181,11 +451,6 @@ function renderizarTabelaVagas (vagas) {
     document.querySelector('table tbody')
 
   if (!tbody) return
-
-  const sanitize =
-    typeof ApiService !== 'undefined'
-      ? ApiService.sanitizeText
-      : str => str || ''
 
   if (!vagas || vagas.length === 0) {
     tbody.innerHTML =
@@ -201,9 +466,9 @@ function renderizarTabelaVagas (vagas) {
 
       return `
       <tr>
-        <td class="fw-bold">${sanitize(numero)}</td>
-        <td class="text-capitalize">${sanitize(tipo)}</td>
-        <td><span class="badge status-${status.toLowerCase()}">${sanitize(
+        <td class="fw-bold">${sanitizar(numero)}</td>
+        <td class="text-capitalize">${sanitizar(tipo)}</td>
+        <td><span class="badge status-${status.toLowerCase()}">${sanitizar(
         status
       )}</span></td>
         <td>
@@ -225,34 +490,19 @@ function renderizarTabelaVagas (vagas) {
 }
 
 /* ==========================================================================
-   3. TABELA DE TARIFAS
-   ========================================================================== */
-
-/* ==========================================================================
-   3. TABELA DE TARIFAS (CORRIGIDA)
+   5. TABELA DE TARIFAS
    ========================================================================== */
 
 function renderizarTabelaTarifas (tarifas) {
-  // Busca por todos os IDs e estruturas comuns que o HTML pode ter
   const tbody =
     document.getElementById('tabela-tarifas-body') ||
     document.querySelector('#tabela-tarifas tbody') ||
     document.getElementById('listagem-tarifas-body') ||
     document.querySelector('#tarifas-body') ||
-    document.querySelectorAll('table tbody')[1] || // Seleciona a segunda tabela da página
+    document.querySelectorAll('table tbody')[1] ||
     document.querySelector('.table-tarifas tbody')
 
-  if (!tbody) {
-    console.warn(
-      '[Tarifas] Container/tbody da tabela de tarifas não foi encontrado no HTML.'
-    )
-    return
-  }
-
-  const sanitize =
-    typeof ApiService !== 'undefined'
-      ? ApiService.sanitizeText
-      : str => str || ''
+  if (!tbody) return
 
   if (!tarifas || tarifas.length === 0) {
     tbody.innerHTML =
@@ -269,7 +519,7 @@ function renderizarTabelaTarifas (tarifas) {
 
       return `
         <tr>
-          <td class="fw-bold">${sanitize(nome)}</td>
+          <td class="fw-bold">${sanitizar(nome)}</td>
           <td>R$ ${valor} / h</td>
           <td>
             <button class="btn btn-sm btn-outline-primary me-1" onclick="editarTarifa('${
@@ -290,7 +540,7 @@ function renderizarTabelaTarifas (tarifas) {
 }
 
 /* ==========================================================================
-   4. REGRAS DE NEGÓCIO E AÇÕES DE EDIÇÃO E EXCLUSÃO
+   6. REGRAS DE NEGÓCIO E AÇÕES DE EDIÇÃO E EXCLUSÃO
    ========================================================================== */
 
 function possuiTicketAberto (vagaId) {
@@ -347,8 +597,13 @@ async function editarVaga (vagaId) {
     confirmButtonText: 'Salvar',
     cancelButtonText: 'Cancelar',
     preConfirm: () => {
+      const codigo = document.getElementById('swal-input-codigo').value.trim()
+      if (!codigo) {
+        Swal.showValidationMessage('O código da vaga não pode ficar vazio.')
+        return false
+      }
       return {
-        codigo: document.getElementById('swal-input-codigo').value,
+        codigo,
         tipo: document.getElementById('swal-input-tipo').value
       }
     }
@@ -368,7 +623,7 @@ async function editarVaga (vagaId) {
       Swal.fire({
         icon: 'error',
         title: 'Erro ao atualizar',
-        text: error.message
+        text: 'Comportamento inesperado. Tente novamente.'
       })
     }
   }
@@ -379,7 +634,6 @@ async function editarTarifa (tarifaId) {
   const tarifa = todasTarifas.find(t => String(t.id) === String(tarifaId))
   if (!tarifa) return
 
-  // Identifica a categoria atual (normalizando maiúsculas/minúsculas)
   const catAtual = (tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral')
     .toLowerCase()
     .trim()
@@ -424,7 +678,7 @@ async function editarTarifa (tarifaId) {
         document.getElementById('swal-input-valor').value
       )
 
-      if (isNaN(valorHora) || valorHora < 0) {
+      if (isNaN(valorHora) || valorHora <= 0) {
         Swal.showValidationMessage('Informe um valor válido por hora.')
         return false
       }
@@ -447,76 +701,8 @@ async function editarTarifa (tarifaId) {
       Swal.fire({
         icon: 'error',
         title: 'Erro ao atualizar tarifa',
-        text: error.message || 'Falha ao salvar no servidor.'
+        text: 'Comportamento inesperado. Tente novamente.'
       })
-    }
-  }
-}
-
-async function abrirOpcoesVaga (vaga) {
-  const statusKey = (vaga.status || '').toLowerCase()
-  const numeroVaga = vaga.codigo || vaga.numero || vaga.id
-  const sanitize =
-    typeof ApiService !== 'undefined'
-      ? ApiService.sanitizeText
-      : str => str || ''
-
-  if (possuiTicketAberto(vaga.id) || statusKey === 'ocupada') {
-    if (typeof Swal !== 'undefined') {
-      await Swal.fire({
-        title: `Vaga ${sanitize(numeroVaga)}`,
-        html: `
-          <p class="mb-1"><strong>Tipo:</strong> ${sanitize(vaga.tipo)}</p>
-          <p class="mb-0"><strong>Status Atual:</strong> <span class="badge bg-danger">Ocupada</span></p>
-          <p class="text-muted small mt-2 mb-0">
-            <i class="fas fa-exclamation-circle text-warning me-1"></i>
-            Existe um ticket aberto para esta vaga. Para alterar o status ou liberar a vaga, encerre o ticket na tela de Tickets.
-          </p>
-        `,
-        icon: 'info',
-        confirmButtonText: 'Entendido'
-      })
-    }
-    return
-  }
-
-  const vaiParaManutencao = statusKey === 'livre'
-  const novoStatus = vaiParaManutencao ? 'manutencao' : 'livre'
-
-  if (typeof Swal !== 'undefined') {
-    const result = await Swal.fire({
-      title: `Vaga ${sanitize(numeroVaga)}`,
-      html: `
-        <p class="mb-1"><strong>Tipo:</strong> ${sanitize(vaga.tipo)}</p>
-        <p class="mb-0"><strong>Status Atual:</strong> ${
-          STATUS_VAGA[statusKey]?.texto || 'Livre'
-        }</p>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: vaiParaManutencao
-        ? 'Marcar em Manutenção'
-        : 'Liberar Vaga',
-      cancelButtonText: 'Cancelar'
-    })
-
-    if (result.isConfirmed) {
-      try {
-        await ApiService.updateVagaStatus(vaga.id, novoStatus)
-        Swal.fire({
-          icon: 'success',
-          title: 'Status Atualizado!',
-          timer: 1500,
-          showConfirmButton: false
-        })
-        await carregarTodosOsDados()
-      } catch (error) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Erro ao atualizar',
-          text: error.message || 'Falha ao comunicar com o servidor.'
-        })
-      }
     }
   }
 }
@@ -558,7 +744,7 @@ async function excluirVaga (vagaId) {
         Swal.fire({
           icon: 'error',
           title: 'Erro ao excluir vaga',
-          text: error.message
+          text: 'Comportamento inesperado. Tente novamente.'
         })
       }
     }
@@ -608,15 +794,18 @@ async function excluirTarifa (tarifaId) {
         Swal.fire({
           icon: 'error',
           title: 'Erro ao excluir tarifa',
-          text: error.message
+          text: 'Comportamento inesperado. Tente novamente.'
         })
       }
     }
   }
 }
 
-// Expõe explicitamente as funções no escopo global window para chamadas via onclick no HTML
+// Expõe as funções globalmente
 window.editarVaga = editarVaga
 window.excluirVaga = excluirVaga
 window.editarTarifa = editarTarifa
 window.excluirTarifa = excluirTarifa
+window.cadastrarNovaTarifa = cadastrarNovaTarifa
+window.abrirModalNovaTarifa = abrirModalNovaTarifa
+window.abrirModalNovaVaga = abrirModalNovaVaga

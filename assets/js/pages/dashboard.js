@@ -1,13 +1,14 @@
 /**
  * Lógica do Dashboard Principal
  * Inicializa os KPIs, filtro por tipo de vaga, ranking de vagas,
- * tabela de tickets recentes e ações da página.
+ * busca rápida por placa, tabela de tickets recentes e ações da página.
  */
 
 // Armazenamento em memória dos dados para permitir filtragem local ágil
 let globalVagas = []
 let globalTickets = []
 let globalMensalistas = []
+let globalTarifas = []
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadDashboardData()
@@ -19,12 +20,81 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadDashboardData()
     })
 
-  // Listener para o Filtro por Tipo de Vaga (Requisito 2.7)
+  // Listener para o Filtro por Tipo de Vaga
   document.getElementById('filtro-tipo-vaga')?.addEventListener('change', e => {
     const tipoSelecionado = e.target.value
     aplicarFiltroTipoVaga(tipoSelecionado)
   })
+
+  // === BUSCA RÁPIDA POR PLACA NO DASHBOARD ===
+  initBuscaRapidaPlaca()
 })
+
+/**
+ * Inicializa a busca rápida por placa para agilizar a baixa do ticket no atendimento
+ */
+function initBuscaRapidaPlaca () {
+  const inputBusca = document.getElementById('input-busca-placa-rapida')
+  if (!inputBusca) return
+
+  // Formatação em caixa alta
+  inputBusca.addEventListener('input', e => {
+    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (value.length > 7) value = value.slice(0, 7)
+    e.target.value = value
+
+    filtrarTicketsPorPlaca(value)
+  })
+
+  // Atalho: Pressionar Enter para dar saída direta na primeira placa correspondente
+  inputBusca.addEventListener('keydown', async e => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const termo = e.target.value.trim().toUpperCase()
+      if (!termo) return
+
+      const ticketEncontrado = globalTickets.find(
+        t =>
+          (t.status || '').toLowerCase() === 'aberto' &&
+          (t.placa || '').toUpperCase().includes(termo)
+      )
+
+      if (ticketEncontrado) {
+        await encerrarTicket(ticketEncontrado.id)
+        e.target.value = ''
+        filtrarTicketsPorPlaca('')
+      } else {
+        Swal.fire({
+          icon: 'info',
+          title: 'Ticket não localizado',
+          text: `Nenhum ticket aberto foi encontrado para a placa "${termo}".`,
+          timer: 2000,
+          showConfirmButton: false
+        })
+      }
+    }
+  })
+}
+
+/**
+ * Filtra dinamicamente a tabela de tickets abertos pela busca de placa
+ */
+function filtrarTicketsPorPlaca (placaTermo) {
+  const ticketsAbertos = globalTickets.filter(
+    t => (t.status || '').toLowerCase() === 'aberto'
+  )
+
+  if (!placaTermo) {
+    renderTicketsRecentes(ticketsAbertos, globalVagas, globalMensalistas)
+    return
+  }
+
+  const filtrados = ticketsAbertos.filter(t =>
+    (t.placa || '').toUpperCase().includes(placaTermo)
+  )
+
+  renderTicketsRecentes(filtrados, globalVagas, globalMensalistas)
+}
 
 // Carregamento dos Dados do Dashboard
 async function loadDashboardData () {
@@ -36,32 +106,33 @@ async function loadDashboardData () {
   tbody?.setAttribute('aria-busy', 'true')
 
   try {
-    const [vagas, tickets, mensalistas] = await Promise.all([
-      ApiService.getVagas(),
-      ApiService.getTickets(),
-      ApiService.getMensalistas()
+    const [vagas, tickets, mensalistas, tarifas] = await Promise.all([
+      ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
+      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
+      ApiService.getMensalistas
+        ? ApiService.getMensalistas()
+        : Promise.resolve([]),
+      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([])
     ])
 
     // Armazena no escopo global para filtragem
     globalVagas = vagas || []
     globalTickets = tickets || []
     globalMensalistas = mensalistas || []
+    globalTarifas = tarifas || []
 
-    // Obtém o tipo selecionado no momento (caso o usuário troque e recarregue)
     const selectTipo = document.getElementById('filtro-tipo-vaga')
     const tipoAtual = selectTipo ? selectTipo.value : 'todos'
 
-    // Atualiza a tela com base no filtro
+    // Atualiza KPIs com base no filtro
     aplicarFiltroTipoVaga(tipoAtual)
 
-    // Renderiza a lista de tickets ativos (independente do filtro de tipo de vaga)
-    renderTicketsRecentes(
-      globalTickets.filter(t => (t.status || '').toLowerCase() === 'aberto'),
-      globalVagas,
-      globalMensalistas
-    )
+    // Aplica filtro de busca rápida se houver texto
+    const inputBusca = document.getElementById('input-busca-placa-rapida')
+    const termoPlaca = inputBusca ? inputBusca.value.trim().toUpperCase() : ''
+    filtrarTicketsPorPlaca(termoPlaca)
 
-    // Renderiza o Ranking de Vagas (Requisito 2.6)
+    // Renderiza o Ranking de Vagas
     renderRankingVagas(globalVagas, globalTickets)
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
@@ -72,17 +143,19 @@ async function loadDashboardData () {
       errorBanner.classList.remove('d-none')
     }
 
-    Swal.fire({
-      icon: 'error',
-      title: 'Erro de Conexão',
-      text: 'Não foi possível carregar os dados do backend (json-server).'
-    })
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro de Conexão',
+        text: 'Não foi possível carregar os dados do backend.'
+      })
+    }
   } finally {
     tbody?.setAttribute('aria-busy', 'false')
   }
 }
 
-// Aplica o filtro por Tipo de Vaga e recarrega os KPIs afetados (Requisito 2.7)
+// Aplica o filtro por Tipo de Vaga e recarrega os KPIs afetados
 function aplicarFiltroTipoVaga (tipo) {
   let vagasFiltradas = globalVagas
 
@@ -92,8 +165,6 @@ function aplicarFiltroTipoVaga (tipo) {
     )
   }
 
-  // Se filtrarmos as vagas por tipo, os tickets contabilizados para faturamento/taxa
-  // também devem ser associados apenas às vagas desse tipo
   const idsVagasFiltradas = new Set(vagasFiltradas.map(v => String(v.id)))
 
   const ticketsFiltrados = globalTickets.filter(t =>
@@ -123,17 +194,13 @@ function atualizarKPIs (vagas, tickets) {
     t => (t.status || '').toLowerCase() === 'fechado'
   )
 
-  // Taxa de ocupação: % de vagas "ocupada" em relação ao total de vagas do tipo
   const taxaOcupacao = totalVagas > 0 ? (vagasOcupadas / totalVagas) * 100 : 0
 
-  // Faturamento TOTAL: soma de todos os tickets fechados
   const faturamentoTotal = ticketsFechados.reduce(
-    (acc, t) => acc + (Number(t.valorTotal) || 0),
+    (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
     0
   )
 
-  // Ticket médio = faturamento total / quantidade de tickets fechados
-  // Exibe "Nenhum dado disponível" se não houver tickets fechados
   const ticketMedioTexto =
     ticketsFechados.length > 0
       ? `R$ ${(faturamentoTotal / ticketsFechados.length)
@@ -141,32 +208,42 @@ function atualizarKPIs (vagas, tickets) {
           .replace('.', ',')}`
       : 'Nenhum dado disponível'
 
-  // Tempo médio de permanência dos tickets fechados
   const tempoMedioTexto = calcularTempoMedio(ticketsFechados)
 
-  document.getElementById('kpi-vagas-livres').textContent = vagasLivres
-  document.getElementById('kpi-vagas-ocupadas').textContent = vagasOcupadas
-  document.getElementById('kpi-vagas-manutencao').textContent = vagasManutencao
-  document.getElementById(
-    'kpi-taxa-ocupacao'
-  ).textContent = `${taxaOcupacao.toFixed(1)}%`
-  document.getElementById('kpi-tickets-abertos').textContent =
-    ticketsAbertos.length
-  document.getElementById(
-    'kpi-faturamento'
-  ).textContent = `R$ ${faturamentoTotal.toFixed(2).replace('.', ',')}`
-  document.getElementById('kpi-ticket-medio').textContent = ticketMedioTexto
-  document.getElementById('kpi-tempo-medio').textContent = tempoMedioTexto
+  if (document.getElementById('kpi-vagas-livres'))
+    document.getElementById('kpi-vagas-livres').textContent = vagasLivres
+  if (document.getElementById('kpi-vagas-ocupadas'))
+    document.getElementById('kpi-vagas-ocupadas').textContent = vagasOcupadas
+  if (document.getElementById('kpi-vagas-manutencao'))
+    document.getElementById('kpi-vagas-manutencao').textContent =
+      vagasManutencao
+  if (document.getElementById('kpi-taxa-ocupacao'))
+    document.getElementById(
+      'kpi-taxa-ocupacao'
+    ).textContent = `${taxaOcupacao.toFixed(1)}%`
+  if (document.getElementById('kpi-tickets-abertos'))
+    document.getElementById('kpi-tickets-abertos').textContent =
+      ticketsAbertos.length
+  if (document.getElementById('kpi-faturamento'))
+    document.getElementById(
+      'kpi-faturamento'
+    ).textContent = `R$ ${faturamentoTotal.toFixed(2).replace('.', ',')}`
+  if (document.getElementById('kpi-ticket-medio'))
+    document.getElementById('kpi-ticket-medio').textContent = ticketMedioTexto
+  if (document.getElementById('kpi-tempo-medio'))
+    document.getElementById('kpi-tempo-medio').textContent = tempoMedioTexto
 }
 
 // Calcula tempo médio de permanência
 function calcularTempoMedio (ticketsFechados) {
-  const validos = ticketsFechados.filter(t => t.dataEntrada && t.dataSaida)
+  const validos = ticketsFechados.filter(
+    t => (t.horaEntrada || t.dataEntrada) && (t.horaSaida || t.dataSaida)
+  )
   if (validos.length === 0) return 'Nenhum dado disponível'
 
   const totalMs = validos.reduce((acc, t) => {
-    const entrada = new Date(t.dataEntrada)
-    const saida = new Date(t.dataSaida)
+    const entrada = new Date(t.horaEntrada || t.dataEntrada)
+    const saida = new Date(t.horaSaida || t.dataSaida)
     return acc + Math.max(0, saida - entrada)
   }, 0)
 
@@ -178,7 +255,7 @@ function calcularTempoMedio (ticketsFechados) {
   return `${horas}h ${minutos}m`
 }
 
-// Renderização do Ranking das Vagas Mais Utilizadas (Requisito 2.6)
+// Renderização do Ranking das Vagas Mais Utilizadas
 function renderRankingVagas (vagas, tickets) {
   const tbody = document.getElementById('tbody-ranking-vagas')
   if (!tbody) return
@@ -194,7 +271,6 @@ function renderRankingVagas (vagas, tickets) {
     return
   }
 
-  // Contabiliza total de uso (tickets associados) por id da vaga
   const contagemUso = {}
   tickets.forEach(ticket => {
     if (ticket.vagaId) {
@@ -203,7 +279,6 @@ function renderRankingVagas (vagas, tickets) {
     }
   })
 
-  // Mapeia as vagas adicionando o total de usos e ordena do maior para o menor
   const ranking = vagas
     .map(vaga => ({
       ...vaga,
@@ -214,7 +289,6 @@ function renderRankingVagas (vagas, tickets) {
   ranking.forEach((item, index) => {
     const tr = document.createElement('tr')
 
-    // Destaque visual para o top 3
     let badgePosicao = `<span class="fw-bold text-muted">${index + 1}º</span>`
     if (index === 0)
       badgePosicao = `<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>1º</span>`
@@ -252,7 +326,7 @@ function renderTicketsRecentes (ticketsAbertos, vagas, mensalistas) {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" class="text-center py-4 text-muted">
-          <i class="fas fa-check-circle text-success me-2" aria-hidden="true"></i>Nenhum ticket aberto no momento.
+          <i class="fas fa-check-circle text-success me-2" aria-hidden="true"></i>Nenhum ticket aberto encontrado.
         </td>
       </tr>
     `
@@ -262,23 +336,23 @@ function renderTicketsRecentes (ticketsAbertos, vagas, mensalistas) {
   ticketsAbertos.forEach(ticket => {
     const vaga = vagas.find(v => String(v.id) === String(ticket.vagaId))
     const identificadorVaga = vaga
-      ? `${vaga.codigo} (${vaga.tipo})`
+      ? `${vaga.codigo || vaga.numero || vaga.id} (${vaga.tipo || 'comum'})`
       : ticket.vagaId
 
-    const horaEntrada = new Date(ticket.dataEntrada).toLocaleTimeString(
-      'pt-BR',
-      {
-        hour: '2-digit',
-        minute: '2-digit'
-      }
-    )
+    const dataEntradaVal = ticket.horaEntrada || ticket.dataEntrada
+    const horaEntrada = dataEntradaVal
+      ? new Date(dataEntradaVal).toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : '-'
 
     const mensalista = ticket.mensalistaId
       ? mensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
       : null
     const clienteHtml = mensalista
       ? `<span class="badge-status status-mensalista"><i class="fas fa-id-card me-1" aria-hidden="true"></i>${ApiService.sanitizeText(
-          mensalista.nome
+          mensalista.nome || mensalista.nomeCliente
         )}</span>`
       : '<span class="badge bg-secondary">Avulso</span>'
 
@@ -309,34 +383,121 @@ function renderTicketsRecentes (ticketsAbertos, vagas, mensalistas) {
   })
 }
 
-// Função de Encerramento do Ticket
+// Função de Encerramento Rápido do Ticket no Dashboard
 async function encerrarTicket (ticketId, botao) {
-  const result = await Swal.fire({
-    title: 'Confirmar Saída?',
-    text: 'O valor será calculado de acordo com o tempo de permanência ou regramento de mensalista.',
+  const ticket = globalTickets.find(t => String(t.id) === String(ticketId))
+  if (!ticket) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro',
+      text: 'Ticket não localizado.'
+    })
+    return
+  }
+
+  const tarifa = globalTarifas.find(
+    t => String(t.id) === String(ticket.tarifaId)
+  )
+  const horaEntrada = new Date(
+    ticket.horaEntrada || ticket.dataEntrada || Date.now()
+  )
+  const horaSaida = new Date()
+
+  const diffMs = horaSaida - horaEntrada
+  const diffMinutos = Math.max(1, Math.floor(diffMs / (1000 * 60)))
+  const horasFormatadas = Math.floor(diffMinutos / 60)
+  const minutosRestantes = diffMinutos % 60
+  const tempoTexto = `${
+    horasFormatadas > 0 ? `${horasFormatadas}h ` : ''
+  }${minutosRestantes}min`
+
+  let valorCalculado = 0
+  const ehMensalista = Boolean(ticket.mensalistaId)
+
+  if (ehMensalista) {
+    valorCalculado = 0
+  } else {
+    const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
+    const diffHoras = diffMs / (1000 * 60 * 60)
+    const horasPagas = Math.max(1, Math.ceil(diffHoras))
+    valorCalculado = horasPagas * valorHora
+  }
+
+  const selectPagamentoHTML = ehMensalista
+    ? `<div class="alert alert-info py-2 mb-3"><strong>Isenção Aplicada:</strong> Veículo de Mensalista.</div>`
+    : `
+      <div class="mb-3 text-start">
+        <label for="swal-dashboard-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
+        <select id="swal-dashboard-pagamento" class="form-select">
+          <option value="pix" selected>📱 PIX</option>
+          <option value="cartao_credito">💳 Cartão de Crédito</option>
+          <option value="cartao_debito">💳 Cartão de Débito</option>
+          <option value="dinheiro">💵 Dinheiro</option>
+        </select>
+      </div>
+    `
+
+  const { isConfirmed, value: formaPagamento } = await Swal.fire({
+    title: 'Confirmar Saída do Veículo',
+    html: `
+      <div class="text-center mb-3">
+        <p class="mb-1 text-muted">Placa: <strong class="text-dark fs-5">${ApiService.sanitizeText(
+          ticket.placa
+        )}</strong></p>
+        <p class="mb-1 text-muted">Permanência: <strong class="text-dark">${tempoTexto}</strong></p>
+        <div class="my-2">
+          <span class="fs-2 fw-bold text-success">R$ ${valorCalculado
+            .toFixed(2)
+            .replace('.', ',')}</span>
+        </div>
+      </div>
+      ${selectPagamentoHTML}
+    `,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#0e3a2f',
     cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Sim, finalizar',
-    cancelButtonText: 'Cancelar'
+    confirmButtonText: '<i class="fas fa-check me-1"></i> Confirmar Saída',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      if (ehMensalista) return 'isento'
+      const select = document.getElementById('swal-dashboard-pagamento')
+      return select ? select.value : 'pix'
+    }
   })
 
-  if (!result.isConfirmed) return
+  if (!isConfirmed) return
 
-  if (botao) botao.disabled = true // Previne clique duplo
+  if (botao) botao.disabled = true
 
   try {
-    const ticketFinalizado = await ApiService.fecharTicket(ticketId)
-    const valorFinal = Number(ticketFinalizado.valorTotal) || 0
+    const ticketAtualizado = {
+      ...ticket,
+      horaSaida: horaSaida.toISOString(),
+      dataSaida: horaSaida.toISOString(),
+      valorCobrado: valorCalculado,
+      valorTotal: valorCalculado,
+      formaPagamento: formaPagamento,
+      tempoPermanencia: tempoTexto,
+      status: 'fechado'
+    }
+
+    if (ApiService.fecharTicket) {
+      await ApiService.fecharTicket(ticketId, ticketAtualizado)
+    } else if (ApiService.updateTicket) {
+      await ApiService.updateTicket(ticketId, ticketAtualizado)
+    }
+
+    if (ticket.vagaId && ApiService.updateVagaStatus) {
+      await ApiService.updateVagaStatus(ticket.vagaId, 'livre')
+    }
 
     Swal.fire({
       icon: 'success',
-      title: 'Ticket Finalizado!',
-      text: `Valor Total a Pagar: R$ ${valorFinal
-        .toFixed(2)
-        .replace('.', ',')}`,
-      confirmButtonColor: '#0e3a2f'
+      title: 'Saída Registrada!',
+      text: `Veículo ${ticket.placa} liberado com sucesso.`,
+      timer: 1800,
+      showConfirmButton: false
     })
 
     await loadDashboardData()
@@ -344,7 +505,7 @@ async function encerrarTicket (ticketId, botao) {
     Swal.fire({
       icon: 'error',
       title: 'Erro ao fechar ticket',
-      text: error.message
+      text: error.message || 'Falha ao processar o encerramento.'
     })
     if (botao) botao.disabled = false
   }

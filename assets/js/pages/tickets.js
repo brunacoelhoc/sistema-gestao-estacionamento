@@ -11,6 +11,7 @@ let allTarifas = []
 let ticketsFiltrados = []
 let paginaAtual = 1
 const TICKETS_POR_PAGINA = 10
+const TEMPO_TOLERANCIA_MINUTOS = 15 // Tolerância de cortesia padrão
 
 document.addEventListener('DOMContentLoaded', async () => {
   initInputMasks()
@@ -197,6 +198,24 @@ function renderizarPagina () {
   })
 }
 
+// Helper para formatar rótulo da forma de pagamento
+function getFormaPagamentoBadge (forma) {
+  switch ((forma || '').toLowerCase()) {
+    case 'pix':
+      return '<span class="badge bg-success text-white"><i class="fas fa-pix me-1"></i>PIX</span>'
+    case 'cartao_credito':
+      return '<span class="badge bg-primary text-white"><i class="fas fa-credit-card me-1"></i>Crédito</span>'
+    case 'cartao_debito':
+      return '<span class="badge bg-info text-dark"><i class="fas fa-credit-card me-1"></i>Débito</span>'
+    case 'dinheiro':
+      return '<span class="badge bg-warning text-dark"><i class="fas fa-money-bill-wave me-1"></i>Dinheiro</span>'
+    case 'isento':
+      return '<span class="badge bg-secondary text-white"><i class="fas fa-star me-1"></i>Isento</span>'
+    default:
+      return '<span class="text-muted">-</span>'
+  }
+}
+
 // Renderiza uma linha individual da tabela de tickets
 function renderizarLinhaTicket (ticket, tbody) {
   const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
@@ -237,12 +256,19 @@ function renderizarLinhaTicket (ticket, tbody) {
       ? '<span class="badge-status status-aberto"><i class="fas fa-clock me-1" aria-hidden="true"></i>Aberto</span>'
       : '<span class="badge-status status-fechado"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Fechado</span>'
 
+  const pagamentoBadge =
+    statusKey === 'fechado'
+      ? getFormaPagamentoBadge(
+          ticket.formaPagamento || (ticket.mensalistaId ? 'isento' : '')
+        )
+      : ''
+
   const btnAcao =
     statusKey === 'aberto'
       ? `<button type="button" class="btn btn-sm btn-outline-danger btn-fechar-ticket" data-id="${ticket.id}">
          <i class="fas fa-sign-out-alt me-1" aria-hidden="true"></i>Fechar Ticket
        </button>`
-      : '<span class="text-muted text-xs">Finalizado</span>'
+      : `<div class="d-flex flex-column gap-1">${pagamentoBadge}</div>`
 
   const tr = document.createElement('tr')
   tr.innerHTML = `
@@ -500,6 +526,7 @@ async function criarNovoTicket (e) {
       dataSaida: null,
       valorCobrado: null,
       valorTotal: null,
+      formaPagamento: null,
       status: 'aberto'
     }
 
@@ -548,19 +575,91 @@ async function criarNovoTicket (e) {
   }
 }
 
-// Fechamento de Ticket e Cálculo de Cobrança (Item 5.1 & 5.2)
+// Fechamento de Ticket com cálculo preciso e seleção de meio de pagamento
 async function finalizarTicket (ticketId) {
-  const confirmacao = await Swal.fire({
-    title: 'Fechar Ticket?',
-    text: 'O valor cobrado será calculado e a vaga ficará livre.',
+  const ticket = allTickets.find(t => String(t.id) === String(ticketId))
+  if (!ticket) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: 'Ticket não encontrado.' })
+    return
+  }
+
+  const tarifa = allTarifas.find(t => String(t.id) === String(ticket.tarifaId))
+  const horaEntrada = new Date(
+    ticket.horaEntrada || ticket.dataEntrada || Date.now()
+  )
+  const horaSaida = new Date()
+
+  // Cálculo de permanência em minutos e horas
+  const diffMs = horaSaida - horaEntrada
+  const diffMinutos = Math.max(1, Math.floor(diffMs / (1000 * 60)))
+  const horasFormatadas = Math.floor(diffMinutos / 60)
+  const minutosRestantes = diffMinutos % 60
+  const tempoTexto = `${
+    horasFormatadas > 0 ? `${horasFormatadas}h ` : ''
+  }${minutosRestantes}min`
+
+  let valorCalculado = 0
+  const ehMensalista = Boolean(ticket.mensalistaId)
+
+  if (ehMensalista) {
+    valorCalculado = 0
+  } else {
+    const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
+
+    // Regra: Isenção por Tolerância (ex: até 15 minutos não paga)
+    if (diffMinutos <= TEMPO_TOLERANCIA_MINUTOS) {
+      valorCalculado = 0
+    } else {
+      const diffHoras = diffMs / (1000 * 60 * 60)
+      const horasPagas = Math.max(1, Math.ceil(diffHoras)) // Fração de hora arredonda para cima
+      valorCalculado = horasPagas * valorHora
+    }
+  }
+
+  // Prepara modal com seleção de meio de pagamento
+  const selectPagamentoHTML = ehMensalista
+    ? `<div class="alert alert-info py-2 mb-3"><strong>Isenção Aplicada:</strong> Veículo cadastrado como Mensalista.</div>`
+    : `
+      <div class="mb-3 text-start">
+        <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
+        <select id="swal-forma-pagamento" class="form-select">
+          <option value="pix" selected>📱 PIX</option>
+          <option value="cartao_credito">💳 Cartão de Crédito</option>
+          <option value="cartao_debito">💳 Cartão de Débito</option>
+          <option value="dinheiro">💵 Dinheiro</option>
+        </select>
+      </div>
+    `
+
+  const { isConfirmed, value: formaPagamento } = await Swal.fire({
+    title: 'Fechar e Cobrar Ticket',
+    html: `
+      <div class="text-center mb-3">
+        <p class="mb-1 text-muted">Placa: <strong class="text-dark">${ApiService.sanitizeText(
+          ticket.placa
+        )}</strong></p>
+        <p class="mb-1 text-muted">Permanência: <strong class="text-dark">${tempoTexto}</strong></p>
+        <div class="my-2">
+          <span class="fs-2 fw-bold text-success">R$ ${valorCalculado
+            .toFixed(2)
+            .replace('.', ',')}</span>
+        </div>
+      </div>
+      ${selectPagamentoHTML}
+    `,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#0e3a2f',
-    confirmButtonText: 'Sim, fechar ticket',
-    cancelButtonText: 'Cancelar'
+    confirmButtonText: '<i class="fas fa-check me-1"></i> Confirmar Saída',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      if (ehMensalista) return 'isento'
+      const select = document.getElementById('swal-forma-pagamento')
+      return select ? select.value : 'pix'
+    }
   })
 
-  if (!confirmacao.isConfirmed) return
+  if (!isConfirmed) return
 
   const botao = document.querySelector(
     `.btn-fechar-ticket[data-id="${ticketId}"]`
@@ -568,37 +667,14 @@ async function finalizarTicket (ticketId) {
   if (botao) botao.disabled = true
 
   try {
-    const ticket = allTickets.find(t => String(t.id) === String(ticketId))
-    if (!ticket) throw new Error('Ticket não encontrado.')
-
-    const tarifa = allTarifas.find(
-      t => String(t.id) === String(ticket.tarifaId)
-    )
-    const horaEntrada = new Date(
-      ticket.horaEntrada || ticket.dataEntrada || Date.now()
-    )
-    const horaSaida = new Date()
-
-    let valorCalculado = 0
-
-    // Regra: Mensalista cobrado R$ 0,00 (Item 5.2)
-    if (ticket.mensalistaId) {
-      valorCalculado = 0
-    } else {
-      const valorHora = tarifa
-        ? Number(tarifa.valorHora || tarifa.valor || 0)
-        : 0
-      const diffHoras = (horaSaida - horaEntrada) / (1000 * 60 * 60)
-      const horasPagas = Math.max(1, Math.ceil(diffHoras)) // Fração de hora arredonda pra cima
-      valorCalculado = horasPagas * valorHora
-    }
-
     const ticketAtualizado = {
       ...ticket,
       horaSaida: horaSaida.toISOString(),
       dataSaida: horaSaida.toISOString(),
       valorCobrado: valorCalculado,
       valorTotal: valorCalculado,
+      formaPagamento: formaPagamento,
+      tempoPermanencia: tempoTexto,
       status: 'fechado'
     }
 
@@ -608,7 +684,7 @@ async function finalizarTicket (ticketId) {
       await ApiService.updateTicket(ticketId, ticketAtualizado)
     }
 
-    // Regra: Devolve a vaga para o status "livre" (Item 5.1)
+    // Regra: Devolve a vaga para o status "livre"
     if (ticket.vagaId && ApiService.updateVagaStatus) {
       await ApiService.updateVagaStatus(ticket.vagaId, 'livre')
     }
@@ -616,22 +692,9 @@ async function finalizarTicket (ticketId) {
     Swal.fire({
       icon: 'success',
       title: 'Ticket Encerrado!',
-      html: `
-        <div class="text-center">
-          <p class="mb-1">Placa: <strong>${ApiService.sanitizeText(
-            ticket.placa
-          )}</strong></p>
-          <p class="fs-3 text-success fw-bold me-1">R$ ${valorCalculado
-            .toFixed(2)
-            .replace('.', ',')}</p>
-          ${
-            ticket.mensalistaId
-              ? '<span class="badge bg-info text-dark">Isento (Mensalista)</span>'
-              : ''
-          }
-        </div>
-      `,
-      confirmButtonColor: '#0e3a2f'
+      text: `Saída do veículo ${ticket.placa} registrada com sucesso.`,
+      timer: 2000,
+      showConfirmButton: false
     })
 
     await carregarDados()

@@ -201,8 +201,8 @@
                         class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-list text-primary me-2"
                                 aria-hidden="true"></i>Listagem de Vagas</h2>
-                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                            data-bs-target="#modalVaga" id="btn-nova-vaga">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-nova-vaga"
+                            onclick="abrirModalNovaVaga()">
                             <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Vaga
                         </button>
                     </div>
@@ -242,8 +242,8 @@
                         class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-tags text-primary me-2"
                                 aria-hidden="true"></i>Tabela de Tarifas</h2>
-                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                            data-bs-target="#modalTarifa" id="btn-nova-tarifa">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-nova-tarifa"
+                            onclick="abrirModalNovaTarifa()">
                             <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Tarifa
                         </button>
                     </div>
@@ -292,10 +292,10 @@
                         <div class="mb-3">
                             <label for="vaga-numero" class="form-label">Número da vaga <span class="text-danger"
                                     aria-hidden="true">*</span></label>
-                            <input type="text" class="form-control" id="vaga-numero" name="numero" required
-                                aria-describedby="vaga-numero-feedback">
+                            <input type="text" class="form-control" id="vaga-numero" name="numero"
+                                placeholder="Ex: A-03, M-02" required aria-describedby="vaga-numero-feedback">
                             <div id="vaga-numero-feedback" class="invalid-feedback">
-                                Informe um número de vaga único (este campo não pode ficar vazio nem repetido).
+                                Informe um número de vaga válido.
                             </div>
                         </div>
 
@@ -304,9 +304,10 @@
                                     aria-hidden="true">*</span></label>
                             <select class="form-select" id="vaga-tipo" name="tipo" required>
                                 <option value="" selected disabled>Selecione...</option>
-                                <option value="comum">Comum</option>
-                                <option value="coberta">Coberta</option>
-                                <option value="mensalista">Mensalista</option>
+                                <option value="Carro">Carro</option>
+                                <option value="Moto">Moto</option>
+                                <option value="Deficiente">Deficiente</option>
+                                <option value="Idoso">Idoso</option>
                             </select>
                             <div class="invalid-feedback">Selecione o tipo da vaga.</div>
                         </div>
@@ -315,14 +316,12 @@
                             <label for="vaga-status" class="form-label">Status <span class="text-danger"
                                     aria-hidden="true">*</span></label>
                             <select class="form-select" id="vaga-status" name="status" required>
-                                <option value="" selected disabled>Selecione...</option>
-                                <option value="livre">Livre</option>
+                                <option value="livre" selected>Livre</option>
                                 <option value="manutencao">Manutenção</option>
                             </select>
                             <div class="form-text">
                                 <i class="fas fa-circle-info me-1" aria-hidden="true"></i>
-                                O status "Ocupada" é definido automaticamente pelo sistema ao abrir um ticket e não pode
-                                ser selecionado aqui.
+                                O status "Ocupada" é definido automaticamente pelo sistema.
                             </div>
                             <div class="invalid-feedback">Selecione o status da vaga.</div>
                         </div>
@@ -350,16 +349,18 @@
                     <div class="modal-body">
                         <input type="hidden" id="tarifa-id" name="id">
 
+                        <!-- Categoria / Nome ajustado para alinhar com vagas.js -->
                         <div class="mb-3">
-                            <label for="tarifa-nome" class="form-label">Nome <span class="text-danger"
+                            <label for="tarifa-categoria" class="form-label">Categoria / Nome <span class="text-danger"
                                     aria-hidden="true">*</span></label>
-                            <input type="text" class="form-control" id="tarifa-nome" name="nome" required
-                                placeholder="Ex.: Hora Normal, Diária" aria-describedby="tarifa-nome-feedback">
-                            <div id="tarifa-nome-feedback" class="invalid-feedback">
-                                Informe um nome para a tarifa.
+                            <input type="text" class="form-control" id="tarifa-categoria" name="categoria" required
+                                placeholder="Ex.: Carro, Moto, Utilitário" aria-describedby="tarifa-categoria-feedback">
+                            <div id="tarifa-categoria-feedback" class="invalid-feedback">
+                                Informe uma categoria para a tarifa.
                             </div>
                         </div>
 
+                        <!-- Valor Principal -->
                         <div class="mb-3">
                             <label for="tarifa-valor" class="form-label">Valor por hora (R$) <span class="text-danger"
                                     aria-hidden="true">*</span></label>
@@ -369,6 +370,9 @@
                                 O valor por hora deve ser um número maior que zero.
                             </div>
                         </div>
+
+                        <!-- Valor Adicional (opcional se não usado) -->
+                        <input type="hidden" id="tarifa-valor-adicional" name="valorAdicional" value="0">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
