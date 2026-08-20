@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Papel {
+  admin
+  funcionario
+}
+
+enum Provedor {
+  local
+  google
+}
+
+enum TipoVaga {
+  comum
+  coberta
+  mensalista
+}
+
+enum StatusVaga {
+  livre
+  ocupada
+}
+
+enum StatusTicket {
+  aberto
+  fechado
+}
+
+enum StatusMensalidade {
+  pendente
+  paga
+  cancelada
+}
+
+model Usuario {
+  id                String    @id @default(cuid())
+  nome              String
+  cpf               String?   @unique
+  email             String    @unique
+  senha             String?
+  telefone          String?
+  endereco          String?
+  dataNascimento    DateTime?
+  avatar            String?
+  role              Papel     @default(funcionario)
+  ativo             Boolean   @default(true)
+  aceitouTermos     Boolean   @default(false)
+  provedor          Provedor  @default(local)
+  senhaTemporaria   Boolean   @default(false)
+  senhaAlteradaEm   DateTime?
+  criadoEm          DateTime  @default(now())
+
+  @@map("usuarios")
+}
+
+model Mensalista {
+  id                String   @id @default(cuid())
+  nome              String
+  cpf               String   @unique
+  placa             String   @unique
+  telefone          String?
+  valorMensalidade  Decimal  @default(0) @db.Decimal(10, 2)
+  ativo             Boolean  @default(true)
+
+  tickets           Ticket[]
+  mensalidades      Mensalidade[]
+
+  @@map("mensalistas")
+}
+
+/**
+ * Um registro por ciclo mensal de um mensalista (não por ticket): nasce
+ * cheio quando o mensalista fica ativo (cadastro ou reativação) e, se ele
+ * for inativado antes do fim do mês, é fechado na hora com valor
+ * proporcional aos dias em que esteve ativo naquele mês.
+ */
+model Mensalidade {
+  id            String            @id @default(cuid())
+  mensalista    Mensalista        @relation(fields: [mensalistaId], references: [id])
+  mensalistaId  String
+  referencia    String            // ano-mês do ciclo, ex.: "2026-08"
+  dataInicio    DateTime
+  dataFim       DateTime
+  diasCobrados  Int
+  diasNoMes     Int
+  valor         Decimal           @db.Decimal(10, 2)
+  status        StatusMensalidade @default(pendente)
+  criadoEm      DateTime          @default(now())
+
+  @@unique([mensalistaId, referencia])
+  @@map("mensalidades")
+}
+
+model Vaga {
+  id      String     @id @default(cuid())
+  codigo  String     @unique
+  tipo    TipoVaga   @default(comum)
+  status  StatusVaga @default(livre)
+
+  tickets Ticket[]
+
+  @@map("vagas")
+}
+
+model Tarifa {
+  id         String   @id @default(cuid())
+  categoria  String
+  valorHora  Decimal  @db.Decimal(10, 2)
+
+  tickets    Ticket[]
+
+  @@map("tarifas")
+}
+
+model Ticket {
+  id              String        @id @default(cuid())
+  placa           String
+  status          StatusTicket  @default(aberto)
+  dataEntrada     DateTime      @default(now())
+  dataSaida       DateTime?
+  valorTotal      Decimal?      @db.Decimal(10, 2)
+  formaPagamento  String?
+
+  vaga            Vaga          @relation(fields: [vagaId], references: [id])
+  vagaId          String
+
+  tarifa          Tarifa?       @relation(fields: [tarifaId], references: [id])
+  tarifaId        String?
+
+  mensalista      Mensalista?   @relation(fields: [mensalistaId], references: [id])
+  mensalistaId    String?
+
+  @@map("tickets")
+}

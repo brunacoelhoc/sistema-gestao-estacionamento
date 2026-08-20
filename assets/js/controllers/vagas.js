@@ -7,6 +7,7 @@
 let todasVagas = []
 let todosTickets = []
 let todasTarifas = []
+let vagasFiltradasAtual = []
 
 document.addEventListener('DOMContentLoaded', async () => {
   await carregarTodosOsDados()
@@ -29,6 +30,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   document
     .getElementById('btn-limpar-filtros-tabela')
     ?.addEventListener('click', limparFiltrosTabelaVagas)
+
+  // Exportação (CSV/Excel) das tabelas de Vagas e Tarifas
+  document
+    .getElementById('btn-exportar-vagas-csv')
+    ?.addEventListener('click', () => exportarVagas('csv'))
+  document
+    .getElementById('btn-exportar-vagas-excel')
+    ?.addEventListener('click', () => exportarVagas('excel'))
+  document
+    .getElementById('btn-exportar-tarifas-csv')
+    ?.addEventListener('click', () => exportarTarifas('csv'))
+  document
+    .getElementById('btn-exportar-tarifas-excel')
+    ?.addEventListener('click', () => exportarTarifas('excel'))
 
   // Listener para formulários de cadastro na página
   document
@@ -124,6 +139,17 @@ async function carregarTodosOsDados () {
    1. MAPA VISUAL DE VAGAS
    ========================================================================== */
 
+// Extrai a "fileira" (letra) e o "assento" (número) do código da vaga, no
+// estilo sala de cinema — ex.: "A1" -> fileira "A", assento 1.
+function separarFileiraEAssento (codigo) {
+  const match = String(codigo || '').match(/^([A-Za-z]+)\s*-?\s*(\d+)$/)
+  if (!match) return { fileira: '•', assento: codigo }
+  return { fileira: match[1].toUpperCase(), assento: Number(match[2]) }
+}
+
+// Mapa Visual estilo "sala de cinema": cada vaga vira uma bolinha (verde =
+// livre, vermelha = ocupada, âmbar = manutenção) agrupada por fileira, com
+// uma "tela" no topo para reforçar a metáfora.
 function renderizarGridVagas (vagasList) {
   const gridContainer = document.getElementById('grid-mapa-vagas')
   if (!gridContainer) return
@@ -131,49 +157,61 @@ function renderizarGridVagas (vagasList) {
 
   if (!vagasList || vagasList.length === 0) {
     gridContainer.innerHTML = `
-      <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+      <div class="text-center py-5 text-muted">
         <i class="fas fa-search me-2" aria-hidden="true"></i>Nenhuma vaga encontrada para esta categoria.
       </div>
     `
     return
   }
 
+  const fileiras = new Map()
   vagasList.forEach(vaga => {
-    const rawStatus = (vaga.status || 'livre').toLowerCase()
-    const info = STATUS_VAGA[rawStatus] || STATUS_VAGA.livre
     const numeroVaga = vaga.codigo || vaga.numero || vaga.id
+    const { fileira, assento } = separarFileiraEAssento(numeroVaga)
+    if (!fileiras.has(fileira)) fileiras.set(fileira, [])
+    fileiras.get(fileira).push({ vaga, assento, numeroVaga })
+  })
 
-    const card = document.createElement('div')
-    card.className = `vaga-card ${info.cardClass} is-interativo shadow-sm position-relative`
-    card.setAttribute('role', 'button')
-    card.setAttribute('tabindex', '0')
-    card.setAttribute(
-      'aria-label',
-      `Vaga ${numeroVaga}, tipo ${vaga.tipo}, status ${info.texto}`
-    )
+  const cinema = document.createElement('div')
+  cinema.className = 'cinema-mapa'
+  cinema.innerHTML = '<div class="cinema-tela">ENTRADA DO PÁTIO</div>'
 
-    card.innerHTML = `
-      <div class="vaga-codigo">${sanitizar(numeroVaga)}</div>
-      <div class="vaga-tipo fw-semibold text-uppercase">${sanitizar(
-        vaga.tipo || 'comum'
-      )}</div>
-      <div class="mt-2">
-        <span class="badge-status ${info.badgeClass}">
-          <i class="fas ${info.icon}" aria-hidden="true"></i> ${info.texto}
-        </span>
-      </div>
-    `
+  Array.from(fileiras.keys())
+    .sort()
+    .forEach(letraFileira => {
+      const itens = fileiras.get(letraFileira).sort((a, b) => a.assento - b.assento)
 
-    card.addEventListener('click', () => abrirOpcoesVaga(vaga))
-    card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        abrirOpcoesVaga(vaga)
-      }
+      const linha = document.createElement('div')
+      linha.className = 'cinema-fileira'
+      linha.innerHTML = `<span class="cinema-fileira-label">${sanitizar(letraFileira)}</span>`
+
+      const assentos = document.createElement('div')
+      assentos.className = 'cinema-assentos'
+
+      itens.forEach(({ vaga, numeroVaga }) => {
+        const rawStatus = (vaga.status || 'livre').toLowerCase()
+        const info = STATUS_VAGA[rawStatus] || STATUS_VAGA.livre
+
+        const bolinha = document.createElement('button')
+        bolinha.type = 'button'
+        bolinha.className = `vaga-circulo vaga-circulo-${rawStatus.replace('ç', 'c').replace('ã', 'a')}`
+        bolinha.setAttribute(
+          'aria-label',
+          `Vaga ${numeroVaga}, tipo ${vaga.tipo || 'comum'}, status ${info.texto}`
+        )
+        bolinha.title = `${numeroVaga} — ${info.texto}`
+        bolinha.innerHTML = `<span>${sanitizar(numeroVaga)}</span>`
+
+        bolinha.addEventListener('click', () => abrirOpcoesVaga(vaga))
+
+        assentos.appendChild(bolinha)
+      })
+
+      linha.appendChild(assentos)
+      cinema.appendChild(linha)
     })
 
-    gridContainer.appendChild(card)
-  })
+  gridContainer.appendChild(cinema)
 }
 
 function filtrarVagasPorTipo (tipo) {
@@ -258,12 +296,9 @@ async function abrirOpcoesVaga (vaga) {
           await ApiService.updateVaga(vaga.id, { ...vaga, status: novoStatus })
         }
 
-        Swal.fire({
-          icon: 'success',
-          title: vaiParaManutencao ? 'Vaga em Manutenção!' : 'Vaga Liberada!',
-          timer: 1500,
-          showConfirmButton: false
-        })
+        toastSucesso(
+          vaiParaManutencao ? 'Vaga em Manutenção!' : 'Vaga Liberada!'
+        )
         await carregarTodosOsDados()
       } catch (error) {
         Swal.fire({
@@ -364,14 +399,8 @@ async function executarSalvarTarifa (dadosTarifa) {
       }
     }
 
-    if (typeof Swal !== 'undefined') {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Sucesso!',
-        text: 'Tarifa salva com sucesso.',
-        timer: 1800,
-        showConfirmButton: false
-      })
+    if (typeof toastSucesso === 'function') {
+      toastSucesso('Tarifa salva com sucesso.')
     }
 
     await carregarTodosOsDados()
@@ -400,12 +429,18 @@ async function abrirModalNovaVaga () {
         <input id="swal-novo-codigo" class="form-control" placeholder="Ex: A-01, B-12">
       </div>
       <div class="text-start mb-3">
-        <label class="form-label fw-bold">Tipo de Veículo <span class="text-danger">*</span></label>
+        <label class="form-label fw-bold">Tipo <span class="text-danger">*</span></label>
         <select id="swal-novo-tipo" class="form-select">
-          <option value="carro">Carro</option>
-          <option value="moto">Moto</option>
-          <option value="deficiente">Deficiente (PCD)</option>
-          <option value="idoso">Idoso</option>
+          <option value="comum">Comum</option>
+          <option value="coberta">Coberta</option>
+          <option value="mensalista">Mensalista</option>
+        </select>
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Status</label>
+        <select id="swal-novo-status" class="form-select">
+          <option value="livre" selected>Livre</option>
+          <option value="manutencao">Manutenção</option>
         </select>
       </div>
     `,
@@ -416,13 +451,21 @@ async function abrirModalNovaVaga () {
     preConfirm: () => {
       const codigo = document.getElementById('swal-novo-codigo').value.trim()
       const tipo = document.getElementById('swal-novo-tipo').value
+      const status = document.getElementById('swal-novo-status').value
 
       if (!codigo) {
         Swal.showValidationMessage('Informe o código da vaga.')
         return false
       }
 
-      return { codigo, tipo, status: 'livre' }
+      if (verificarDuplicidadeVaga(codigo, null)) {
+        Swal.showValidationMessage(
+          'Já existe uma vaga cadastrada com este código.'
+        )
+        return false
+      }
+
+      return { codigo, tipo, status }
     }
   })
 
@@ -432,13 +475,7 @@ async function abrirModalNovaVaga () {
         await ApiService.createVaga(formValues)
       }
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Sucesso!',
-        text: 'Vaga cadastrada com sucesso.',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      toastSucesso('Vaga cadastrada com sucesso.')
 
       await carregarTodosOsDados()
     } catch (error) {
@@ -481,6 +518,7 @@ function aplicarFiltrosTabelaVagas () {
     return bateBusca && bateTipo && bateStatus
   })
 
+  vagasFiltradasAtual = vagasFiltradas
   renderizarTabelaVagas(vagasFiltradas)
 }
 
@@ -493,108 +531,172 @@ function limparFiltrosTabelaVagas () {
   if (selectTipo) selectTipo.value = 'todos'
   if (selectStatus) selectStatus.value = 'todos'
 
+  vagasFiltradasAtual = todasVagas
   renderizarTabelaVagas(todasVagas)
 }
 
-function renderizarTabelaVagas (vagas) {
-  const tbody =
-    document.getElementById('tbody-vagas') ||
-    document.getElementById('tabela-vagas-body') ||
-    document.querySelector('#tabela-vagas tbody') ||
-    document.querySelector('table tbody')
+// Monta as linhas "achatadas" a partir da lista de vagas já filtrada pela
+// busca/tipo/status ativos na tabela, e delega para o exportador genérico.
+function exportarVagas (formato) {
+  const colunas = [
+    { chave: 'codigo', rotulo: 'Código' },
+    { chave: 'tipo', rotulo: 'Tipo' },
+    { chave: 'status', rotulo: 'Status' }
+  ]
 
-  if (!tbody) return
+  const linhas = vagasFiltradasAtual.map(vaga => ({
+    codigo: vaga.codigo || vaga.numero || vaga.id,
+    tipo: vaga.tipo || 'comum',
+    status: STATUS_VAGA[(vaga.status || 'livre').toLowerCase()]?.texto ||
+      vaga.status ||
+      'Livre'
+  }))
 
-  if (!vagas || vagas.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="4" class="text-center py-4 text-muted"><i class="fas fa-search me-1"></i>Nenhuma vaga encontrada com os filtros aplicados.</td></tr>'
-    return
+  if (formato === 'excel') {
+    exportarParaExcel('vagas-parkgestao.xlsx', 'Vagas', colunas, linhas)
+  } else {
+    exportarParaCSV('vagas-parkgestao.csv', colunas, linhas)
   }
+}
 
-  tbody.innerHTML = vagas
-    .map(vaga => {
-      const numero = vaga.codigo || vaga.numero || vaga.id
-      const tipo = vaga.tipo || 'comum'
-      const statusRaw = (vaga.status || 'livre').toLowerCase()
-      const statusInfo = STATUS_VAGA[statusRaw] || STATUS_VAGA.livre
+// Exporta a tabela de tarifas (não tem filtro próprio, exporta a lista completa).
+function exportarTarifas (formato) {
+  const colunas = [
+    { chave: 'categoria', rotulo: 'Categoria' },
+    { chave: 'valorHora', rotulo: 'Valor por Hora (R$)' }
+  ]
 
-      return `
+  const linhas = todasTarifas.map(tarifa => ({
+    categoria: tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral',
+    valorHora: Number(tarifa.valorHora || tarifa.valor || 0)
+      .toFixed(2)
+      .replace('.', ',')
+  }))
+
+  if (formato === 'excel') {
+    exportarParaExcel('tarifas-parkgestao.xlsx', 'Tarifas', colunas, linhas)
+  } else {
+    exportarParaCSV('tarifas-parkgestao.csv', colunas, linhas)
+  }
+}
+
+const paginadorVagas =
+  typeof criarPaginador === 'function'
+    ? criarPaginador({
+        idSufixo: 'vagas',
+        tbodyId: 'tbody-vagas',
+        colspanVazio: 4,
+        textoVazio:
+          '<i class="fas fa-search me-1" aria-hidden="true"></i>Nenhuma vaga encontrada com os filtros aplicados.',
+        renderLinha: renderLinhaVaga
+      })
+    : null
+
+function renderLinhaVaga (vaga, tbody) {
+  const numero = vaga.codigo || vaga.numero || vaga.id
+  const tipo = vaga.tipo || 'comum'
+  const statusRaw = (vaga.status || 'livre').toLowerCase()
+  const statusInfo = STATUS_VAGA[statusRaw] || STATUS_VAGA.livre
+
+  // Botão rápido para colocar em manutenção / liberar, sem precisar ir até
+  // o Mapa Visual. Para vagas ocupadas, abre o mesmo aviso explicando que é
+  // preciso encerrar o ticket primeiro.
+  const emManutencao = statusRaw === 'manutencao' || statusRaw === 'manutenção'
+  const botaoManutencaoLabel = emManutencao
+    ? '<i class="fas fa-check-circle"></i> Liberar'
+    : '<i class="fas fa-tools"></i> Manutenção'
+
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    `
       <tr>
         <td class="fw-bold">${sanitizar(numero)}</td>
         <td class="text-capitalize">${sanitizar(tipo)}</td>
         <td>
           <span class="badge-status ${statusInfo.badgeClass}">
-            <i class="fas ${statusInfo.icon}" aria-hidden="true"></i> ${
-        statusInfo.texto
-      }
+            <i class="fas ${statusInfo.icon}" aria-hidden="true"></i> ${statusInfo.texto}
           </span>
         </td>
         <td>
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="editarVaga('${
-            vaga.id
-          }')">
+          <button class="btn btn-sm btn-outline-primary me-1" onclick="editarVaga('${vaga.id}')">
             <i class="fas fa-edit"></i> Editar
           </button>
-          <button class="btn btn-sm btn-outline-danger" onclick="excluirVaga('${
-            vaga.id
-          }')">
+          <button class="btn btn-sm btn-outline-warning me-1" onclick="alternarManutencaoVaga('${vaga.id}')" title="Colocar em manutenção ou liberar a vaga">
+            ${botaoManutencaoLabel}
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="excluirVaga('${vaga.id}')">
             <i class="fas fa-trash"></i> Excluir
           </button>
         </td>
       </tr>
     `
-    })
-    .join('')
+  )
+}
+
+function renderizarTabelaVagas (vagas) {
+  if (paginadorVagas) {
+    paginadorVagas.definirItens(vagas || [])
+    return
+  }
+
+  // Fallback sem paginação (não deveria ocorrer — só se o módulo de
+  // paginação não tiver sido carregado nesta página).
+  const tbody = document.getElementById('tbody-vagas')
+  if (!tbody) return
+  tbody.innerHTML = ''
+  ;(vagas || []).forEach(vaga => renderLinhaVaga(vaga, tbody))
 }
 
 /* ==========================================================================
    5. TABELA DE TARIFAS
    ========================================================================== */
 
-function renderizarTabelaTarifas (tarifas) {
-  const tbody =
-    document.getElementById('tbody-tarifas') ||
-    document.getElementById('tabela-tarifas-body') ||
-    document.querySelector('#tabela-tarifas tbody') ||
-    document.querySelector('#tarifas-body') ||
-    document.querySelectorAll('table tbody')[1] ||
-    document.querySelector('.table-tarifas tbody')
+const paginadorTarifas =
+  typeof criarPaginador === 'function'
+    ? criarPaginador({
+        idSufixo: 'tarifas',
+        tbodyId: 'tbody-tarifas',
+        colspanVazio: 3,
+        textoVazio: 'Nenhuma tarifa cadastrada.',
+        renderLinha: renderLinhaTarifa
+      })
+    : null
 
-  if (!tbody) return
+function renderLinhaTarifa (tarifa, tbody) {
+  const nome = tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral'
+  const valor = Number(tarifa.valorHora || tarifa.valor || 0)
+    .toFixed(2)
+    .replace('.', ',')
 
-  if (!tarifas || tarifas.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="3" class="text-center py-4 text-muted">Nenhuma tarifa cadastrada.</td></tr>'
-    return
-  }
-
-  tbody.innerHTML = tarifas
-    .map(tarifa => {
-      const nome = tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral'
-      const valor = Number(tarifa.valorHora || tarifa.valor || 0)
-        .toFixed(2)
-        .replace('.', ',')
-
-      return `
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    `
         <tr>
           <td class="fw-bold">${sanitizar(nome)}</td>
           <td>R$ ${valor} / h</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1" onclick="editarTarifa('${
-              tarifa.id
-            }')">
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editarTarifa('${tarifa.id}')">
               <i class="fas fa-edit"></i> Editar
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="excluirTarifa('${
-              tarifa.id
-            }')">
+            <button class="btn btn-sm btn-outline-danger" onclick="excluirTarifa('${tarifa.id}')">
               <i class="fas fa-trash"></i> Excluir
             </button>
           </td>
         </tr>
       `
-    })
-    .join('')
+  )
+}
+
+function renderizarTabelaTarifas (tarifas) {
+  if (paginadorTarifas) {
+    paginadorTarifas.definirItens(tarifas || [])
+    return
+  }
+
+  const tbody = document.getElementById('tbody-tarifas')
+  if (!tbody) return
+  tbody.innerHTML = ''
+  ;(tarifas || []).forEach(tarifa => renderLinhaTarifa(tarifa, tbody))
 }
 
 /* ==========================================================================
@@ -607,6 +709,26 @@ function possuiTicketAberto (vagaId) {
       String(ticket.vagaId) === String(vagaId) &&
       (ticket.status || '').toLowerCase() === 'aberto'
   )
+}
+
+// Verifica se já existe outra vaga cadastrada com o mesmo código/número
+function verificarDuplicidadeVaga (codigo, idAtual) {
+  const codigoClean = (codigo || '').trim().toUpperCase()
+  return todasVagas.some(
+    v =>
+      String(v.id) !== String(idAtual) &&
+      String(v.codigo || v.numero || '')
+        .trim()
+        .toUpperCase() === codigoClean
+  )
+}
+
+// Atalho da tabela de Gestão de Vagas: colocar em manutenção / liberar sem
+// precisar ir até o card no Mapa Visual. Reaproveita a mesma regra de
+// negócio (bloqueia se houver ticket aberto) usada em abrirOpcoesVaga.
+function alternarManutencaoVaga (vagaId) {
+  const vaga = todasVagas.find(v => String(v.id) === String(vagaId))
+  if (vaga) abrirOpcoesVaga(vaga)
 }
 
 async function editarVaga (vagaId) {
@@ -622,31 +744,41 @@ async function editarVaga (vagaId) {
     return
   }
 
+  const codigoAtualSanitizado = sanitizar(vaga.codigo || vaga.numero || vaga.id)
+  const statusAtual = (vaga.status || 'livre').toLowerCase()
+
   const { value: formValues } = await Swal.fire({
     title: 'Editar Vaga',
     html: `
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Código/Número da Vaga</label>
-        <input id="swal-input-codigo" class="form-control" value="${
-          vaga.codigo || vaga.numero || vaga.id
-        }">
+        <input id="swal-input-codigo" class="form-control" value="${codigoAtualSanitizado}">
       </div>
       <div class="text-start mb-3">
-        <label class="form-label fw-bold">Tipo de Veículo</label>
+        <label class="form-label fw-bold">Tipo</label>
         <select id="swal-input-tipo" class="form-select">
-          <option value="carro" ${
-            vaga.tipo === 'carro' ? 'selected' : ''
-          }>Carro</option>
-          <option value="moto" ${
-            vaga.tipo === 'moto' ? 'selected' : ''
-          }>Moto</option>
-          <option value="deficiente" ${
-            vaga.tipo === 'deficiente' ? 'selected' : ''
-          }>Deficiente</option>
-          <option value="idoso" ${
-            vaga.tipo === 'idoso' ? 'selected' : ''
-          }>Idoso</option>
+          <option value="comum" ${
+            vaga.tipo === 'comum' ? 'selected' : ''
+          }>Comum</option>
+          <option value="coberta" ${
+            vaga.tipo === 'coberta' ? 'selected' : ''
+          }>Coberta</option>
+          <option value="mensalista" ${
+            vaga.tipo === 'mensalista' ? 'selected' : ''
+          }>Mensalista</option>
         </select>
+      </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Status</label>
+        <select id="swal-input-status" class="form-select">
+          <option value="livre" ${
+            statusAtual === 'livre' ? 'selected' : ''
+          }>Livre</option>
+          <option value="manutencao" ${
+            statusAtual.startsWith('manuten') ? 'selected' : ''
+          }>Manutenção</option>
+        </select>
+        <div class="form-text">O status "Ocupada" é definido automaticamente pelo sistema.</div>
       </div>
     `,
     focusConfirm: false,
@@ -659,9 +791,16 @@ async function editarVaga (vagaId) {
         Swal.showValidationMessage('O código da vaga não pode ficar vazio.')
         return false
       }
+      if (verificarDuplicidadeVaga(codigo, vagaId)) {
+        Swal.showValidationMessage(
+          'Já existe outra vaga cadastrada com este código.'
+        )
+        return false
+      }
       return {
         codigo,
-        tipo: document.getElementById('swal-input-tipo').value
+        tipo: document.getElementById('swal-input-tipo').value,
+        status: document.getElementById('swal-input-status').value
       }
     }
   })
@@ -669,12 +808,7 @@ async function editarVaga (vagaId) {
   if (formValues) {
     try {
       await ApiService.updateVaga(vagaId, formValues)
-      Swal.fire({
-        icon: 'success',
-        title: 'Vaga atualizada!',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      toastSucesso('Vaga atualizada!')
       await carregarTodosOsDados()
     } catch (error) {
       Swal.fire({
@@ -690,38 +824,21 @@ async function editarTarifa (tarifaId) {
   const tarifa = todasTarifas.find(t => String(t.id) === String(tarifaId))
   if (!tarifa) return
 
-  const catAtual = (tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral')
-    .toLowerCase()
-    .trim()
+  const categoriaAtual = sanitizar(
+    tarifa.categoria || tarifa.tipo || tarifa.nome || 'Geral'
+  )
+  const valorAtual = Number(tarifa.valorHora || tarifa.valor || 0)
 
   const { value: formValues } = await Swal.fire({
     title: 'Editar Tarifa',
     html: `
       <div class="text-start mb-3">
-        <label class="form-label fw-bold">Categoria / Tipo</label>
-        <select id="swal-input-categoria" class="form-select">
-          <option value="Carro" ${
-            catAtual === 'carro' ? 'selected' : ''
-          }>Carro</option>
-          <option value="Moto" ${
-            catAtual === 'moto' ? 'selected' : ''
-          }>Moto</option>
-          <option value="Deficiente" ${
-            catAtual === 'deficiente' || catAtual === 'pcd' ? 'selected' : ''
-          }>Deficiente (PCD)</option>
-          <option value="Idoso" ${
-            catAtual === 'idoso' ? 'selected' : ''
-          }>Idoso</option>
-          <option value="Geral" ${
-            catAtual === 'geral' ? 'selected' : ''
-          }>Geral / Padrão</option>
-        </select>
+        <label class="form-label fw-bold">Categoria / Nome</label>
+        <input id="swal-input-categoria" class="form-control" value="${categoriaAtual}" placeholder="Ex: Carro, Moto, PCD">
       </div>
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Valor da Hora (R$)</label>
-        <input id="swal-input-valor" type="number" step="0.50" class="form-control" value="${
-          tarifa.valorHora || tarifa.valor || 0
-        }">
+        <input id="swal-input-valor" type="number" step="0.50" min="0" class="form-control" value="${valorAtual}">
       </div>
     `,
     focusConfirm: false,
@@ -729,11 +846,17 @@ async function editarTarifa (tarifaId) {
     confirmButtonText: 'Salvar',
     cancelButtonText: 'Cancelar',
     preConfirm: () => {
-      const categoria = document.getElementById('swal-input-categoria').value
+      const categoria = document
+        .getElementById('swal-input-categoria')
+        .value.trim()
       const valorHora = Number(
         document.getElementById('swal-input-valor').value
       )
 
+      if (!categoria) {
+        Swal.showValidationMessage('Informe a categoria/nome da tarifa.')
+        return false
+      }
       if (isNaN(valorHora) || valorHora <= 0) {
         Swal.showValidationMessage('Informe um valor válido por hora.')
         return false
@@ -746,12 +869,7 @@ async function editarTarifa (tarifaId) {
   if (formValues) {
     try {
       await ApiService.updateTarifa(tarifaId, formValues)
-      Swal.fire({
-        icon: 'success',
-        title: 'Tarifa atualizada!',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      toastSucesso('Tarifa atualizada!')
       await carregarTodosOsDados()
     } catch (error) {
       Swal.fire({
@@ -788,12 +906,7 @@ async function excluirVaga (vagaId) {
     if (result.isConfirmed) {
       try {
         await ApiService.deleteVaga(vagaId)
-        Swal.fire({
-          icon: 'success',
-          title: 'Vaga excluída com sucesso!',
-          timer: 1500,
-          showConfirmButton: false
-        })
+        toastSucesso('Vaga excluída com sucesso!')
         await carregarTodosOsDados()
       } catch (error) {
         Swal.fire({
@@ -837,12 +950,7 @@ async function excluirTarifa (tarifaId) {
     if (result.isConfirmed) {
       try {
         await ApiService.deleteTarifa(tarifaId)
-        Swal.fire({
-          icon: 'success',
-          title: 'Tarifa excluída com sucesso!',
-          timer: 1500,
-          showConfirmButton: false
-        })
+        toastSucesso('Tarifa excluída com sucesso!')
         await carregarTodosOsDados()
       } catch (error) {
         Swal.fire({
@@ -857,6 +965,7 @@ async function excluirTarifa (tarifaId) {
 
 // Expõe as funções globalmente
 window.editarVaga = editarVaga
+window.alternarManutencaoVaga = alternarManutencaoVaga
 window.excluirVaga = excluirVaga
 window.editarTarifa = editarTarifa
 window.excluirTarifa = excluirTarifa

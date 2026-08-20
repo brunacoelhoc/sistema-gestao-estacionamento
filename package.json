@@ -4,10 +4,11 @@
   "description": "Sistema de Gestão de Estacionamento acessível (WCAG 2.1 AAA) e em conformidade com a LGPD.",
   "main": "index.js",
   "scripts": {
-    "server": "json-server --port 3000 db.json",
+    "api": "node server/index.js",
     "sass:build": "sass assets/scss/main.scss:assets/css/style.css --no-source-map --style=compressed",
     "sass:watch": "sass assets/scss/main.scss:assets/css/style.css --no-source-map --style=expanded --watch",
-    "dev": "concurrently -n SERVER,SASS -c blue,magenta \"npm:server\" \"npm:sass:watch\"",
+    "dev": "concurrently -n API,SASS -c blue,magenta \"npm:api\" \"npm:sass:watch\"",
+    "db:seed": "node prisma/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,10 +17,21 @@
   "type": "commonjs",
   "devDependencies": {
     "concurrently": "^10.0.4",
-    "json-server": "^1.0.0-beta.15",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.9.1",
     "sass": "^1.102.0"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "google-auth-library": "^11.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
   }
 }

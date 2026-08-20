@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Página não encontrada — ParkGestão.">
+    <title>Página Não Encontrada | ParkGestão</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Estilos Customizados -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+    <!-- Página de erro autônoma: sem guarda de rota, barra de acessibilidade ou
+         navbar, pois um link quebrado pode ser acessado por qualquer pessoa,
+         logada ou não. -->
+    <section class="hero-section py-4 px-3 px-md-4 flex-grow-1 d-flex align-items-center"
+        aria-labelledby="erro-404-title">
+        <div class="container-fluid px-0">
+            <div class="hero-card-container position-relative overflow-hidden rounded-5 text-white shadow-lg">
+                <div
+                    class="position-relative z-1 p-4 p-md-5 d-flex flex-column align-items-center text-center min-vh-40 justify-content-center">
+
+                    <div id="erro-404-icone" class="mb-4">
+                        <i class="fas fa-square-parking display-1 text-warning" aria-hidden="true"></i>
+                    </div>
+
+                    <span
+                        class="badge bg-white bg-opacity-10 backdrop-blur border border-white-11 text-white px-3 py-2 rounded-pill text-xs fw-semibold mb-3">
+                        ERRO 404
+                    </span>
+
+                    <h1 id="erro-404-title" class="hero-title display-4 fw-black text-white mb-3 tracking-tight">
+                        Vaga <span class="fst-italic text-warning">Não Encontrada</span>
+                    </h1>
+
+                    <p class="lead text-white-80 mb-4 fs-5" style="max-width: 560px;">
+                        A página que você procura não existe, foi movida ou o endereço está incorreto.
+                        Vamos te levar de volta para um lugar conhecido.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-3 justify-content-center">
+                        <a href="index.html"
+                            class="btn btn-warning btn-lg rounded-pill fw-bold fs-6 px-4 shadow-sm text-dark d-inline-flex align-items-center gap-2">
+                            <i class="fas fa-gauge-high" aria-hidden="true"></i> Ir para o Dashboard
+                        </a>
+                        <a href="views/login.html"
+                            class="btn btn-outline-light btn-lg rounded-pill fw-medium fs-6 px-4 d-inline-flex align-items-center gap-2">
+                            <i class="fas fa-right-to-bracket" aria-hidden="true"></i> Ir para o Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="text-center py-3">
+        <p class="footer-muted text-xs mb-0">&copy; <span id="footer-year"></span> ParkGestão — Sistema de Gestão de
+            Estacionamento.</p>
+    </footer>
+
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+        window.addEventListener('load', function () {
+            var reduzirMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduzirMovimento || typeof gsap === 'undefined') return;
+
+            gsap.from('#erro-404-icone', {
+                opacity: 0,
+                y: -20,
+                duration: 0.7,
+                ease: 'bounce.out',
+                delay: 0.1
+            });
+            gsap.from('.hero-card-container > div > *:not(#erro-404-icone)', {
+                opacity: 0,
+                y: 16,
+                duration: 0.5,
+                ease: 'power2.out',
+                stagger: 0.08,
+                delay: 0.3
+            });
+        });
+
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
+</body>
+
+</html>

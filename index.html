@@ -3,6 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- Guarda de rota: sem sessão salva, manda para o login antes de
+         renderizar qualquer conteúdo protegido. -->
+    <script>
+        (function () {
+            try {
+                if (!localStorage.getItem('parkgestao:session')) {
+                    window.location.replace('views/login.html');
+                }
+            } catch (erro) {
+                window.location.replace('views/login.html');
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Sistema de Gestão de Estacionamento Acessível e Seguro. Conforme com WCAG 2.1 AAA e LGPD.">
@@ -18,12 +31,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
         crossorigin="anonymous" referrerpolicy="no-referrer">
 
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="assets/css/style.css">
-
-    <!-- Three.js + Vanta.js (efeito único, carregado uma só vez, com defer) -->
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
 </head>
 
 <body>
@@ -70,6 +85,12 @@
                 <i class="fas fa-running me-1" aria-hidden="true"></i> Animação Off
             </button>
 
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Alternar Modo Noturno" aria-label="Alternar modo noturno"
+                aria-pressed="false">
+                <i class="fas fa-moon me-1" aria-hidden="true"></i> Modo Noturno
+            </button>
+
             <!-- Select Estilizado de Daltonismo -->
             <div class="position-relative d-inline-flex align-items-center">
                 <i class="fas fa-eye position-absolute start-0 ms-2 text-warning pointer-events-none text-xs"
@@ -87,23 +108,18 @@
         </div>
     </div>
 
+    <!-- Envolve navbar/hero/main/footer, mas NÃO a barra de acessibilidade nem o
+         banner LGPD (fixos), para que o filtro de daltonismo (CSS `filter`) não
+         quebre o posicionamento `fixed` desses dois elementos. -->
+    <div id="app-content">
     <!-- NAVBAR PRINCIPAL -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-xl navbar-light">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="index.html">
                     <img src="assets/img/favicon.svg" alt="Logo ParkGestão" width="36" height="36" class="rounded-2">
                     <span>ParkGestão</span>
                 </a>
-
-                <!-- Indicador de Status da API -->
-                <div id="api-status-indicator"
-                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
-                    aria-live="polite">
-                    <span id="api-status-dot" class="rounded-circle bg-secondary"
-                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
-                    <span id="api-status-text">Verificando servidor…</span>
-                </div>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
@@ -113,90 +129,126 @@
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item"><a class="nav-link active" aria-current="page" href="index.html"><i
                                     class="fas fa-chart-line me-1" aria-hidden="true"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/tickets.html"><i
+                        <li class="nav-item"><a class="nav-link" href="views/tickets.html"><i
                                     class="fas fa-ticket-alt me-1" aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/vagas-tarifas.html"><i
+                        <li class="nav-item"><a class="nav-link" href="views/vagas-tarifas.html"><i
                                     class="fas fa-car me-1" aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/mensalistas.html"><i
+                        <li class="nav-item"><a class="nav-link" href="views/mensalistas.html"><i
                                     class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/metricas.html"><i
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="views/metricas.html"><i
                                     class="fas fa-chart-pie me-1" aria-hidden="true"></i> Métricas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="paginas/sobre.html"><i
+                        <li class="nav-item"><a class="nav-link" href="views/sobre.html"><i
                                     class="fas fa-info-circle me-1" aria-hidden="true"></i> Sobre</a></li>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-none" id="link-funcionarios" href="views/funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item d-none d-xl-flex align-items-center ms-xl-3">
+                            <!-- Indicador de Status da API -->
+                            <div id="api-status-indicator" class="d-flex align-items-center gap-1 text-xs text-muted"
+                                role="status" aria-live="polite">
+                                <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                                <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
 
-    <!-- HERO BANNER PREMIUM COM INSPIRAÇÃO EM MOBILIDADE & ESTACIONAMENTO -->
-    <section class="hero-section py-4 px-3 px-md-4" aria-labelledby="hero-title">
-        <div class="container-fluid px-0">
-            <div class="hero-card-container position-relative overflow-hidden rounded-5 text-white shadow-lg">
+    <!-- HERO BANNER PREMIUM COM FOTO DE FUNDO (largura total, altura fluida) -->
+    <section class="hero-section text-white" aria-labelledby="hero-title">
+        <!-- Camada de imagem + gradiente de contraste (puramente decorativas) -->
+        <div class="hero-bg-photo" aria-hidden="true"></div>
+        <div class="hero-bg-scrim" aria-hidden="true"></div>
 
-                <!-- Fundo dinâmico com Vanta.js ou Imagem Temática Overlay -->
-                <div id="vanta-bg" class="hero-bg-overlay position-absolute top-0 start-0 w-100 h-100"
-                    aria-hidden="true"></div>
+        <!-- Conteúdo Principal do Hero -->
+        <div class="container position-relative z-1 py-5">
+            <div class="d-flex flex-column justify-content-between hero-content-inner">
 
-                <!-- Conteúdo Principal do Hero -->
-                <div class="position-relative z-1 p-4 p-md-5 d-flex flex-column justify-content-between min-vh-40">
-
-                    <!-- Cabeçalho Secundário do Hero -->
-                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                        <span
-                            class="badge bg-white bg-opacity-10 backdrop-blur border border-white-11 text-white px-3 py-2 rounded-pill text-xs fw-semibold">
-                            <i class="fas fa-parking text-warning me-1" aria-hidden="true"></i> SISTEMA DE CONTROLE
-                            URBANO
-                        </span>
-                        <div class="d-flex align-items-center gap-2 text-xs text-white-50">
-                            <span class="d-inline-block rounded-circle bg-success pulse-dot"
-                                style="width:8px; height:8px;"></span>
-                            <span>Pátio Operacional</span>
-                        </div>
+                <!-- Cabeçalho Secundário do Hero -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <span
+                        class="badge bg-white bg-opacity-10 backdrop-blur border border-white-11 text-white px-3 py-2 rounded-pill text-xs fw-semibold">
+                        <i class="fas fa-parking text-warning me-1" aria-hidden="true"></i> SISTEMA DE CONTROLE
+                        URBANO
+                    </span>
+                    <div class="d-flex align-items-center gap-2 text-xs text-white-50">
+                        <span class="d-inline-block rounded-circle bg-success pulse-dot"
+                            style="width:8px; height:8px;"></span>
+                        <span>Pátio Operacional</span>
                     </div>
+                </div>
 
-                    <!-- Título e Subtítulo de Impacto -->
-                    <div class="my-3 my-md-4 max-w-700">
-                        <h1 id="hero-title" class="display-4 fw-black text-white mb-3 tracking-tight">
+                <!-- Título e Subtítulo de Impacto -->
+                <div class="my-3 my-md-4">
+                    <div class="max-w-700">
+                        <h1 id="hero-title" class="hero-title display-4 fw-black text-white mb-3 tracking-tight">
                             Gestão Inteligente de <span class="fst-italic text-warning">Estacionamento</span>
                         </h1>
-                        <p class="lead text-white-80 mb-4 fs-5">
+                        <p class="lead text-white-80 mb-0 fs-5">
                             Monitore vagas, controle acessos e acompanhe o faturamento do seu pátio em tempo real com
                             acessibilidade total.
                         </p>
                     </div>
+                </div>
 
-                    <!-- Barra de Ações Rápidas & Métricas Flutuantes -->
-                    <div
-                        class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 border-top border-white-10">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="paginas/tickets.html"
-                                class="btn btn-warning btn-lg rounded-pill fw-bold fs-6 px-4 shadow-sm text-dark d-inline-flex align-items-center gap-2">
-                                <i class="fas fa-ticket-alt" aria-hidden="true"></i>
-                                Emitir Novo Ticket
-                            </a>
-                            <a href="paginas/vagas-tarifas.html"
-                                class="btn btn-outline-light btn-lg rounded-pill fw-medium fs-6 px-4 d-inline-flex align-items-center gap-2">
-                                <i class="fas fa-th" aria-hidden="true"></i>
-                                Mapa de Vagas
-                            </a>
-                        </div>
-
-                        <!-- Mini Widget Integrado -->
-                        <div
-                            class="d-none d-lg-flex align-items-center gap-3 bg-black bg-opacity-30 backdrop-blur p-2 px-3 rounded-pill border border-white-10">
-                            <div class="text-end">
-                                <span class="d-block text-xs text-white-50 text-uppercase fw-bold">Capacidade
-                                    Ativa</span>
-                                <span class="fw-bold fs-6 text-white">240 Vagas Monitoradas</span>
-                            </div>
-                            <div class="bg-primary bg-opacity-20 p-2 rounded-circle text-primary">
-                                <i class="fas fa-car fs-5 text-warning" aria-hidden="true"></i>
-                            </div>
-                        </div>
+                <!-- Barra de Ações Rápidas & Métricas Flutuantes -->
+                <div
+                    class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 border-top border-white-10">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="views/tickets.html"
+                            class="btn btn-warning btn-lg rounded-pill fw-bold fs-6 px-4 shadow-sm text-dark d-inline-flex align-items-center gap-2">
+                            <i class="fas fa-ticket-alt" aria-hidden="true"></i>
+                            Emitir Novo Ticket
+                        </a>
+                        <a href="views/vagas-tarifas.html"
+                            class="btn btn-outline-light btn-lg rounded-pill fw-medium fs-6 px-4 d-inline-flex align-items-center gap-2">
+                            <i class="fas fa-th" aria-hidden="true"></i>
+                            Mapa de Vagas
+                        </a>
                     </div>
 
+                    <!-- Mini Widget Integrado -->
+                    <div
+                        class="d-none d-lg-flex align-items-center gap-3 bg-black bg-opacity-30 backdrop-blur p-2 px-3 rounded-pill border border-white-10">
+                        <div class="text-end">
+                            <span class="d-block text-xs text-white-50 text-uppercase fw-bold">Capacidade
+                                Ativa</span>
+                            <span id="hero-total-vagas" class="fw-bold fs-6 text-white">Carregando…</span>
+                        </div>
+                        <div class="bg-primary bg-opacity-20 p-2 rounded-circle text-primary">
+                            <i class="fas fa-car fs-5 text-warning" aria-hidden="true"></i>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
     </section>
@@ -226,10 +278,9 @@
                 <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto shadow-sm"
                     aria-label="Filtrar métricas por tipo de vaga">
                     <option value="todos">Todos os tipos</option>
-                    <option value="carro">Carro</option>
-                    <option value="moto">Moto</option>
-                    <option value="deficiente">Deficiente (PCD)</option>
-                    <option value="idoso">Idoso</option>
+                    <option value="comum">Comum</option>
+                    <option value="coberta">Coberta</option>
+                    <option value="mensalista">Mensalista</option>
                 </select>
             </div>
         </div>
@@ -237,7 +288,8 @@
         <!-- CARDS KPI: contagem de vagas por status -->
         <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-success h-100">
+                <div class="card-kpi kpi-success h-100" role="button" tabindex="0" data-kpi="vagas-livres"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Vagas Livres</span>
@@ -253,7 +305,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-danger h-100">
+                <div class="card-kpi kpi-danger h-100" role="button" tabindex="0" data-kpi="vagas-ocupadas"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Vagas Ocupadas</span>
@@ -269,7 +322,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-secondary h-100">
+                <div class="card-kpi kpi-secondary h-100" role="button" tabindex="0" data-kpi="vagas-manutencao"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Em Manutenção</span>
@@ -285,7 +339,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-primary h-100">
+                <div class="card-kpi kpi-primary h-100" role="button" tabindex="0" data-kpi="taxa-ocupacao"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Taxa de Ocupação</span>
@@ -305,7 +360,8 @@
         <h2 class="h6 text-uppercase text-muted fw-bold mb-3">Financeiro &amp; operação</h2>
         <div class="row g-3 mb-4" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-warning h-100">
+                <div class="card-kpi kpi-warning h-100" role="button" tabindex="0" data-kpi="tickets-abertos"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Tickets Abertos</span>
@@ -321,7 +377,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-primary h-100">
+                <div class="card-kpi kpi-primary h-100" role="button" tabindex="0" data-kpi="faturamento"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Faturamento Total</span>
@@ -337,7 +394,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-info h-100">
+                <div class="card-kpi kpi-info h-100" role="button" tabindex="0" data-kpi="ticket-medio"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Ticket Médio</span>
@@ -353,7 +411,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-secondary h-100">
+                <div class="card-kpi kpi-secondary h-100" role="button" tabindex="0" data-kpi="tempo-medio"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Tempo Médio Perm.</span>
@@ -379,7 +438,7 @@
                             <i class="fas fa-list-alt text-primary me-2" aria-hidden="true"></i> Tickets Ativos no
                             Momento
                         </h2>
-                        <a href="paginas/tickets.html" class="btn btn-outline-primary btn-sm rounded-pill">Ver Todos</a>
+                        <a href="views/tickets.html" class="btn btn-outline-primary btn-sm rounded-pill">Ver Todos</a>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -407,6 +466,39 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                    <div
+                        class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="paginacao-info-tickets-recentes" class="text-muted text-sm">Mostrando 0 de
+                                0</span>
+                            <select id="select-tamanho-pagina-tickets-recentes" class="form-select form-select-sm w-auto"
+                                aria-label="Itens por página">
+                                <option value="10" selected>10 por página</option>
+                                <option value="50">50 por página</option>
+                                <option value="100">100 por página</option>
+                            </select>
+                        </div>
+                        <nav aria-label="Paginação de tickets ativos">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled">
+                                    <button class="page-link" id="btn-pagina-anterior-tickets-recentes" type="button"
+                                        aria-label="Página anterior">
+                                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <span class="page-link" id="pagina-atual-label-tickets-recentes"
+                                        aria-current="page">1</span>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" id="btn-pagina-proxima-tickets-recentes" type="button"
+                                        aria-label="Próxima página">
+                                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -445,6 +537,38 @@
                             </table>
                         </div>
                     </div>
+                    <div
+                        class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="paginacao-info-ranking" class="text-muted text-sm">Mostrando 0 de 0</span>
+                            <select id="select-tamanho-pagina-ranking" class="form-select form-select-sm w-auto"
+                                aria-label="Itens por página">
+                                <option value="10" selected>10 por página</option>
+                                <option value="50">50 por página</option>
+                                <option value="100">100 por página</option>
+                            </select>
+                        </div>
+                        <nav aria-label="Paginação do ranking de vagas">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled">
+                                    <button class="page-link" id="btn-pagina-anterior-ranking" type="button"
+                                        aria-label="Página anterior">
+                                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <span class="page-link" id="pagina-atual-label-ranking"
+                                        aria-current="page">1</span>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" id="btn-pagina-proxima-ranking" type="button"
+                                        aria-label="Próxima página">
+                                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
@@ -452,7 +576,7 @@
     </main>
 
     <!-- FOOTER ACESSÍVEL MELHORADO -->
-    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+    <footer class="py-5 border-top mt-5">
         <div class="container">
             <div class="row g-4 align-items-center">
 
@@ -461,14 +585,14 @@
                     <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
-                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                        <a href="tel:11999999999" class="footer-muted text-decoration-none">(11) 99999-9999</a>
                     </p>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
                         <a href="mailto:contato@parkgestao.com.br"
-                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                            class="footer-muted text-decoration-none">contato@parkgestao.com.br</a>
                     </p>
-                    <p class="mb-0 text-sm">
+                    <p class="mb-0 text-sm footer-muted">
                         <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
                         Av. Paulista, 1000 — São Paulo, SP
                     </p>
@@ -481,12 +605,17 @@
                         <img src="assets/img/favicon.svg" alt="Logo ParkGestão" width="100" height="100"
                             class="rounded-2">
                     </a>
-                    <p class="mb-1 text-xs text-white-50">
+                    <p class="mb-1 text-xs footer-muted">
                         &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
                     </p>
-                    <p class="mb-0 text-xs text-white-50">
+                    <p class="mb-0 text-xs footer-muted">
                         <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
                         WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                    <p class="mb-0 mt-1 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                        <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                            style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                        <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
                     </p>
                 </div>
 
@@ -494,15 +623,15 @@
                 <div class="col-12 col-md-4 text-center text-md-end">
                     <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
                     <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
-                        <a href="paginas/tickets.html"
+                        <a href="views/tickets.html"
                             class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
                             <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
                         </a>
-                        <a href="paginas/vagas-tarifas.html"
+                        <a href="views/vagas-tarifas.html"
                             class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
                             <i class="fas fa-car me-2 text-warning" aria-hidden="true"></i>Vagas &amp; Tarifas
                         </a>
-                        <a href="paginas/sobre.html#privacidade"
+                        <a href="views/sobre.html#privacidade"
                             class="btn btn-sm btn-outline-light w-75 w-md-auto text-start rounded-pill">
                             <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
                             Privacidade
@@ -513,6 +642,8 @@
             </div>
         </div>
     </footer>
+    </div>
+    <!-- /#app-content -->
 
     <!-- WIDGET VLIBRAS -->
     <div vw class="enabled">
@@ -527,14 +658,23 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 
     <!-- MÓDULOS INTERNOS DA APLICAÇÃO -->
     <script defer src="assets/js/modules/accessibility.js"></script>
     <script defer src="assets/js/modules/lgpd.js"></script>
-    <script defer src="assets/js/modules/api.js"></script>
-    <script defer src="assets/js/modules/vanta-init.js"></script>
-    <script defer src="assets/js/pages/dashboard.js"></script>
+    <script defer src="assets/js/modules/table-scroll-hint.js"></script>
+    <script defer src="assets/js/models/api.js"></script>
+    <script defer src="assets/js/modules/auth.js"></script>
+    <script defer src="assets/js/modules/toast.js"></script>
+    <script defer src="assets/js/modules/frase-do-dia.js"></script>
+    <script defer src="assets/js/modules/gsap-init.js"></script>
+    <script defer src="assets/js/modules/comprovante.js"></script>
+    <script defer src="assets/js/controllers/dashboard.js"></script>
     <script defer src="assets/js/main.js"></script>
 
     <script>

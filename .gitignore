@@ -28,3 +28,10 @@ db.json.bak
 
 # Build/dist temporários (caso algum dia haja etapa de build separada)
 dist/
+/generated/prisma
+
+# Caches de skills de assistentes de IA (não fazem parte do projeto)
+.agents/
+.claude/
+.windsurf/
+skills-lock.json

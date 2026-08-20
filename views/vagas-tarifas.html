@@ -3,6 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- Guarda de rota: sem sessão salva, manda para o login antes de
+         renderizar qualquer conteúdo protegido. -->
+    <script>
+        (function () {
+            try {
+                if (!localStorage.getItem('parkgestao:session')) {
+                    window.location.replace('login.html');
+                }
+            } catch (erro) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Gestão de Vagas e Tarifas do Estacionamento - ParkGestão">
     <title>Vagas &amp; Tarifas | ParkGestão</title>
@@ -15,6 +28,12 @@
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
         crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="../assets/css/style.css">
 
@@ -56,6 +75,10 @@
                 title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
                 <i class="fas fa-running" aria-hidden="true"></i> Animação Off
             </button>
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 text-white" type="button"
+                title="Alternar Modo Noturno" aria-label="Alternar modo noturno" aria-pressed="false">
+                <i class="fas fa-moon" aria-hidden="true"></i> Modo Noturno
+            </button>
             <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
             <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
                 aria-label="Selecionar filtro para daltonismo">
@@ -67,23 +90,18 @@
         </div>
     </div>
 
+    <!-- Envolve navbar/main/footer, mas NÃO a barra de acessibilidade nem o
+         banner LGPD (fixos), para que o filtro de daltonismo (CSS `filter`) não
+         quebre o posicionamento `fixed` desses dois elementos. -->
+    <div id="app-content">
     <!-- NAVBAR PRINCIPAL -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-xl navbar-light">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
-
-                <!-- Indicador de Status da API -->
-                <div id="api-status-indicator"
-                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
-                    aria-live="polite">
-                    <span id="api-status-dot" class="rounded-circle bg-secondary"
-                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
-                    <span id="api-status-text">Verificando servidor…</span>
-                </div>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
@@ -99,10 +117,47 @@
                                 <i class="fas fa-car me-1" aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i class="fas fa-id-card me-1"
                                     aria-hidden="true"></i> Mensalistas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
                         <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
                                     aria-hidden="true"></i> Sobre</a></li>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-none" id="link-funcionarios" href="funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item d-none d-xl-flex align-items-center ms-xl-3">
+                            <!-- Indicador de Status da API -->
+                            <div id="api-status-indicator" class="d-flex align-items-center gap-1 text-xs text-muted"
+                                role="status" aria-live="polite">
+                                <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                                <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -164,10 +219,9 @@
                             <select id="filtro-tipo-vaga" class="form-select form-select-sm w-auto"
                                 aria-label="Filtrar por tipo de vaga">
                                 <option value="todas">Todas as Categorias</option>
-                                <option value="carro">Carro</option>
-                                <option value="moto">Moto</option>
-                                <option value="deficiente">Deficiente (PCD)</option>
-                                <option value="idoso">Idoso</option>
+                                <option value="comum">Comum</option>
+                                <option value="coberta">Coberta</option>
+                                <option value="mensalista">Mensalista</option>
                             </select>
                         </div>
 
@@ -188,7 +242,7 @@
 
                 <!-- GRID VISUAL DAS VAGAS -->
                 <section aria-label="Grid de Vagas do Estacionamento">
-                    <div id="grid-mapa-vagas" class="vagas-grid" aria-live="polite" aria-busy="true">
+                    <div id="grid-mapa-vagas" aria-live="polite" aria-busy="true">
                         <div class="text-center py-5 text-muted w-100">
                             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                             Carregando mapa do estacionamento...
@@ -205,10 +259,30 @@
                         <h2 class="h5 mb-0 fw-bold text-dark">
                             <i class="fas fa-list text-primary me-2" aria-hidden="true"></i>Listagem de Vagas
                         </h2>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-nova-vaga"
-                            onclick="abrirModalNovaVaga()">
-                            <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Vaga
-                        </button>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                                    id="btn-exportar-vagas" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-export me-1" aria-hidden="true"></i>Exportar
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="btn-exportar-vagas">
+                                    <li>
+                                        <button class="dropdown-item" type="button" id="btn-exportar-vagas-csv">
+                                            <i class="fas fa-file-csv me-2" aria-hidden="true"></i>Exportar CSV
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" type="button" id="btn-exportar-vagas-excel">
+                                            <i class="fas fa-file-excel me-2" aria-hidden="true"></i>Exportar Excel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-nova-vaga"
+                                onclick="abrirModalNovaVaga()">
+                                <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Vaga
+                            </button>
+                        </div>
                     </div>
 
                     <!-- BARRA DE FILTROS DA TABELA DE VAGAS -->
@@ -225,10 +299,9 @@
                             <div class="col-6 col-md-3">
                                 <select id="filtro-tabela-tipo" class="form-select form-select-sm">
                                     <option value="todos">Todos os Tipos</option>
-                                    <option value="carro">Carro</option>
-                                    <option value="moto">Moto</option>
-                                    <option value="deficiente">Deficiente (PCD)</option>
-                                    <option value="idoso">Idoso</option>
+                                    <option value="comum">Comum</option>
+                                    <option value="coberta">Coberta</option>
+                                    <option value="mensalista">Mensalista</option>
                                 </select>
                             </div>
                             <div class="col-6 col-md-3">
@@ -274,6 +347,36 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="paginacao-info-vagas" class="text-muted text-sm">Mostrando 0 de 0</span>
+                            <select id="select-tamanho-pagina-vagas" class="form-select form-select-sm w-auto"
+                                aria-label="Itens por página">
+                                <option value="10" selected>10 por página</option>
+                                <option value="50">50 por página</option>
+                                <option value="100">100 por página</option>
+                            </select>
+                        </div>
+                        <nav aria-label="Paginação de vagas">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled">
+                                    <button class="page-link" id="btn-pagina-anterior-vagas" type="button"
+                                        aria-label="Página anterior">
+                                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <span class="page-link" id="pagina-atual-label-vagas" aria-current="page">1</span>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" id="btn-pagina-proxima-vagas" type="button"
+                                        aria-label="Próxima página">
+                                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
 
@@ -284,10 +387,30 @@
                         class="card-header bg-white py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <h2 class="h5 mb-0 fw-bold text-dark"><i class="fas fa-tags text-primary me-2"
                                 aria-hidden="true"></i>Tabela de Tarifas</h2>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-nova-tarifa"
-                            onclick="abrirModalNovaTarifa()">
-                            <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Tarifa
-                        </button>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                                    id="btn-exportar-tarifas" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-export me-1" aria-hidden="true"></i>Exportar
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="btn-exportar-tarifas">
+                                    <li>
+                                        <button class="dropdown-item" type="button" id="btn-exportar-tarifas-csv">
+                                            <i class="fas fa-file-csv me-2" aria-hidden="true"></i>Exportar CSV
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" type="button" id="btn-exportar-tarifas-excel">
+                                            <i class="fas fa-file-excel me-2" aria-hidden="true"></i>Exportar Excel
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-nova-tarifa"
+                                onclick="abrirModalNovaTarifa()">
+                                <i class="fas fa-plus me-1" aria-hidden="true"></i> Nova Tarifa
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -314,121 +437,43 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="paginacao-info-tarifas" class="text-muted text-sm">Mostrando 0 de 0</span>
+                            <select id="select-tamanho-pagina-tarifas" class="form-select form-select-sm w-auto"
+                                aria-label="Itens por página">
+                                <option value="10" selected>10 por página</option>
+                                <option value="50">50 por página</option>
+                                <option value="100">100 por página</option>
+                            </select>
+                        </div>
+                        <nav aria-label="Paginação de tarifas">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled">
+                                    <button class="page-link" id="btn-pagina-anterior-tarifas" type="button"
+                                        aria-label="Página anterior">
+                                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item">
+                                    <span class="page-link" id="pagina-atual-label-tarifas" aria-current="page">1</span>
+                                </li>
+                                <li class="page-item">
+                                    <button class="page-link" id="btn-pagina-proxima-tarifas" type="button"
+                                        aria-label="Próxima página">
+                                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- MODAL: CADASTRO/EDIÇÃO DE VAGA -->
-    <div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="form-vaga" novalidate>
-                    <div class="modal-header">
-                        <h2 class="modal-title h5" id="modalVagaLabel">Nova Vaga</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="vaga-id" name="id">
-
-                        <div class="mb-3">
-                            <label for="vaga-numero" class="form-label">Número da vaga <span class="text-danger"
-                                    aria-hidden="true">*</span></label>
-                            <input type="text" class="form-control" id="vaga-numero" name="numero"
-                                placeholder="Ex: A-03, M-02" required aria-describedby="vaga-numero-feedback">
-                            <div id="vaga-numero-feedback" class="invalid-feedback">
-                                Informe um número de vaga válido.
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="vaga-tipo" class="form-label">Tipo <span class="text-danger"
-                                    aria-hidden="true">*</span></label>
-                            <select class="form-select" id="vaga-tipo" name="tipo" required>
-                                <option value="" selected disabled>Selecione...</option>
-                                <option value="Carro">Carro</option>
-                                <option value="Moto">Moto</option>
-                                <option value="Deficiente">Deficiente</option>
-                                <option value="Idoso">Idoso</option>
-                            </select>
-                            <div class="invalid-feedback">Selecione o tipo da vaga.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="vaga-status" class="form-label">Status <span class="text-danger"
-                                    aria-hidden="true">*</span></label>
-                            <select class="form-select" id="vaga-status" name="status" required>
-                                <option value="livre" selected>Livre</option>
-                                <option value="manutencao">Manutenção</option>
-                            </select>
-                            <div class="form-text">
-                                <i class="fas fa-circle-info me-1" aria-hidden="true"></i>
-                                O status "Ocupada" é definido automaticamente pelo sistema.
-                            </div>
-                            <div class="invalid-feedback">Selecione o status da vaga.</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btn-salvar-vaga">
-                            <i class="fas fa-save me-1" aria-hidden="true"></i> Salvar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: CADASTRO/EDIÇÃO DE TARIFA -->
-    <div class="modal fade" id="modalTarifa" tabindex="-1" aria-labelledby="modalTarifaLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="form-tarifa" novalidate>
-                    <div class="modal-header">
-                        <h2 class="modal-title h5" id="modalTarifaLabel">Nova Tarifa</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="tarifa-id" name="id">
-
-                        <!-- Categoria / Nome ajustado para alinhar com vagas.js -->
-                        <div class="mb-3">
-                            <label for="tarifa-categoria" class="form-label">Categoria / Nome <span class="text-danger"
-                                    aria-hidden="true">*</span></label>
-                            <input type="text" class="form-control" id="tarifa-categoria" name="categoria" required
-                                placeholder="Ex.: Carro, Moto, Utilitário" aria-describedby="tarifa-categoria-feedback">
-                            <div id="tarifa-categoria-feedback" class="invalid-feedback">
-                                Informe uma categoria para a tarifa.
-                            </div>
-                        </div>
-
-                        <!-- Valor Principal -->
-                        <div class="mb-3">
-                            <label for="tarifa-valor" class="form-label">Valor por hora (R$) <span class="text-danger"
-                                    aria-hidden="true">*</span></label>
-                            <input type="number" class="form-control" id="tarifa-valor" name="valorHora" required
-                                min="0.01" step="0.01" inputmode="decimal" aria-describedby="tarifa-valor-feedback">
-                            <div id="tarifa-valor-feedback" class="invalid-feedback">
-                                O valor por hora deve ser um número maior que zero.
-                            </div>
-                        </div>
-
-                        <!-- Valor Adicional (opcional se não usado) -->
-                        <input type="hidden" id="tarifa-valor-adicional" name="valorAdicional" value="0">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btn-salvar-tarifa">
-                            <i class="fas fa-save me-1" aria-hidden="true"></i> Salvar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- FOOTER ACESSÍVEL MELHORADO -->
-    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+    <footer class="py-5 border-top mt-5">
         <div class="container">
             <div class="row g-4 align-items-center">
 
@@ -437,14 +482,14 @@
                     <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
-                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                        <a href="tel:11999999999" class="footer-muted text-decoration-none">(11) 99999-9999</a>
                     </p>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
                         <a href="mailto:contato@parkgestao.com.br"
-                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                            class="footer-muted text-decoration-none">contato@parkgestao.com.br</a>
                     </p>
-                    <p class="mb-0 text-sm">
+                    <p class="mb-0 text-sm footer-muted">
                         <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
                         Av. Paulista, 1000 — São Paulo, SP
                     </p>
@@ -457,12 +502,17 @@
                         <i class="fas fa-parking text-warning" aria-hidden="true"></i>
                         <span>ParkGestão</span>
                     </a>
-                    <p class="mb-1 text-xs text-white-50">
+                    <p class="mb-1 text-xs footer-muted">
                         &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
                     </p>
-                    <p class="mb-0 text-xs text-white-50">
+                    <p class="mb-0 text-xs footer-muted">
                         <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
                         WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                    <p class="mb-0 mt-1 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                        <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                            style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                        <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
                     </p>
                 </div>
 
@@ -486,6 +536,8 @@
             </div>
         </div>
     </footer>
+    </div>
+    <!-- /#app-content -->
 
     <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
     <div vw class="enabled">
@@ -500,13 +552,24 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 
     <!-- MÓDULOS INTERNOS (ordem importa) -->
     <script defer src="../assets/js/modules/accessibility.js"></script>
     <script defer src="../assets/js/modules/lgpd.js"></script>
-    <script defer src="../assets/js/modules/api.js"></script>
-    <script defer src="../assets/js/pages/vagas.js"></script>
+    <script defer src="../assets/js/modules/table-scroll-hint.js"></script>
+    <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/toast.js"></script>
+    <script defer src="../assets/js/modules/paginacao.js"></script>
+    <script defer src="../assets/js/modules/gsap-init.js"></script>
+    <script defer src="../assets/js/modules/exportar-tabela.js"></script>
+    <script defer src="../assets/js/main.js"></script>
+    <script defer src="../assets/js/controllers/vagas.js"></script>
 
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();

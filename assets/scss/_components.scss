@@ -215,77 +215,98 @@
 }
 
 /* --------------------------------------------------------------------------
-   3. GRID DE VAGAS (Mapa Visual Interativo & Responsivo)
+   3. MAPA VISUAL DE VAGAS — ESTILO "SALA DE CINEMA"
+   Cada vaga é uma bolinha (verde = livre, vermelha = ocupada, âmbar =
+   manutenção) agrupada por fileira (letra do código, ex.: A1, A2… B1, B2…),
+   como um mapa de assentos de cinema.
    -------------------------------------------------------------------------- */
-.vagas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1.25rem;
+.cinema-mapa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0 0.5rem;
+}
 
-  .vaga-card {
-    position: relative;
-    border-radius: 1rem;
-    padding: 1.25rem 1rem;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: transform $transition-fast, box-shadow $transition-fast,
-      border-color $transition-fast;
+.cinema-tela {
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: $color-text-muted;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  border-bottom: 3px solid rgba(0, 0, 0, 0.15);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
 
-    // Micro-interações em vagas clicáveis
-    &.is-interativo {
-      cursor: pointer;
+.cinema-fileira {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 640px;
+  justify-content: center;
+}
 
-      &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
-      }
+.cinema-fileira-label {
+  flex-shrink: 0;
+  width: 1.5rem;
+  text-align: center;
+  font-weight: 800;
+  color: $color-text-muted;
+}
 
-      &:focus-visible {
-        outline: 3px solid $color-focus-outline !important;
-        outline-offset: 3px !important;
-        transform: translateY(-3px);
-      }
-    }
+.cinema-assentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
 
-    // Variantes de Cor das Vagas usando módulo moderno de cores do Sass
-    &.vaga-livre {
-      background-color: color.adjust($color-sucesso, $lightness: 28%);
-      border-color: color.adjust($color-sucesso, $lightness: 10%);
-      color: $color-sucesso-text;
-    }
+.vaga-circulo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: none;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform $transition-fast, box-shadow $transition-fast;
 
-    &.vaga-ocupada {
-      background-color: color.adjust($color-alerta, $lightness: 24%);
-      border-color: color.adjust($color-alerta, $lightness: 8%);
-      color: $color-alerta-text;
-    }
+  &:hover {
+    transform: scale(1.15);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  }
 
-    &.vaga-manutencao {
-      background-color: color.adjust($color-pendente, $lightness: 22%);
-      border-color: color.adjust($color-pendente, $lightness: 5%);
-      color: $color-pendente-text;
-    }
+  &:focus-visible {
+    outline: 3px solid $color-focus-outline !important;
+    outline-offset: 2px !important;
+  }
 
-    .vaga-codigo {
-      font-size: 1.5rem;
-      font-weight: 800;
-      line-height: 1.2;
-      margin-bottom: 0.25rem;
-    }
+  &.vaga-circulo-livre {
+    background-color: #22c55e;
+  }
 
-    .vaga-tipo {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      opacity: 0.85;
-      margin-bottom: 0.6rem;
-    }
+  &.vaga-circulo-ocupada {
+    background-color: #ef4444;
+  }
 
-    .badge-status {
-      font-size: 0.725rem;
-      padding: 0.3em 0.65em;
-    }
+  &.vaga-circulo-manutencao {
+    background-color: #f59e0b;
+    color: #1f2937;
   }
 }
 
@@ -311,6 +332,16 @@
   }
 }
 
+// Cards de KPI clicáveis (abrem modal com detalhes dos dados contidos)
+.card-kpi[role='button'],
+.metrics-kpi-card[role='button'] {
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+}
+
 .metrics-kpi-label {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.8rem;
@@ -331,6 +362,107 @@
 
   .table-dark {
     --bs-table-bg: transparent;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4b. DROPDOWNS SOBRE CARDS (Exportar CSV/Excel, etc.)
+   Garante que o menu do dropdown sempre fique acima do .card seguinte.
+   NÃO dar z-index a `.dropdown` aqui: essa classe também é usada pelo <li>
+   do menu de usuário no navbar, e criar um contexto de empilhamento nele
+   prenderia o `.dropdown-menu` (z-index 1035) num nível baixo, fazendo-o
+   perder para outro `.dropdown` mais abaixo no HTML (ex.: o botão
+   "Exportar Relatório" da página) — foi exatamente esse o bug.
+   -------------------------------------------------------------------------- */
+.dropdown-menu.show {
+  z-index: 1035;
+}
+
+/* --------------------------------------------------------------------------
+   4c. BANNER DE COOKIES / CONSENTIMENTO LGPD
+   Fica acima do widget de acessibilidade (z-index 1050) para nunca ser
+   coberto por ele, e reserva espaço à direita em telas largas para os
+   botões não ficarem embaixo do botão flutuante de acessibilidade.
+   -------------------------------------------------------------------------- */
+.lgpd-banner {
+  z-index: 1060;
+
+  @media (min-width: 768px) {
+    padding-right: 96px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4d. REVELAÇÃO DE CONTEÚDO NO SCROLL
+   Estado inicial (oculto/deslocado) e final (visível) dos cards/blocos
+   alvo de assets/js/main.js::inicializarScrollReveal(). A transição em si
+   já é neutralizada globalmente por `.reduce-motion *` (ver
+   _accessibility.scss), então não precisa repetir a checagem aqui.
+   -------------------------------------------------------------------------- */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   4e. TABELAS COM ROLAGEM HORIZONTAL (responsividade em telas estreitas)
+   Em telas estreitas, .table-responsive vira um scroller horizontal — mas
+   sem nenhuma pista visual, a tabela parece só "cortada", como se faltasse
+   conteúdo. As sombras nas bordas (aplicadas/removidas por
+   assets/js/modules/table-scroll-hint.js conforme a posição do scroll)
+   avisam que dá para arrastar para o lado. white-space: nowrap evita que
+   valores curtos (CPF, telefone, placa) quebrem no meio da célula — a
+   tabela já rola como um todo, então não precisa quebrar linha dentro da
+   célula.
+   -------------------------------------------------------------------------- */
+.table-responsive {
+  position: relative;
+
+  table td,
+  table th {
+    white-space: nowrap;
+  }
+
+  &.tem-scroll-horizontal {
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 16px;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity $transition-fast;
+    }
+
+    &::before {
+      left: 0;
+      box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.25);
+    }
+
+    &::after {
+      right: 0;
+      box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.25);
+    }
+
+    // A sombra de cada lado só aparece quando ainda há conteúdo pra rolar
+    // NAQUELA direção — classes alternadas por table-scroll-hint.js.
+    &:not(.scroll-no-inicio)::before {
+      opacity: 1;
+    }
+
+    &:not(.scroll-no-fim)::after {
+      opacity: 1;
+    }
   }
 }
 

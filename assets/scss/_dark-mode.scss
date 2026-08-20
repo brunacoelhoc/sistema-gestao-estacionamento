@@ -1,0 +1,169 @@
+@use 'variables' as *;
+
+// ==========================================================================
+// PARKGESTÃO - MODO NOTURNO (tema escuro completo, ativado manualmente)
+// Reaproveita a paleta escura já usada na página de Métricas
+// ($color-bg-dark / $color-surface-dark / $color-text-dark) para o site
+// inteiro, para manter consistência visual.
+// ==========================================================================
+
+body.dark-mode {
+  background-color: $color-bg-dark !important;
+  color: $color-text-dark !important;
+
+  .navbar {
+    background-color: $color-surface-dark !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    .navbar-brand,
+    .navbar-brand span {
+      color: $color-text-dark !important;
+    }
+
+    .nav-link {
+      color: $color-text-muted-dark !important;
+
+      &:hover {
+        color: $color-text-dark !important;
+        background-color: rgba(255, 255, 255, 0.06);
+      }
+
+      &.active {
+        color: $color-text-dark !important;
+      }
+    }
+  }
+
+  .navbar-toggler-icon {
+    filter: invert(1);
+  }
+
+  .card,
+  .modal-content,
+  .login-card,
+  .card-kpi,
+  .kpi-card,
+  .vaga-card {
+    background-color: $color-surface-dark !important;
+    color: $color-text-dark !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .card-header,
+  .card-footer {
+    background-color: $color-surface-dark !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .text-dark {
+    color: $color-text-dark !important;
+  }
+
+  .text-muted {
+    color: $color-text-muted-dark !important;
+  }
+
+  // Textos de ajuda abaixo dos campos (ex.: "Formato Mercosul...", "Apenas
+  // a estrutura de 11 números é validada..."): no tema claro usam um cinza
+  // discreto de propósito, mas no escuro esse mesmo cinza (herdado do
+  // Bootstrap) quase some sobre o fundo navy — trocado por branco para
+  // manter a leitura confortável.
+  .form-text {
+    color: $color-text-secondary-dark !important;
+  }
+
+  .bg-white {
+    background-color: $color-surface-dark !important;
+  }
+
+  .bg-light {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: $color-text-dark !important;
+  }
+
+  // Tabelas — mesma correção usada no modo Alto Contraste: classes como
+  // table-light/thead redefinem a CSS custom property --bs-table-bg
+  // localmente, então sobrescrever só o <table> não bastava para o
+  // cabeçalho (ficava com fundo claro e texto escuro invertido).
+  .table > :not(caption) > * > *,
+  .table-light,
+  thead {
+    --bs-table-bg: #{$color-surface-dark} !important;
+    --bs-table-color: #{$color-text-dark} !important;
+    --bs-table-striped-bg: #1a2436 !important;
+    --bs-table-hover-bg: #1a2436 !important;
+    --bs-table-accent-bg: #1a2436 !important;
+    background-color: $color-surface-dark !important;
+    color: $color-text-dark !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .table-hover > tbody > tr:hover > * {
+    background-color: #1a2436 !important;
+    color: $color-text-dark !important;
+  }
+
+  .form-control,
+  .form-select {
+    background-color: $color-bg-dark !important;
+    color: $color-text-dark !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+
+    &::placeholder {
+      color: $color-text-muted-dark !important;
+      opacity: 1;
+    }
+  }
+
+  .input-group-text {
+    background-color: $color-surface-dark !important;
+    color: $color-text-muted-dark !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  hr {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  // SweetAlert2 — usado em praticamente toda ação do sistema, então precisa
+  // acompanhar o tema para não "piscar" branco no meio de uma tela escura.
+  .swal2-popup {
+    background: $color-surface-dark !important;
+    color: $color-text-dark !important;
+  }
+
+  .swal2-title,
+  .swal2-html-container,
+  .swal2-input-label {
+    color: $color-text-dark !important;
+  }
+
+  .swal2-input,
+  .swal2-select,
+  .swal2-textarea {
+    background: $color-bg-dark !important;
+    color: $color-text-dark !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  // Dropdown do menu de usuário na navbar
+  .dropdown-menu {
+    background-color: $color-surface-dark !important;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .dropdown-item {
+    color: $color-text-dark !important;
+
+    &:hover,
+    &:focus {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: $color-text-dark !important;
+    }
+  }
+
+  .dropdown-divider {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}

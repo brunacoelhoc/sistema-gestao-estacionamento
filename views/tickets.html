@@ -3,6 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- Guarda de rota: sem sessão salva, manda para o login antes de
+         renderizar qualquer conteúdo protegido. -->
+    <script>
+        (function () {
+            try {
+                if (!localStorage.getItem('parkgestao:session')) {
+                    window.location.replace('login.html');
+                }
+            } catch (erro) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Gestão e Emissão de Tickets de Estacionamento - WCAG 2.1 AAA & LGPD.">
     <title>Gestão de Tickets | ParkGestão</title>
@@ -15,6 +28,12 @@
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
         crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <!-- Estilos Customizados -->
     <link rel="stylesheet" href="../assets/css/style.css">
 
@@ -69,6 +88,12 @@
                 <i class="fas fa-running me-1" aria-hidden="true"></i> Animação Off
             </button>
 
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Alternar Modo Noturno" aria-label="Alternar modo noturno"
+                aria-pressed="false">
+                <i class="fas fa-moon me-1" aria-hidden="true"></i> Modo Noturno
+            </button>
+
             <!-- Select Estilizado de Daltonismo -->
             <div class="position-relative d-inline-flex align-items-center">
                 <i class="fas fa-eye position-absolute start-0 ms-2 text-warning pointer-events-none text-xs"
@@ -86,23 +111,18 @@
         </div>
     </div>
 
+    <!-- Envolve navbar/main/footer, mas NÃO a barra de acessibilidade nem o
+         banner LGPD (fixos), para que o filtro de daltonismo (CSS `filter`) não
+         quebre o posicionamento `fixed` desses dois elementos. -->
+    <div id="app-content">
     <!-- NAVBAR PRINCIPAL -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-xl navbar-light">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
                     <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
                     <span>ParkGestão</span>
                 </a>
-
-                <!-- Indicador de Status da API -->
-                <div id="api-status-indicator"
-                    class="d-flex align-items-center gap-1 text-xs text-white-50 me-2 order-lg-2" role="status"
-                    aria-live="polite">
-                    <span id="api-status-dot" class="rounded-circle bg-secondary"
-                        style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
-                    <span id="api-status-text">Verificando servidor…</span>
-                </div>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
@@ -118,10 +138,47 @@
                                     aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i class="fas fa-id-card me-1"
                                     aria-hidden="true"></i> Mensalistas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
                         <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
                                     aria-hidden="true"></i> Sobre</a></li>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-none" id="link-funcionarios" href="funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item d-none d-xl-flex align-items-center ms-xl-3">
+                            <!-- Indicador de Status da API -->
+                            <div id="api-status-indicator" class="d-flex align-items-center gap-1 text-xs text-muted"
+                                role="status" aria-live="polite">
+                                <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                                <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -136,10 +193,30 @@
                     de Tickets</h1>
                 <p class="text-muted mb-0">Registre a entrada e saída de veículos do estacionamento.</p>
             </div>
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNovoTicket"
-                id="btn-emitir-ticket">
-                <i class="fas fa-plus-circle me-1" aria-hidden="true"></i> Emitir Novo Ticket
-            </button>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="btn-exportar-tickets"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-file-export me-1" aria-hidden="true"></i>Exportar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="btn-exportar-tickets">
+                        <li>
+                            <button class="dropdown-item" type="button" id="btn-exportar-tickets-csv">
+                                <i class="fas fa-file-csv me-2" aria-hidden="true"></i>Exportar CSV
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" type="button" id="btn-exportar-tickets-excel">
+                                <i class="fas fa-file-excel me-2" aria-hidden="true"></i>Exportar Excel
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNovoTicket"
+                    id="btn-emitir-ticket">
+                    <i class="fas fa-plus-circle me-1" aria-hidden="true"></i> Emitir Novo Ticket
+                </button>
+            </div>
         </div>
 
         <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
@@ -196,7 +273,15 @@
                 </div>
             </div>
             <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span id="paginacao-info" class="text-muted text-sm">Mostrando 0 de 0 tickets</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="paginacao-info" class="text-muted text-sm">Mostrando 0 de 0 tickets</span>
+                    <select id="select-tamanho-pagina-tickets" class="form-select form-select-sm w-auto"
+                        aria-label="Itens por página">
+                        <option value="10" selected>10 por página</option>
+                        <option value="50">50 por página</option>
+                        <option value="100">100 por página</option>
+                    </select>
+                </div>
                 <nav aria-label="Paginação de tickets">
                     <ul class="pagination pagination-sm mb-0" id="paginacao-tickets">
                         <li class="page-item disabled">
@@ -304,7 +389,7 @@
     </div>
 
     <!-- FOOTER ACESSÍVEL MELHORADO -->
-    <footer class="py-5 border-top mt-5 bg-dark text-white-50">
+    <footer class="py-5 border-top mt-5">
         <div class="container">
             <div class="row g-4 align-items-center">
 
@@ -313,14 +398,14 @@
                     <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
-                        <a href="tel:11999999999" class="text-white-50 text-decoration-none">(11) 99999-9999</a>
+                        <a href="tel:11999999999" class="footer-muted text-decoration-none">(11) 99999-9999</a>
                     </p>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
                         <a href="mailto:contato@parkgestao.com.br"
-                            class="text-white-50 text-decoration-none">contato@parkgestao.com.br</a>
+                            class="footer-muted text-decoration-none">contato@parkgestao.com.br</a>
                     </p>
-                    <p class="mb-0 text-sm">
+                    <p class="mb-0 text-sm footer-muted">
                         <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
                         Av. Paulista, 1000 — São Paulo, SP
                     </p>
@@ -333,12 +418,17 @@
                         <i class="fas fa-parking text-warning" aria-hidden="true"></i>
                         <span>ParkGestão</span>
                     </a>
-                    <p class="mb-1 text-xs text-white-50">
+                    <p class="mb-1 text-xs footer-muted">
                         &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
                     </p>
-                    <p class="mb-0 text-xs text-white-50">
+                    <p class="mb-0 text-xs footer-muted">
                         <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
                         WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                    <p class="mb-0 mt-1 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                        <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                            style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                        <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
                     </p>
                 </div>
 
@@ -362,6 +452,8 @@
             </div>
         </div>
     </footer>
+    </div>
+    <!-- /#app-content -->
 
     <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
     <div vw class="enabled">
@@ -376,13 +468,26 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 
     <!-- MÓDULOS INTERNOS (ordem importa) -->
     <script defer src="../assets/js/modules/accessibility.js"></script>
     <script defer src="../assets/js/modules/lgpd.js"></script>
-    <script defer src="../assets/js/modules/api.js"></script>
-    <script defer src="../assets/js/pages/tickets.js"></script>
+    <script defer src="../assets/js/modules/table-scroll-hint.js"></script>
+    <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/toast.js"></script>
+    <script defer src="../assets/js/modules/gsap-init.js"></script>
+    <script defer src="../assets/js/modules/comprovante.js"></script>
+    <script defer src="../assets/js/modules/exportar-tabela.js"></script>
+    <script defer src="../assets/js/main.js"></script>
+    <script defer src="../assets/js/controllers/tickets.js"></script>
 
     <script>
         document.getElementById('footer-year').textContent = new Date().getFullYear();

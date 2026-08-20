@@ -23,39 +23,15 @@ window.LGPDModule = {
   },
 
   /**
-   * Valida algoritmo do dígito verificador e estrutura do CPF
+   * Valida apenas a estrutura do CPF (11 dígitos numéricos), sem cálculo de
+   * dígito verificador — conforme especificação.
    * @param {string} cpf
    * @returns {boolean}
    */
   validateCPF (cpf) {
     if (!cpf) return false
     const clean = String(cpf).replace(/\D/g, '')
-
-    if (clean.length !== 11 || /^(\d)\1{10}$/.test(clean)) {
-      return false
-    }
-
-    let sum = 0
-    let remainder
-
-    for (let i = 1; i <= 9; i++) {
-      sum += parseInt(clean.substring(i - 1, i), 10) * (11 - i)
-    }
-
-    remainder = (sum * 10) % 11
-    if (remainder === 10 || remainder === 11) remainder = 0
-    if (remainder !== parseInt(clean.substring(9, 10), 10)) return false
-
-    sum = 0
-    for (let i = 1; i <= 10; i++) {
-      sum += parseInt(clean.substring(i - 1, i), 10) * (12 - i)
-    }
-
-    remainder = (sum * 10) % 11
-    if (remainder === 10 || remainder === 11) remainder = 0
-    if (remainder !== parseInt(clean.substring(10, 11), 10)) return false
-
-    return true
+    return clean.length === 11
   }
 }
 
@@ -89,7 +65,7 @@ class LGPDConsentManager {
     const banner = document.createElement('div')
     banner.id = 'lgpd-banner'
     banner.className =
-      'fixed-bottom bg-dark text-white p-3 shadow-lg z-3 border-top border-primary'
+      'lgpd-banner fixed-bottom bg-dark text-white p-3 shadow-lg border-top border-primary'
     banner.setAttribute('role', 'dialog')
     banner.setAttribute('aria-modal', 'false')
     banner.setAttribute('aria-live', 'polite')

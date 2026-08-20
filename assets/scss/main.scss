@@ -8,6 +8,7 @@
 @use 'variables' as *;
 @use 'accessibility';
 @use 'components';
+@use 'dark-mode';
 
 /* --------------------------------------------------------------------------
    2. ESTILOS GLOBAIS & RESET ESTRUTURAL
@@ -86,16 +87,44 @@ textarea,
   padding: 0.85rem 1.5rem;
   transition: background-color $transition-normal, box-shadow $transition-normal;
 
+  // Rede de segurança para telas estreitas ou fonte aumentada pelo controle
+  // de acessibilidade (A+): em vez de estourar a largura da página, a marca
+  // e o menu quebram para a linha de baixo.
+  > .container {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .navbar-brand {
+    color: $color-text-light;
+
+    span {
+      color: $color-text-light;
+    }
+  }
+
+  // O menu (visível a partir do breakpoint de expansão) também pode quebrar
+  // em mais de uma linha internamente, em vez de espremer os itens ou
+  // vazar para fora da tela.
+  .navbar-nav {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+    align-items: center;
+  }
+
   .nav-link {
     font-weight: 600;
-    color: $color-text-muted;
+    // Antes usava $color-text-muted (#64748b, ~4.7:1 sobre branco — só AA).
+    // Com $color-text-muted-aaa o padrão do sistema (AAA / 7:1) é respeitado.
+    color: $color-text-muted-aaa;
     padding: 0.5rem 1rem;
     border-radius: $border-radius-sm;
+    white-space: nowrap;
     transition: color $transition-fast, background-color $transition-fast;
 
     &:hover {
       color: $color-text-light;
-      background-color: rgba(0, 0, 0, 0.03);
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
     &.active {
@@ -117,33 +146,162 @@ textarea,
   }
 }
 
+// Faixa mais apertada logo depois que o menu "abre" (breakpoint xl, a
+// partir de 1200px): reduz um pouco o espaçamento dos links até a tela
+// ficar larga o suficiente (xxl) para o espaçamento padrão.
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .navbar .nav-link {
+    padding-left: 0.55rem;
+    padding-right: 0.55rem;
+    font-size: 0.875rem;
+  }
+}
+
 /* --------------------------------------------------------------------------
-   6. HERO SECTION & IMPLANTAÇÃO VANTA.JS
+   5b. AVATAR DO USUÁRIO (Menu da Navbar)
+   -------------------------------------------------------------------------- */
+.user-avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: $color-focus-outline;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Avatar grande usado no modal "Meu Perfil"
+.user-avatar-circle-lg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background-color: $color-focus-outline;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.5rem;
+  overflow: hidden;
+  border: 3px solid rgba(0, 0, 0, 0.08);
+}
+
+.perfil-avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Botões da galeria de avatares (bichinhos) dentro do modal de perfil
+.avatar-galeria-item {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  transition: transform $transition-fast, border-color $transition-fast;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &:hover,
+  &:focus-visible {
+    transform: scale(1.1);
+    border-color: $color-focus-outline;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. HERO SECTION — FOTO DE FUNDO EM LARGURA TOTAL
+   A foto e o véu de contraste (scrim) são camadas absolutas que preenchem
+   toda a .hero-section; como a seção não tem largura/altura fixas (só a
+   altura mínima de .hero-content-inner + padding), as duas acompanham
+   automaticamente a largura da viewport e a altura real do conteúdo, sem
+   precisar de JS nem de breakpoints extras.
    -------------------------------------------------------------------------- */
 .hero-section {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    $color-hero-gradient-start 0%,
-    $color-hero-gradient-end 100%
-  );
   color: $color-hero-text;
-  padding: 4.5rem 0;
   overflow: hidden;
+  // Cor sólida de fallback (mesma base do gradiente antigo) enquanto a foto
+  // carrega ou caso ela falhe.
+  background-color: $color-hero-gradient-end;
+}
 
-  #vanta-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
+.hero-bg-photo {
+  position: absolute;
+  inset: 0;
+  background-image: url('../img/hero-bg-cars.jpg');
+  background-size: cover;
+  background-position: center 42%;
+  background-repeat: no-repeat;
+}
+
+// Véu escuro sobre a foto: mais forte à esquerda/embaixo (onde fica o texto
+// e a barra de ações) e mais suave à direita/em cima (onde a foto "respira"
+// e mostra mais detalhe) — preserva o contraste do texto branco sem cobrir
+// a imagem por completo.
+.hero-bg-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      100deg,
+      rgba(6, 10, 20, 0.94) 0%,
+      rgba(6, 10, 20, 0.82) 30%,
+      rgba(6, 10, 20, 0.45) 62%,
+      rgba(6, 10, 20, 0.22) 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(6, 10, 20, 0.78) 0%,
+      rgba(6, 10, 20, 0) 40%
+    );
+}
+
+.hero-content-inner {
+  min-height: clamp(400px, 56vh, 600px);
+}
+
+.hero-title {
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+}
+
+// Telas menores: a foto perde espaço horizontal (o texto ocupa quase 100%
+// da largura), então o véu fica praticamente sólido para não brigar com o
+// texto, mantendo só uma sugestão da foto nas bordas.
+@media (max-width: 767.98px) {
+  .hero-content-inner {
+    min-height: clamp(360px, 64vh, 560px);
   }
 
-  .hero-content {
-    position: relative;
-    z-index: 1;
+  .hero-bg-scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(6, 10, 20, 0.9) 0%,
+      rgba(6, 10, 20, 0.86) 55%,
+      rgba(6, 10, 20, 0.72) 100%
+    );
   }
 }
 
@@ -151,11 +309,24 @@ textarea,
    7. RODAPÉ SOFISTICADO (FOOTER)
    -------------------------------------------------------------------------- */
 footer {
+  position: relative;
   margin-top: auto;
   background-color: $color-footer-bg;
   color: $color-footer-text;
   padding: 2.5rem 0 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+
+  // Linha de destaque sutil no topo do rodapé, ecoando o gradiente do hero
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0d6efd 0%, #38bdf8 50%, #ffc107 100%);
+    opacity: 0.7;
+  }
 
   a {
     color: $color-footer-link;
@@ -167,11 +338,22 @@ footer {
       opacity: 0.9;
     }
   }
+
+  // Texto secundário do rodapé (antes usava a utilidade Bootstrap
+  // text-white-50, que aplicava !important e derrubava para ~3.9:1 de
+  // contraste sobre o fundo escuro — abaixo até do mínimo AA).
+  .footer-muted {
+    color: $color-text-muted-dark;
+  }
 }
 
 /* --------------------------------------------------------------------------
    8. UTILITÁRIOS DE TIPOGRAFIA & MODAIS
    -------------------------------------------------------------------------- */
+.text-sm {
+  font-size: 0.875rem !important;
+}
+
 .text-xs {
   font-size: 0.75rem !important;
 }
@@ -202,8 +384,17 @@ footer {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
 
-  #vanta-bg {
-    display: none !important;
-  }
+/* --------------------------------------------------------------------------
+   10. WIDGET VLIBRAS
+   Sem posição própria, o plugin usa seu padrão (canto superior-esquerdo,
+   sobrepondo a barra de acessibilidade). Força o canto inferior direito,
+   convenção usada nos demais sites gov.br.
+   -------------------------------------------------------------------------- */
+div[vw] {
+  top: auto !important;
+  left: auto !important;
+  right: 20px !important;
+  bottom: 20px !important;
 }

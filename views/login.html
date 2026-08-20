@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Guarda de rota: se já existe sessão salva, não faz sentido mostrar o
+         login de novo — manda direto para o Dashboard. Fica logo no topo do
+         <head>, antes de qualquer CSS/HTML renderizar, para não "piscar" a
+         tela de login para quem já está logado. -->
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('parkgestao:session')) {
+                    window.location.replace('../index.html');
+                }
+            } catch (erro) { /* localStorage indisponível: deixa seguir para o login normalmente */ }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Entrar no ParkGestão - Sistema de Gestão de Estacionamento">
+    <title>Entrar | ParkGestão</title>
+
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Estilos Customizados -->
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body class="login-page">
+
+    <!-- Skip Link -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+    <!-- BARRA DE ACESSIBILIDADE WCAG -->
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
+        role="region" aria-label="Barra de Acessibilidade">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
+                <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
+            </button>
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
+                <i class="fas fa-font" aria-hidden="true"></i> Dislexia
+            </button>
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
+                <i class="fas fa-running" aria-hidden="true"></i> Animação Off
+            </button>
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Alternar Modo Noturno" aria-label="Alternar modo noturno" aria-pressed="false">
+                <i class="fas fa-moon" aria-hidden="true"></i> Modo Noturno
+            </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+            <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
+                aria-label="Selecionar filtro para daltonismo">
+                <option value="normal">Daltonismo: Normal</option>
+                <option value="protanopia">Protanopia</option>
+                <option value="deuteranopia">Deuteranopia</option>
+                <option value="tritanopia">Tritanopia</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="app-content">
+        <!-- CABEÇALHO SIMPLES -->
+        <header class="py-4 text-center">
+            <a class="d-inline-flex align-items-center justify-content-center gap-2 fw-bold text-decoration-none fs-3"
+                href="../index.html">
+                <i class="fas fa-parking text-warning" aria-hidden="true"></i>
+                <span class="login-brand-text">ParkGestão</span>
+            </a>
+        </header>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main id="main-content" class="container py-3 py-md-4">
+            <div class="row justify-content-center">
+                <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+                    <div class="card shadow-lg border-0 rounded-4 login-card">
+                        <div class="card-body p-4 p-md-5">
+
+                            <!-- ABAS: ENTRAR / CADASTRAR -->
+                            <ul class="nav nav-pills nav-fill mb-4" id="loginTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab-entrar-btn" data-bs-toggle="pill"
+                                        data-bs-target="#tab-entrar" type="button" role="tab"
+                                        aria-controls="tab-entrar" aria-selected="true">
+                                        <i class="fas fa-right-to-bracket me-1" aria-hidden="true"></i> Entrar
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-cadastrar-btn" data-bs-toggle="pill"
+                                        data-bs-target="#tab-cadastrar" type="button" role="tab"
+                                        aria-controls="tab-cadastrar" aria-selected="false">
+                                        <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Cadastrar
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content" id="loginTabContent">
+
+                                <!-- ABA: ENTRAR -->
+                                <div class="tab-pane fade show active" id="tab-entrar" role="tabpanel"
+                                    aria-labelledby="tab-entrar-btn" tabindex="0">
+                                    <form id="form-login" novalidate>
+                                        <div class="mb-3 text-start">
+                                            <label for="login-cpf" class="form-label fw-bold">CPF</label>
+                                            <input type="text" id="login-cpf" class="form-control" required
+                                                autocomplete="username" inputmode="numeric" maxlength="14"
+                                                placeholder="000.000.000-00">
+                                        </div>
+                                        <div class="mb-2 text-start">
+                                            <label for="login-senha" class="form-label fw-bold">Senha</label>
+                                            <div class="input-group">
+                                                <input type="password" id="login-senha" class="form-control" required
+                                                    autocomplete="current-password">
+                                                <button type="button" class="btn btn-outline-secondary"
+                                                    id="btn-toggle-login-senha" tabindex="-1"
+                                                    aria-label="Mostrar ou ocultar a senha">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="text-end mb-3">
+                                            <button type="button" id="btn-esqueci-senha"
+                                                class="btn btn-link btn-sm p-0 text-decoration-none">
+                                                Esqueci minha senha
+                                            </button>
+                                        </div>
+                                        <button type="submit" id="btn-submit-login"
+                                            class="btn btn-primary w-100 fw-bold py-2">
+                                            <i class="fas fa-right-to-bracket me-1" aria-hidden="true"></i> Entrar
+                                        </button>
+                                    </form>
+
+                                    <div class="d-flex align-items-center gap-2 my-4">
+                                        <hr class="flex-grow-1">
+                                        <span class="text-muted text-sm">ou</span>
+                                        <hr class="flex-grow-1">
+                                    </div>
+
+                                    <div id="google-signin-button" class="d-flex justify-content-center"></div>
+                                </div>
+
+                                <!-- ABA: CADASTRAR -->
+                                <div class="tab-pane fade" id="tab-cadastrar" role="tabpanel"
+                                    aria-labelledby="tab-cadastrar-btn" tabindex="0">
+                                    <form id="form-cadastro" novalidate>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-nome" class="form-label fw-bold">Nome completo</label>
+                                            <input type="text" id="cadastro-nome" class="form-control" required
+                                                autocomplete="name">
+                                        </div>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-cpf" class="form-label fw-bold">CPF</label>
+                                            <input type="text" id="cadastro-cpf" class="form-control" required
+                                                inputmode="numeric" maxlength="14" placeholder="000.000.000-00"
+                                                autocomplete="off">
+                                            <div class="form-text">Usado para entrar no sistema. Só a estrutura de 11
+                                                dígitos é validada.</div>
+                                        </div>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-email" class="form-label fw-bold">E-mail</label>
+                                            <input type="email" id="cadastro-email" class="form-control" required
+                                                autocomplete="email">
+                                            <div class="form-text">Usado apenas para recuperação de senha.</div>
+                                        </div>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-telefone" class="form-label fw-bold">Telefone</label>
+                                            <input type="text" id="cadastro-telefone" class="form-control" required
+                                                autocomplete="tel" inputmode="tel" maxlength="15"
+                                                placeholder="(11) 99999-9999">
+                                        </div>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-senha" class="form-label fw-bold">Senha</label>
+                                            <div class="input-group">
+                                                <input type="password" id="cadastro-senha" class="form-control"
+                                                    required minlength="8" autocomplete="new-password">
+                                                <button type="button" class="btn btn-outline-secondary"
+                                                    id="btn-toggle-cadastro-senha" tabindex="-1"
+                                                    aria-label="Mostrar ou ocultar a senha">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div id="cadastro-senha-forca-barra" class="progress-bar"
+                                                    role="progressbar" style="width: 0%" aria-valuenow="0"
+                                                    aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <div id="cadastro-senha-forca-texto" class="form-text">Mínimo de 8
+                                                caracteres, com maiúscula, minúscula, número e caractere especial.
+                                            </div>
+                                        </div>
+                                        <div class="mb-3 text-start">
+                                            <label for="cadastro-confirmar-senha" class="form-label fw-bold">Confirmar
+                                                senha</label>
+                                            <div class="input-group">
+                                                <input type="password" id="cadastro-confirmar-senha"
+                                                    class="form-control" required autocomplete="new-password">
+                                                <button type="button" class="btn btn-outline-secondary"
+                                                    id="btn-toggle-cadastro-confirmar-senha" tabindex="-1"
+                                                    aria-label="Mostrar ou ocultar a senha">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="form-check text-start mb-4">
+                                            <input class="form-check-input" type="checkbox" id="cadastro-termos"
+                                                required>
+                                            <label class="form-check-label text-sm" for="cadastro-termos">
+                                                Li e aceito os <a href="sobre.html#privacidade" target="_blank"
+                                                    rel="noopener">Termos de Uso e a Política de Privacidade</a>.
+                                            </label>
+                                        </div>
+                                        <button type="submit" id="btn-submit-cadastro"
+                                            class="btn btn-primary w-100 fw-bold py-2">
+                                            <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Cadastrar
+                                        </button>
+                                    </form>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- /#app-content -->
+
+    <!-- FOOTER SIMPLES -->
+    <footer class="py-3 text-center border-top">
+        <div class="container">
+            <p class="mb-1 text-xs footer-muted">&copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido
+                por Bruna Coelho.</p>
+            <p class="mb-0 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
+            </p>
+        </div>
+    </footer>
+
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+
+    <!-- DEPENDÊNCIAS -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script defer src="https://accounts.google.com/gsi/client"></script>
+
+    <!-- MÓDULOS INTERNOS (ordem importa) -->
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/toast.js"></script>
+    <script defer src="../assets/js/modules/frase-do-dia.js"></script>
+    <script defer src="../assets/js/modules/gsap-init.js"></script>
+    <script defer src="../assets/js/main.js"></script>
+    <script defer src="../assets/js/controllers/login.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
+</body>
+
+</html>

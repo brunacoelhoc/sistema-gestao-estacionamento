@@ -1,152 +1,237 @@
-# 🚗 ParkGestão — Sistema de Gestão de Estacionamento
+# 🚗 ParkGestão
 
-> Sistema web responsivo para controle de tickets, gestão de mensalistas, vagas, tarifas e métricas de estacionamento, construído focado em **Acessibilidade (WCAG 2.1 AAA)** e **Conformidade com a LGPD**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white" alt="Node.js >= 18" />
+  <img src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white" alt="Express 5" />
+  <img src="https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white" alt="Prisma 7" />
+  <img src="https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/WCAG-2.1%20AAA-7C3AED" alt="WCAG 2.1 AAA" />
+  <img src="https://img.shields.io/badge/LGPD-conforme-16A34A" alt="LGPD" />
+  <img src="https://img.shields.io/badge/licença-MIT-F59E0B" alt="Licença MIT" />
+</p>
+
+<p align="center">
+  <strong>Sistema de gestão de estacionamento</strong> — tickets avulsos, mensalistas com cobrança mensal de verdade, vagas, tarifas e métricas — acessível (WCAG 2.1 AAA) e em conformidade com a LGPD. 🅿️✨
+</p>
 
 ---
 
 ## 📌 Índice
-- [🚗 ParkGestão — Sistema de Gestão de Estacionamento](#-parkgestão--sistema-de-gestão-de-estacionamento)
-  - [📌 Índice](#-índice)
-  - [📖 Sobre o Projeto](#-sobre-o-projeto)
-    - [🎯 Principais Objetivos:](#-principais-objetivos)
-  - [🛠️ Arquitetura e Tecnologias](#️-arquitetura-e-tecnologias)
-  - [📂 Estrutura do Projeto](#-estrutura-do-projeto)
-    - [💡 Por que este formato é um padrão corporativo excelente?](#-por-que-este-formato-é-um-padrão-corporativo-excelente)
+
+- [📖 Sobre o projeto](#-sobre-o-projeto)
+- [🛠️ Stack e arquitetura](#️-stack-e-arquitetura)
+- [📂 Estrutura do projeto (MVC)](#-estrutura-do-projeto-mvc)
+- [🚀 Como rodar](#-como-rodar)
+- [💳 Cobrança de mensalistas](#-cobrança-de-mensalistas)
+- [🎟️ Regras de tickets avulsos](#️-regras-de-tickets-avulsos)
+- [🔐 Autenticação e área administrativa](#-autenticação-e-área-administrativa)
+- [♿ Acessibilidade (WCAG 2.1 AAA)](#-acessibilidade-wcag-21-aaa)
+- [🛡️ LGPD](#️-lgpd)
+- [🔑 Login com Google (opcional)](#-login-com-google-opcional)
+- [📐 Padrão de commits](#-padrão-de-commits)
+- [👩‍💻 Autora](#-autora)
 
 ---
 
-## 📖 Sobre o Projeto
+## 📖 Sobre o projeto
 
-O **ParkGestão** é uma solução completa para operacionalização e controle financeiro/operacional de estacionamentos. Ele resolve o fluxo de emissão e pagamento de tickets avulsos, bem como a gestão contínua de clientes mensalistas.
+O **ParkGestão** cobre o dia a dia de um estacionamento: abrir e fechar tickets avulsos, controlar vagas e tarifas, cadastrar mensalistas (com cobrança mensal de verdade, não por ticket) e acompanhar tudo num painel de métricas.
 
-### 🎯 Principais Objetivos:
-* **Eficiência Operacional:** Controle rápido de entrada, saída e valores de permanência.
-* **Inclusão e Acessibilidade:** Interface adaptada para pessoas com deficiência visual, dislexia ou daltonismo.
-* **Segurança e Privacidade:** Tratamento de dados pessoais (como CPF e Placa) em conformidade com a Lei Geral de Proteção de Dados (LGPD).
-
----
-
-## 🛠️ Arquitetura e Tecnologias
-
-O projeto adota uma arquitetura **Front-end Jamstack/Vanilla**, focada em alta performance, sem dependência de *frameworks* pesados no lado do cliente.
-
-* **HTML5 Semântico:** Estruturação acessível com uso adequado de tags ARIA e WCAG.
-* **CSS3 & Bootstrap 5.3:** Layout responsivo, utilitários flexbox e componentes visuais.
-* **JavaScript (ES6+):** Programação modular e assíncrona (`async/await`, Fetch API).
-* **FontAwesome 6:** Iconografia vetorial e acessível.
-* **SweetAlert2:** Feedback visual amigável para modais de confirmação e alertas.
-* **VLibras Widget:** Tradução automática do conteúdo para Língua Brasileira de Sinais (LIBRAS).
+**🎯 Objetivos principais**
+- ⚡ **Eficiência operacional** — entrada, saída e cálculo de valor em poucos cliques.
+- ♿ **Inclusão** — interface pensada para pessoas com baixa visão, dislexia ou daltonismo.
+- 🔒 **Privacidade** — dados pessoais (CPF, placa) tratados em conformidade com a LGPD.
 
 ---
 
-## 📂 Estrutura do Projeto
+## 🛠️ Stack e arquitetura
 
-Para manter a organização corporativa e facilitar a manutenção, o projeto é dividido em pastas bem definidas:
+| Camada | Tecnologias |
+|---|---|
+| **Front-end** | HTML5 semântico + SCSS + JavaScript ES6+ nativo (sem framework), Bootstrap 5.3 |
+| **Back-end** | Node.js + Express 5, arquitetura MVC (rotas → controllers → services) |
+| **Banco de dados** | PostgreSQL via Prisma ORM 7 |
+| **Autenticação** | JWT assinado pelo servidor + senha com hash bcrypt + Google Identity Services (opcional) |
+| **UI / Feedback** | SweetAlert2 (modais), FontAwesome 6 (ícones), GSAP (animações de entrada) |
+| **Gráficos e relatórios** | Chart.js, jsPDF + jspdf-autotable (PDF), SheetJS/xlsx (Excel) |
+| **Acessibilidade** | VLibras (tradução em Libras), painel próprio de contraste/dislexia/daltonismo/zoom |
+
+O front-end é uma aplicação **multipágina (MPA)** — cada tela é um `.html` próprio — que fala com a API por `fetch`. Nenhuma regra de negócio (cálculo de tarifa, tolerância, cobrança de mensalista) roda no navegador: tudo é decidido e persistido pelo back-end.
+
+---
+
+## 📂 Estrutura do projeto (MVC)
 
 ```text
-ParkGestao/
+projeto/
+├── index.html                    # Dashboard (entrada do site, fica na raiz)
+├── 404.html                      # Página de erro (raiz, padrão de hosts estáticos)
+├── views/                        # 🖼️ View — as demais telas
+│   ├── tickets.html
+│   ├── mensalistas.html
+│   ├── vagas-tarifas.html
+│   ├── metricas.html
+│   ├── funcionarios.html         # Área administrativa (só para "admin")
+│   ├── login.html
+│   └── sobre.html
 ├── assets/
-│   ├── css/
-│   │   └── style.css            # Estilos globais e customizações de acessibilidade
+│   ├── scss/ + css/style.css     # Estilos (SCSS compilado)
 │   ├── img/
-│   │   └── favicon.svg          # Ícone da aplicação
 │   └── js/
-│       ├── modules/             # Módulos reutilizáveis em toda a aplicação
-│       │   ├── accessibility.js # Motor do painel de acessibilidade
-│       │   ├── api.js           # Comunicação centralizada com a API REST
-│       │   └── lgpd.js          # Funções de mascaramento e privacidade de dados
-│       └── pages/               # Scripts específicos de cada página HTML
-│           ├── mensalistas.js   # Regras de negócio e CRUD de Mensalistas
-│           ├── tickets.js       # Controle e emissão de tickets
-│           └── vagas.js         # Gestão de ocupação e tarifas
-├── pages/
-│   ├── mensalistas.html         # Tela de gestão de clientes mensalistas
-│   ├── metricas.html            # Relatórios e gráficos operacionais
-│   ├── sobre.html               # Informações do sistema e privacidade
-│   ├── tickets.html             # Painel de operações de tickets
-│   └── vagas-tarifas.html       # Configuração de vagas e preços
-├── index.html                   # Dashboard principal
-└── README.md                    # Documentação do projeto
-
-🚀 Pré-requisitos e Como Rodar
-Por ser um projeto de front-end nativo, não é necessário instalar o Node.js ou gerenciadores de pacote para rodar localmente.
-
-👨‍💻 Passo a Passo para Desenvolvimento:
-Clonar o Repositório:
-
-Bash
-git clone [https://github.com/seu-usuario/parkgestao.git](https://github.com/seu-usuario/parkgestao.git)
-Acessar a pasta do projeto:
-
-Bash
-cd parkgestao
-Executar a aplicação:
-
-Opção 1 (Recomendada): Abra a pasta no VS Code, instale a extensão Live Server e clique em "Go Live".
-
-Opção 2: Abra diretamente o arquivo index.html em qualquer navegador web moderno (Chrome, Edge, Firefox, Safari).
-
-⚙️ Funcionalidades e Validações
-👤 Módulo de Mensalistas
-Cadastro e Edição: Inclusão de Nome, CPF, Telefone e Placa.
-
-Validações de Entrada:
-
-Nome Completo: Campo obrigatório, impede salvamento em branco.
-
-CPF: Máscara dinâmica (000.000.000-00) + Algoritmo matemático dos dígitos verificadores (DV).
-
-Placa: Padrão antigo (ABC-1234) e Mercosul (ABC1D23).
-
-Duplicidade: Bloqueio de cadastro de CPFs ou Placas já registrados na base de dados.
-
-Sem Exclusão Física: Em conformidade com auditorias operacionais, mensalistas não são deletados, apenas Inativados ou Reativados.
-
-♿ Acessibilidade & LGPD
-♿ Recursos WCAG 2.1 AAA
-Aumentar/Diminuir Fonte: Ajuste dinâmico da escala de texto sem quebrar o layout.
-
-Modo Alto Contraste: Troca de esquema de cores para facilitar a leitura por pessoas com baixa visão.
-
-Fonte para Dislexia: Alteração da tipografia para fontes otimizadas para leitura facilitada.
-
-Modo Reduzir Animações: Pausa efeitos visuais para usuários com sensibilidade a movimento (vestibular disorders).
-
-Filtros de Daltonismo: Ajustes em SVG/CSS para Protanopia, Deuteranopia e Tritanopia.
-
-Suporte a VLibras: Tradutor automático integrado.
-
-🛡️ Conformidade LGPD
-Minimização de Dados: Coleta estritamente dos dados necessários para a operação.
-
-Mascaramento de CPF: Exibição mascarada (***.***.**0-00) nas listagens e tabelas públicas para evitar exposição visual.
-
-📐 Padrões de Código e Commits
-Este projeto adota a convenção de Conventional Commits para manter o histórico de alterações limpo e legível.
-
-Padrão de Mensagens do Git:
-feat: Uma nova funcionalidade (ex: feat(mensalistas): adiciona validacao no campo nome).
-
-fix: Correção de um bug (ex: fix(tickets): corrige calculo do valor de permanencia).
-
-style: Mudanças de formatação ou CSS sem alterar lógica (ex: style(bar): ajusta espacamento do select).
-
-docs: Alterações na documentação (ex: docs: atualiza guia de instalacao no README).
-
-refactor: Refatoração de código que não altera comportamento final.
-
-👩‍💻 Autora e Contato
-Desenvolvido por Bruna Coelho.
-
-Projeto: Sistema Estacionamento ParkGestão
-
-Licença: MIT — Livre para estudos e aprimoramentos.
-
+│       ├── main.js               # Bootstrap global (navbar, footer, status da API, VLibras)
+│       ├── models/                # 🗄️ Model do front — camada de dados
+│       │   └── api.js             #   único ponto de comunicação com a API REST
+│       ├── controllers/          # 🎮 Controller de cada tela
+│       │   ├── dashboard.js, tickets.js, mensalistas.js, vagas.js
+│       │   └── metricas.js, funcionarios.js, login.js
+│       └── modules/               # utilitários/serviços transversais (fora do
+│                                   # tripé MVC): acessibilidade, sessão/login,
+│                                   # LGPD, toast, paginação, exportação, PDF…
+├── prisma/
+│   ├── schema.prisma              # Modelo de dados (Model do back-end)
+│   ├── migrations/
+│   └── seed.js                    # Popula o banco a partir de db.json
+├── server/                        # 🧠 Back-end Express, em MVC
+│   ├── index.js / app.js
+│   ├── config/prisma.js           # Conexão com o banco (Prisma + driver adapter)
+│   ├── routes/                    # Rotas HTTP — só wiring, sem lógica
+│   ├── controllers/                # Lógica de cada rota
+│   ├── services/mensalidade.js    # Regra do ciclo mensal do mensalista
+│   └── middleware/auth.js         # JWT (requireAuth / requireAdmin)
+├── db.json                        # Dados de exemplo usados por prisma/seed.js
+└── generated/prisma/               # Cliente Prisma gerado (não versionado)
+```
 
 ---
 
-### 💡 Por que este formato é um padrão corporativo excelente?
+## 🚀 Como rodar
 
-1. **Badges e Índice Visual:** Permite navegar direto ao ponto sem precisar rolar a página toda.
-2. **Explicativo para Iniciantes:** Ensina como clonar, como rodar via *Live Server*, o motivo da arquitetura sem *frameworks* pesados e o significado de cada pasta.
-3. **Padrão Profissional para Recrutadores:** Inclui seções sobre **LGPD**, **Acessibilidade WC
+Pré-requisitos: **Node.js 18+** e um banco **PostgreSQL** acessível (local ou na nuvem).
+
+```bash
+# 1. Clonar e instalar dependências
+git clone <url-do-repositório>
+cd projeto
+npm install
+
+# 2. Configurar variáveis de ambiente
+cp .env.example .env   # ou crie o .env manualmente (ver variáveis abaixo)
+
+# 3. Criar as tabelas e popular com dados de exemplo
+npx prisma migrate dev
+npm run db:seed
+
+# 4. Subir a API + compilar o SCSS em modo watch
+npm run dev
+```
+
+Com a API rodando (`http://localhost:3001` por padrão), abra `index.html` no navegador — o jeito mais simples é a extensão **Live Server** do VS Code, já que o front-end é estático e só precisa ser servido por HTTP (não pelo `file://`) para os módulos JS funcionarem direito.
+
+**Variáveis de ambiente (`.env`):**
+
+| Variável | Para que serve |
+|---|---|
+| `DATABASE_URL` | String de conexão do PostgreSQL |
+| `PORT` | Porta da API (padrão: `3001`) |
+| `JWT_SECRET` | Chave usada para assinar o token de sessão |
+| `JWT_EXPIRES_IN` | Validade do token (ex.: `8h`) |
+| `GOOGLE_CLIENT_ID` | Opcional — habilita o "Entrar com Google" (ver seção própria) |
+
+**Credenciais de teste** (criadas pelo `npm run db:seed`, com ~3 meses de tickets simulados):
+
+| Papel | CPF | Senha |
+|---|---|---|
+| 👑 Administrador | `111.222.333-44` | `Admin@123` |
+| 🧑‍💼 Funcionário | `222.333.444-55` | `Func@123` |
+| 🧑‍💼 Funcionário | `333.444.555-66` | `Func@123` |
+| 🚫 Funcionário (inativo) | `444.555.666-77` | `Func@123` |
+
+O login é feito por **CPF**, não por e-mail — o e-mail só serve como via de recuperação de senha.
+
+---
+
+## 💳 Cobrança de mensalistas
+
+Mensalista **não paga por ticket** — ele paga um **ciclo mensal** (`server/services/mensalidade.js`), que fica registrado no banco (`Mensalidade`) com histórico completo:
+
+- ✅ **Ao cadastrar (ou reativar)** um mensalista, abre-se um ciclo do dia atual até o fim do mês corrente, no valor **cheio** da mensalidade.
+- ⏳ **Se ele completar o mês** (continua ativo), o próximo ciclo nasce automaticamente cheio, e assim por diante.
+- ✂️ **Se for inativado antes do fim do mês**, o ciclo em aberto é fechado na hora com valor **proporcional aos dias em que esteve ativo** naquele mês (`valor da mensalidade × dias ativos ÷ dias do mês`).
+- 🎫 Tickets abertos por um mensalista ativo fecham sempre com `valorTotal = 0` — ele já pagou pelo ciclo, então cada entrada/saída não gera cobrança extra (o rótulo "Isento" no comprovante passa a ser literal, não um bug).
+
+Na tela de **Mensalistas**, o botão <kbd>💵 Ver cobranças</kbd> em cada linha abre o histórico de ciclos daquele cliente (período, dias cobrados, valor, status) com opção de marcar um ciclo como pago. A página de **Métricas** soma a receita dos ciclos de mensalidade junto com a dos tickets avulsos, para o faturamento total refletir a realidade.
+
+---
+
+## 🎟️ Regras de tickets avulsos
+
+- Não é possível abrir ticket numa vaga já ocupada.
+- Permanências de até **15 minutos** são cortesia (sem cobrança).
+- Acima disso, cobra-se por hora cheia (arredondada para cima) sobre a tarifa da categoria escolhida.
+- Ao fechar o ticket, a vaga volta automaticamente para "livre".
+- Todo o cálculo roda no servidor, numa transação — o front-end nunca envia nem decide o valor cobrado.
+
+---
+
+## 🔐 Autenticação e área administrativa
+
+- Todas as páginas (exceto `sobre.html` e `login.html`) exigem sessão — sem uma sessão salva, o usuário é redirecionado para `views/login.html`.
+- Senhas com hash **bcrypt** (nunca texto puro) e sessão via **JWT** assinado pelo servidor.
+- Senhas novas (cadastro, reset, perfil, funcionários) exigem mínimo de 8 caracteres com maiúscula, minúscula, número e caractere especial — força mostrada em tempo real.
+- Menu do usuário na navbar: avatar, "Meu Perfil" (trocar nome/e-mail/telefone/senha) e "Sair".
+- `views/funcionarios.html`, visível só para contas "admin", cadastra/edita/inativa funcionários.
+- Modo escuro, com o mesmo padrão de preferência salva localmente usado nos outros recursos de acessibilidade.
+
+> ⚠️ **Limitação conhecida:** a recuperação de senha é simulada — sem servidor de e-mail neste projeto acadêmico, o "código de verificação" aparece na própria tela em vez de ser enviado por e-mail (`server/controllers/auth.js` + `assets/js/modules/auth.js`).
+
+---
+
+## ♿ Acessibilidade (WCAG 2.1 AAA)
+
+- 🔠 Aumentar/diminuir fonte sem quebrar o layout.
+- 🌓 Alto contraste e modo escuro/claro.
+- 🧠 Fonte para dislexia (tipografia e espaçamento adaptados).
+- ⏸️ Reduzir animações (pausa efeitos para sensibilidade a movimento).
+- 👁️ Filtros de daltonismo (protanopia, deuteranopia, tritanopia).
+- 🤟 VLibras integrado (tradução automática para Libras).
+- Navegação completa por teclado, `aria-label`/`aria-live`/`role` em tabelas, modais e formulários.
+
+## 🛡️ LGPD
+
+- **Minimização de dados** — coleta só o necessário para operar o estacionamento.
+- **Mascaramento de CPF** (`***.***.**0-00`) nas listagens e tabelas.
+- Mensalistas nunca são excluídos fisicamente, só inativados/reativados — preserva o histórico para auditoria.
+
+---
+
+## 🔑 Login com Google (opcional)
+
+O botão "Entrar com Google" usa **Google Identity Services** (gratuito) e precisa de um Client ID OAuth real — sem ele, o botão fica escondido e mostra um aviso de indisponibilidade, sem simular um login inseguro.
+
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Credentials**.
+2. Crie um **OAuth 2.0 Client ID** do tipo *Web application*, com a origem apontando para onde o projeto roda (ex.: `http://localhost:8080`).
+3. Copie o Client ID gerado e cole em **dois lugares** (mesmo valor nos dois): a constante `GOOGLE_CLIENT_ID` no topo de `assets/js/modules/auth.js`, e a variável `GOOGLE_CLIENT_ID` no `.env`.
+
+Client ID não é segredo — o fluxo de ID token do Google Identity Services não usa Client Secret.
+
+---
+
+## 📐 Padrão de commits
+
+Este projeto segue [Conventional Commits](https://www.conventionalcommits.org/):
+
+| Prefixo | Uso |
+|---|---|
+| `feat` | Nova funcionalidade — ex.: `feat(mensalistas): adiciona ciclo de cobrança mensal` |
+| `fix` | Correção de bug — ex.: `fix(tickets): corrige cálculo do valor de permanência` |
+| `style` | Formatação/CSS sem alterar lógica |
+| `docs` | Documentação |
+| `refactor` | Refatoração sem alterar comportamento |
+
+---
+
+## 👩‍💻 Autora
+
+Desenvolvido por **Bruna Coelho**.
+
+Projeto: Sistema de Estacionamento ParkGestão · Licença: **MIT** — livre para estudos e aprimoramentos.

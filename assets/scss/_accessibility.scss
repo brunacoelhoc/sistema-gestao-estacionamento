@@ -36,6 +36,66 @@ body.high-contrast {
     box-shadow: none !important;
   }
 
+  // Cabeçalho e variações de tabela do Bootstrap (table-light/table-hover/
+  // table-striped): essas classes redefinem as CSS custom properties
+  // --bs-table-bg/--bs-table-color localmente no <thead>/<tr>, então
+  // sobrescrever só o <table> (elemento pai) não bastava — o cabeçalho
+  // ("table-light") continuava com fundo claro e o texto virava branco por
+  // herança, ficando ilegível. Aqui forçamos direto nas células.
+  .table > :not(caption) > * > *,
+  .table-light,
+  thead {
+    --bs-table-bg: #121212 !important;
+    --bs-table-color: #ffffff !important;
+    --bs-table-striped-bg: #1a1a1a !important;
+    --bs-table-striped-color: #ffffff !important;
+    --bs-table-hover-bg: #1a1a1a !important;
+    --bs-table-hover-color: #ffffff !important;
+    --bs-table-accent-bg: #1a1a1a !important;
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+  }
+
+  .table-hover > tbody > tr:hover > * {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+  }
+
+  // Campos de formulário (inputs, selects de filtro/busca): mantinham o
+  // fundo branco padrão do Bootstrap enquanto o texto/placeholder virava
+  // branco por herança — texto branco em campo branco também ficava
+  // ilegível ao digitar.
+  .form-control,
+  .form-select {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+
+    &::placeholder {
+      color: #cccccc !important;
+      opacity: 1;
+    }
+  }
+
+  // Botões "outline" (ações das tabelas: Editar/Excluir/Manutenção, filtros)
+  // — garante texto e borda sempre visíveis sobre o novo fundo escuro.
+  .btn-outline-primary,
+  .btn-outline-secondary,
+  .btn-outline-danger,
+  .btn-outline-warning,
+  .btn-outline-success,
+  .btn-outline-info {
+    color: #ffffff !important;
+    border-color: #ffffff !important;
+    background-color: transparent !important;
+
+    &:hover {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+    }
+  }
+
   // Cards de KPI / Dashboard Sofisticados
   .card-kpi,
   .kpi-card,
@@ -106,16 +166,18 @@ body.dyslexic-font {
 
 /* --------------------------------------------------------------------------
    3. FILTROS PARA DALTONISMO (CSS Filters via SVG)
+   Aplicado em #app-content (não em body) para não quebrar o `position: fixed`
+   da barra de acessibilidade e do banner de LGPD, que ficam fora desse wrapper.
    -------------------------------------------------------------------------- */
-body.protanopia {
+#app-content.protanopia {
   filter: url('../img/color-blind-filters.svg#protanopia');
 }
 
-body.deuteranopia {
+#app-content.deuteranopia {
   filter: url('../img/color-blind-filters.svg#deuteranopia');
 }
 
-body.tritanopia {
+#app-content.tritanopia {
   filter: url('../img/color-blind-filters.svg#tritanopia');
 }
 
@@ -139,15 +201,60 @@ html.reduce-motion {
   .kpi-icon-bubble {
     transform: none !important;
   }
+}
 
-  // Remove animação pesada de background 3D (Vanta.js)
-  #vanta-bg {
-    display: none !important;
+/* --------------------------------------------------------------------------
+   5. ESTADO VISUAL "ATIVO" DOS BOTÕES DA BARRA DE ACESSIBILIDADE
+   Sem isto, alternar contraste/dislexia/animação não dava nenhum feedback
+   visual no próprio botão (o aria-pressed mudava, mas nada na tela mudava
+   junto), o que passava a impressão de que o clique não tinha feito nada.
+   -------------------------------------------------------------------------- */
+.accessibility-bar button[aria-pressed='true'] {
+  background-color: #ffc107 !important;
+  border-color: #ffc107 !important;
+  color: #000000 !important;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   6. RESPONSIVIDADE DA BARRA DE ACESSIBILIDADE
+   Sem isto, o segundo grupo de botões (Contraste/Dislexia/Animação Off/Modo
+   Noturno/Daltonismo) estourava a largura da tela em viewports estreitos ou
+   com a fonte A+ aumentada, cortando os últimos itens em vez de quebrar
+   para uma nova linha — mesma "rede de segurança" (flex-wrap + row-gap) já
+   aplicada na navbar em main.scss.
+   -------------------------------------------------------------------------- */
+.accessibility-bar {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+  column-gap: 0.75rem;
+}
+
+.accessibility-group {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767.98px) {
+  .accessibility-bar {
+    justify-content: center;
+  }
+
+  .accessibility-group {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .accessibility-bar .btn,
+  .accessibility-bar .form-select {
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    font-size: 0.7rem !important;
   }
 }
 
 /* --------------------------------------------------------------------------
-   5. FOCO ACESSÍVEL PARA NAVEGAÇÃO POR TECLADO
+   7. FOCO ACESSÍVEL PARA NAVEGAÇÃO POR TECLADO
    -------------------------------------------------------------------------- */
 a:focus-visible,
 button:focus-visible,

@@ -10,7 +10,7 @@ let allTarifas = []
 
 let ticketsFiltrados = []
 let paginaAtual = 1
-const TICKETS_POR_PAGINA = 10
+let TICKETS_POR_PAGINA = 10
 const TEMPO_TOLERANCIA_MINUTOS = 15 // Tolerância de cortesia padrão
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -48,6 +48,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     carregarDados()
   })
 
+  // Exportação (CSV/Excel) respeitando a busca/filtro de status atuais
+  document
+    .getElementById('btn-exportar-tickets-csv')
+    ?.addEventListener('click', () => exportarTickets('csv'))
+  document
+    .getElementById('btn-exportar-tickets-excel')
+    ?.addEventListener('click', () => exportarTickets('excel'))
+
   // Paginação
   document
     .getElementById('btn-pagina-anterior')
@@ -69,6 +77,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginaAtual++
         renderizarPagina()
       }
+    })
+
+  document
+    .getElementById('select-tamanho-pagina-tickets')
+    ?.addEventListener('change', e => {
+      TICKETS_POR_PAGINA = Number(e.target.value) || 10
+      paginaAtual = 1
+      renderizarPagina()
     })
 })
 
@@ -287,6 +303,60 @@ function renderizarLinhaTicket (ticket, tbody) {
   tbody.appendChild(tr)
 }
 
+// Monta as linhas "achatadas" (prontas para planilha) a partir da lista já
+// filtrada pela busca/status ativos na tela, e delega para o exportador
+// genérico (CSV ou Excel).
+function exportarTickets (formato) {
+  const colunas = [
+    { chave: 'id', rotulo: 'ID' },
+    { chave: 'placa', rotulo: 'Placa' },
+    { chave: 'vaga', rotulo: 'Vaga' },
+    { chave: 'mensalista', rotulo: 'Cliente' },
+    { chave: 'entrada', rotulo: 'Entrada' },
+    { chave: 'saida', rotulo: 'Saída' },
+    { chave: 'valor', rotulo: 'Valor (R$)' },
+    { chave: 'status', rotulo: 'Status' },
+    { chave: 'formaPagamento', rotulo: 'Forma de Pagamento' }
+  ]
+
+  const linhas = ticketsFiltrados.map(ticket => {
+    const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
+    const mensalista = ticket.mensalistaId
+      ? allMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
+      : null
+
+    const dataEntradaVal = ticket.horaEntrada || ticket.dataEntrada
+    const dataSaidaVal = ticket.horaSaida || ticket.dataSaida
+    const valorFinal = ticket.valorCobrado ?? ticket.valorTotal
+    const statusKey = (ticket.status || 'aberto').toLowerCase()
+
+    return {
+      id: ticket.id,
+      placa: ticket.placa,
+      vaga: vaga ? vaga.codigo || vaga.numero || vaga.id : ticket.vagaId,
+      mensalista: mensalista
+        ? mensalista.nome || mensalista.nomeCliente
+        : 'Avulso',
+      entrada: dataEntradaVal ? new Date(dataEntradaVal).toLocaleString('pt-BR') : '-',
+      saida: dataSaidaVal ? new Date(dataSaidaVal).toLocaleString('pt-BR') : '-',
+      valor: valorFinal !== null && valorFinal !== undefined
+        ? Number(valorFinal).toFixed(2).replace('.', ',')
+        : '-',
+      status: statusKey === 'aberto' ? 'Aberto' : 'Fechado',
+      formaPagamento:
+        statusKey === 'fechado'
+          ? ticket.formaPagamento || (ticket.mensalistaId ? 'Isento' : '-')
+          : '-'
+    }
+  })
+
+  if (formato === 'excel') {
+    exportarParaExcel('tickets-parkgestao.xlsx', 'Tickets', colunas, linhas)
+  } else {
+    exportarParaCSV('tickets-parkgestao.csv', colunas, linhas)
+  }
+}
+
 // Filtro por termo (placa ou código da vaga) e status do ticket
 function filtrarTickets () {
   const termo = (document.getElementById('input-busca-ticket')?.value || '')
@@ -374,14 +444,9 @@ function preencherSelectMensalistas () {
 
   if (!Array.isArray(allMensalistas)) return
 
+  // "ativo" (boolean) é a única fonte da verdade para o status do mensalista.
   allMensalistas
-    .filter(m => {
-      const ehAtivoBool =
-        m.ativo === true || String(m.ativo).toLowerCase() === 'true'
-      const ehAtivoStatus =
-        m.status && String(m.status).toLowerCase() === 'ativo'
-      return ehAtivoBool || ehAtivoStatus
-    })
+    .filter(m => m.ativo === true)
     .forEach(mensalista => {
       const option = document.createElement('option')
       option.value = mensalista.id
@@ -452,9 +517,12 @@ function verificarMensalistaNaDigitacao (placa) {
   })
 
   if (mensalistaEncontrado) {
+    const valorMensal = Number(mensalistaEncontrado.valorMensalidade || 0)
+      .toFixed(2)
+      .replace('.', ',')
     infoDiv.innerHTML = `<span class="text-success fw-semibold"><i class="fas fa-check-circle me-1" aria-hidden="true"></i> Mensalista Ativo: ${ApiService.sanitizeText(
       mensalistaEncontrado.nome || mensalistaEncontrado.nomeCliente
-    )} (Isento)</span>`
+    )} (Mensalidade: R$ ${valorMensal})</span>`
     if (selectMensalista) selectMensalista.value = mensalistaEncontrado.id
   } else {
     infoDiv.innerHTML = `<span class="text-muted"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Veículo avulso (tarifado normalmente)</span>`
@@ -530,24 +598,14 @@ async function criarNovoTicket (e) {
       status: 'aberto'
     }
 
+    // ApiService.criarTicket já muda o status da vaga para "ocupada" internamente.
     if (ApiService.criarTicket) {
       await ApiService.criarTicket(novoTicket)
     } else {
       await ApiService.createTicket(novoTicket)
     }
 
-    // Regra: Muda status da vaga para "ocupada"
-    if (ApiService.updateVagaStatus) {
-      await ApiService.updateVagaStatus(vagaId, 'ocupada')
-    }
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Ticket Emitido!',
-      text: `Entrada da placa ${placa} registrada com sucesso.`,
-      timer: 1800,
-      showConfirmButton: false
-    })
+    toastSucesso(`Ticket emitido! Entrada da placa ${placa} registrada.`)
 
     const form = document.getElementById('form-novo-ticket')
     form?.reset()
@@ -598,11 +656,17 @@ async function finalizarTicket (ticketId) {
     horasFormatadas > 0 ? `${horasFormatadas}h ` : ''
   }${minutosRestantes}min`
 
+  const mensalista = ticket.mensalistaId
+    ? allMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
+    : null
+
   let valorCalculado = 0
   const ehMensalista = Boolean(ticket.mensalistaId)
 
   if (ehMensalista) {
-    valorCalculado = 0
+    // Mensalista é cobrado pelo valor da mensalidade cadastrada, não pela
+    // tarifa avulsa por hora.
+    valorCalculado = Number(mensalista?.valorMensalidade || 0)
   } else {
     const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
 
@@ -618,7 +682,16 @@ async function finalizarTicket (ticketId) {
 
   // Prepara modal com seleção de meio de pagamento
   const selectPagamentoHTML = ehMensalista
-    ? `<div class="alert alert-info py-2 mb-3"><strong>Isenção Aplicada:</strong> Veículo cadastrado como Mensalista.</div>`
+    ? `<div class="alert alert-info py-2 mb-3"><strong>Mensalidade Aplicada:</strong> Veículo cadastrado como Mensalista — cobrança referente ao plano mensal.</div>
+      <div class="mb-3 text-start">
+        <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
+        <select id="swal-forma-pagamento" class="form-select">
+          <option value="pix" selected>📱 PIX</option>
+          <option value="cartao_credito">💳 Cartão de Crédito</option>
+          <option value="cartao_debito">💳 Cartão de Débito</option>
+          <option value="dinheiro">💵 Dinheiro</option>
+        </select>
+      </div>`
     : `
       <div class="mb-3 text-start">
         <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
@@ -653,7 +726,6 @@ async function finalizarTicket (ticketId) {
     confirmButtonText: '<i class="fas fa-check me-1"></i> Confirmar Saída',
     cancelButtonText: 'Cancelar',
     preConfirm: () => {
-      if (ehMensalista) return 'isento'
       const select = document.getElementById('swal-forma-pagamento')
       return select ? select.value : 'pix'
     }
@@ -667,35 +739,35 @@ async function finalizarTicket (ticketId) {
   if (botao) botao.disabled = true
 
   try {
-    const ticketAtualizado = {
-      ...ticket,
-      horaSaida: horaSaida.toISOString(),
-      dataSaida: horaSaida.toISOString(),
-      valorCobrado: valorCalculado,
-      valorTotal: valorCalculado,
-      formaPagamento: formaPagamento,
-      tempoPermanencia: tempoTexto,
-      status: 'fechado'
-    }
+    // ApiService.fecharTicket é o único ponto que calcula e persiste o valor
+    // cobrado, garantindo que ele nunca divirja do valor mostrado acima.
+    await ApiService.fecharTicket(ticketId, { formaPagamento })
 
-    if (ApiService.fecharTicket) {
-      await ApiService.fecharTicket(ticketId, ticketAtualizado)
-    } else if (ApiService.updateTicket) {
-      await ApiService.updateTicket(ticketId, ticketAtualizado)
-    }
+    const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
 
-    // Regra: Devolve a vaga para o status "livre"
-    if (ticket.vagaId && ApiService.updateVagaStatus) {
-      await ApiService.updateVagaStatus(ticket.vagaId, 'livre')
-    }
-
-    Swal.fire({
+    const { isDenied } = await Swal.fire({
       icon: 'success',
       title: 'Ticket Encerrado!',
       text: `Saída do veículo ${ticket.placa} registrada com sucesso.`,
-      timer: 2000,
-      showConfirmButton: false
+      confirmButtonColor: '#0e3a2f',
+      confirmButtonText: 'OK',
+      showDenyButton: true,
+      denyButtonText: '<i class="fas fa-file-pdf me-1"></i>Comprovante',
+      denyButtonColor: '#0d6efd'
     })
+
+    if (isDenied && typeof gerarComprovanteTicketPDF === 'function') {
+      gerarComprovanteTicketPDF({
+        ticketId: ticket.id,
+        placa: ticket.placa,
+        vagaCodigo: vaga?.codigo || vaga?.numero || ticket.vagaId,
+        horaEntrada,
+        horaSaida,
+        tempoTexto,
+        formaPagamento,
+        valor: valorCalculado
+      })
+    }
 
     await carregarDados()
   } catch (error) {

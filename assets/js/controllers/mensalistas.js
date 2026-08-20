@@ -4,6 +4,7 @@
  */
 
 let mensalistasCache = []
+let mensalistasFiltradosAtual = []
 let modalMensalistaBS = null
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -33,8 +34,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     carregarMensalistas()
   })
 
+  // Exportação (CSV/Excel) respeitando a busca/filtro de status atuais
+  document
+    .getElementById('btn-exportar-mensalistas-csv')
+    ?.addEventListener('click', () => exportarMensalistas('csv'))
+  document
+    .getElementById('btn-exportar-mensalistas-excel')
+    ?.addEventListener('click', () => exportarMensalistas('excel'))
+
   modalEl?.addEventListener('hidden.bs.modal', resetFormulario)
 })
+
+// Monta as linhas "achatadas" a partir da lista já filtrada pela busca/
+// status ativos na tela, e delega para o exportador genérico (CSV/Excel).
+// O CPF sai mascarado no arquivo, mesma regra de exibição usada na tabela.
+function exportarMensalistas (formato) {
+  const colunas = [
+    { chave: 'nome', rotulo: 'Nome' },
+    { chave: 'cpf', rotulo: 'CPF' },
+    { chave: 'telefone', rotulo: 'Telefone' },
+    { chave: 'placa', rotulo: 'Placa' },
+    { chave: 'mensalidade', rotulo: 'Mensalidade (R$)' },
+    { chave: 'status', rotulo: 'Status' }
+  ]
+
+  const linhas = mensalistasFiltradosAtual.map(m => ({
+    nome: m.nome,
+    cpf:
+      typeof LGPDModule !== 'undefined' &&
+      typeof LGPDModule.maskCPF === 'function'
+        ? LGPDModule.maskCPF(m.cpf)
+        : mascararCpfFallback(m.cpf),
+    telefone: m.telefone || '-',
+    placa: m.placa,
+    mensalidade: Number(m.valorMensalidade || 0).toFixed(2).replace('.', ','),
+    status: m.ativo === true ? 'Ativo' : 'Inativo'
+  }))
+
+  if (formato === 'excel') {
+    exportarParaExcel(
+      'mensalistas-parkgestao.xlsx',
+      'Mensalistas',
+      colunas,
+      linhas
+    )
+  } else {
+    exportarParaCSV('mensalistas-parkgestao.csv', colunas, linhas)
+  }
+}
 
 // Aplica máscaras e tratamento de input em tempo real
 function initInputMasks () {
@@ -66,38 +113,11 @@ function initInputMasks () {
   })
 }
 
-// Algoritmo de Validação Real de CPF (Compatível com Máscara e Validação de DV)
+// Validação de CPF: apenas estrutura (11 dígitos numéricos preenchidos via
+// máscara), sem cálculo de dígito verificador — conforme especificação.
 function validarCPF (cpf) {
-  // Remove pontos, hífens e qualquer caractere não numérico
   const cleanCPF = (cpf || '').replace(/\D/g, '')
-
-  // 1. Verifica se tem exatamente 11 dígitos numéricos
-  if (cleanCPF.length !== 11) return false
-
-  // 2. Elimina CPFs com dígitos repetidos (ex: 111.111.111-11)
-  if (/^(\d)\1{10}$/.test(cleanCPF)) return false
-
-  // 3. Validação matemática do 1º Dígito Verificador
-  let soma = 0
-  let resto
-
-  for (let i = 1; i <= 9; i++) {
-    soma += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i)
-  }
-  resto = (soma * 10) % 11
-  if (resto === 10 || resto === 11) resto = 0
-  if (resto !== parseInt(cleanCPF.substring(9, 10))) return false
-
-  // 4. Validação matemática do 2º Dígito Verificador
-  soma = 0
-  for (let i = 1; i <= 10; i++) {
-    soma += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i)
-  }
-  resto = (soma * 10) % 11
-  if (resto === 10 || resto === 11) resto = 0
-  if (resto !== parseInt(cleanCPF.substring(10, 11))) return false
-
-  return true
+  return cleanCPF.length === 11
 }
 
 // Algoritmo de Validação de Placa (Mercosul ou Padrão Antigo)
@@ -166,6 +186,7 @@ function aplicarFiltros () {
     )
   }
 
+  mensalistasFiltradosAtual = filtrados
   renderizarTabelaMensalistas(filtrados)
 }
 
@@ -178,56 +199,53 @@ function mascararCpfFallback (cpf) {
 }
 
 // Renderiza a tabela de mensalistas
-function renderizarTabelaMensalistas (lista) {
-  const tbody = document.getElementById('tbody-mensalistas')
-  if (!tbody) return
+const paginadorMensalistas =
+  typeof criarPaginador === 'function'
+    ? criarPaginador({
+        idSufixo: 'mensalistas',
+        tbodyId: 'tbody-mensalistas',
+        colspanVazio: 7,
+        textoVazio:
+          '<i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum mensalista encontrado.',
+        renderLinha: renderLinhaMensalista,
+        aposRenderizar: ligarBotoesLinhaMensalista
+      })
+    : null
 
-  tbody.innerHTML = ''
+function renderLinhaMensalista (m, tbody) {
+  const tr = document.createElement('tr')
 
-  if (!lista || lista.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4 text-muted">
-          <i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum mensalista encontrado.
-        </td>
-      </tr>
-    `
-    return
-  }
+  const cpfMascarado =
+    typeof LGPDModule !== 'undefined' &&
+    typeof LGPDModule.maskCPF === 'function'
+      ? LGPDModule.maskCPF(m.cpf)
+      : mascararCpfFallback(m.cpf)
 
-  lista.forEach(m => {
-    const tr = document.createElement('tr')
+  const ativo = m.ativo === true
+  const statusBadge = ativo
+    ? '<span class="badge-status status-ativo"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Ativo</span>'
+    : '<span class="badge-status status-inativo"><i class="fas fa-ban me-1" aria-hidden="true"></i>Inativo</span>'
 
-    const cpfMascarado =
-      typeof LGPDModule !== 'undefined' &&
-      typeof LGPDModule.maskCPF === 'function'
-        ? LGPDModule.maskCPF(m.cpf)
-        : mascararCpfFallback(m.cpf)
+  const btnToggleLabel = ativo ? 'Inativar' : 'Reativar'
+  const btnToggleIcon = ativo ? 'fa-user-slash' : 'fa-user-check'
+  const btnToggleClasse = ativo ? 'btn-outline-danger' : 'btn-outline-success'
 
-    const ativo = m.ativo === true
-    const statusBadge = ativo
-      ? '<span class="badge-status status-ativo"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Ativo</span>'
-      : '<span class="badge-status status-inativo"><i class="fas fa-ban me-1" aria-hidden="true"></i>Inativo</span>'
-
-    const btnToggleLabel = ativo ? 'Inativar' : 'Reativar'
-    const btnToggleIcon = ativo ? 'fa-user-slash' : 'fa-user-check'
-    const btnToggleClasse = ativo ? 'btn-outline-danger' : 'btn-outline-success'
-
-    tr.innerHTML = `
+  tr.innerHTML = `
       <td class="fw-bold">${ApiService.sanitizeText(m.nome)}</td>
       <td><code>${ApiService.sanitizeText(cpfMascarado)}</code></td>
       <td>${ApiService.sanitizeText(m.telefone || '-')}</td>
       <td><span class="badge bg-dark text-white">${ApiService.sanitizeText(
         m.placa
       )}</span></td>
+      <td>R$ ${Number(m.valorMensalidade || 0).toFixed(2).replace('.', ',')}</td>
       <td>${statusBadge}</td>
       <td>
         <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-editar-mensalista"
           data-id="${
             m.id
           }" title="Editar Mensalista" aria-label="Editar ${ApiService.sanitizeText(
-      m.nome
-    )}">
+    m.nome
+  )}">
           <i class="fas fa-edit" aria-hidden="true"></i>
         </button>
         <button type="button" class="btn btn-sm ${btnToggleClasse} btn-toggle-ativo-mensalista"
@@ -235,11 +253,16 @@ function renderizarTabelaMensalistas (lista) {
           aria-label="${btnToggleLabel} ${ApiService.sanitizeText(m.nome)}">
           <i class="fas ${btnToggleIcon} me-1" aria-hidden="true"></i>${btnToggleLabel}
         </button>
+        <button type="button" class="btn btn-sm btn-outline-info ms-1 btn-cobrancas-mensalista"
+          data-id="${m.id}" title="Ver cobranças" aria-label="Ver cobranças de ${ApiService.sanitizeText(m.nome)}">
+          <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>
+        </button>
       </td>
     `
-    tbody.appendChild(tr)
-  })
+  tbody.appendChild(tr)
+}
 
+function ligarBotoesLinhaMensalista (tbody) {
   tbody.querySelectorAll('.btn-editar-mensalista').forEach(btn => {
     btn.addEventListener('click', () =>
       editarMensalista(btn.getAttribute('data-id'))
@@ -250,6 +273,24 @@ function renderizarTabelaMensalistas (lista) {
       alternarAtivoMensalista(btn.getAttribute('data-id'))
     )
   })
+  tbody.querySelectorAll('.btn-cobrancas-mensalista').forEach(btn => {
+    btn.addEventListener('click', () =>
+      abrirCobrancasMensalista(btn.getAttribute('data-id'))
+    )
+  })
+}
+
+function renderizarTabelaMensalistas (lista) {
+  if (paginadorMensalistas) {
+    paginadorMensalistas.definirItens(lista || [])
+    return
+  }
+
+  const tbody = document.getElementById('tbody-mensalistas')
+  if (!tbody) return
+  tbody.innerHTML = ''
+  ;(lista || []).forEach(m => renderLinhaMensalista(m, tbody))
+  ligarBotoesLinhaMensalista(tbody)
 }
 
 // Verifica duplicidade de CPF e Placa
@@ -287,6 +328,9 @@ async function salvarMensalista (e) {
     .getElementById('mensalista-placa')
     .value.trim()
     .toUpperCase()
+  const valorMensalidade = Number(
+    document.getElementById('mensalista-valor-mensalidade').value
+  )
 
   // 1. Validação do Nome Completo (NOVA VALIDAÇÃO)
   if (!nome) {
@@ -324,7 +368,17 @@ async function salvarMensalista (e) {
     return
   }
 
-  // 4. Validação de Duplicidade
+  // 4. Validação da Mensalidade
+  if (!valorMensalidade || valorMensalidade <= 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Mensalidade Obrigatória',
+      text: 'Informe o valor da mensalidade (maior que zero) antes de salvar.'
+    })
+    return
+  }
+
+  // 5. Validação de Duplicidade
   const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
     Swal.fire({
@@ -340,29 +394,24 @@ async function salvarMensalista (e) {
 
   try {
     if (id) {
-      await ApiService.updateMensalista(id, { nome, cpf, telefone, placa })
-      Swal.fire({
-        icon: 'success',
-        title: 'Atualizado!',
-        text: 'Mensalista atualizado com sucesso.',
-        timer: 1500,
-        showConfirmButton: false
+      await ApiService.updateMensalista(id, {
+        nome,
+        cpf,
+        telefone,
+        placa,
+        valorMensalidade
       })
+      toastSucesso('Mensalista atualizado com sucesso.')
     } else {
       await ApiService.createMensalista({
         nome,
         cpf,
         telefone,
         placa,
+        valorMensalidade,
         ativo: true
       })
-      Swal.fire({
-        icon: 'success',
-        title: 'Cadastrado!',
-        text: 'Novo mensalista adicionado com sucesso.',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      toastSucesso('Novo mensalista adicionado com sucesso.')
     }
 
     modalMensalistaBS.hide()
@@ -389,6 +438,8 @@ function editarMensalista (id) {
   document.getElementById('mensalista-cpf').value = m.cpf
   document.getElementById('mensalista-telefone').value = m.telefone || ''
   document.getElementById('mensalista-placa').value = m.placa
+  document.getElementById('mensalista-valor-mensalidade').value =
+    m.valorMensalidade || ''
 
   document.getElementById('modalMensalistaLabel').innerHTML =
     '<i class="fas fa-user-edit text-primary me-2" aria-hidden="true"></i>Editar Mensalista'
@@ -408,10 +459,10 @@ async function alternarAtivoMensalista (id) {
     html: ativoAtual
       ? `O mensalista <strong>${ApiService.sanitizeText(
           m.nome
-        )}</strong> ficará inativo. A placa dele não poderá mais ser usada para abrir tickets como mensalista, mas o histórico é mantido.`
+        )}</strong> ficará inativo. A placa dele não poderá mais ser usada para abrir tickets como mensalista, o histórico é mantido, e a mensalidade deste mês é fechada agora com valor proporcional aos dias em que ele esteve ativo.`
       : `O mensalista <strong>${ApiService.sanitizeText(
           m.nome
-        )}</strong> voltará a ficar ativo.`,
+        )}</strong> voltará a ficar ativo e a mensalidade deste mês volta a valer o valor cheio.`,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: ativoAtual ? '#3d0c13' : '#0e3a2f',
@@ -424,17 +475,150 @@ async function alternarAtivoMensalista (id) {
 
   try {
     await ApiService.updateMensalista(id, { ativo: !ativoAtual })
-    Swal.fire({
-      icon: 'success',
-      title: ativoAtual ? 'Mensalista inativado.' : 'Mensalista reativado.',
-      timer: 1500,
-      showConfirmButton: false
-    })
+    toastSucesso(
+      ativoAtual ? 'Mensalista inativado.' : 'Mensalista reativado.'
+    )
     await carregarMensalistas()
   } catch (error) {
     Swal.fire({
       icon: 'error',
       title: `Erro ao ${acao}`,
+      text: error.message
+    })
+  }
+}
+
+// Formata a referência do ciclo ("2026-08") como "08/2026"
+function formatarReferenciaMensalidade (referencia) {
+  const [ano, mes] = String(referencia || '').split('-')
+  return ano && mes ? `${mes}/${ano}` : referencia || '-'
+}
+
+function formatarDataMensalidade (iso) {
+  if (!iso) return '-'
+  const data = new Date(iso)
+  return isNaN(data) ? '-' : data.toLocaleDateString('pt-BR')
+}
+
+const ROTULO_STATUS_MENSALIDADE = {
+  pendente: 'Pendente',
+  paga: 'Paga',
+  cancelada: 'Cancelada'
+}
+
+// badge-status (assets/scss/_components.scss) não tem uma classe .status-paga
+// / .status-cancelada própria — reaproveita as classes já existentes
+// (status-pago tem a cor "info", status-cancelado tem a cor de alerta).
+const CLASSE_STATUS_MENSALIDADE = {
+  pendente: 'status-pendente',
+  paga: 'status-pago',
+  cancelada: 'status-cancelado'
+}
+
+// Monta as linhas da tabela de cobranças exibida no modal "Ver cobranças".
+// Ciclos pendentes ganham um botão para marcar como paga; os demais só
+// mostram o status.
+function montarLinhasCobrancas (mensalidades) {
+  if (!mensalidades.length) {
+    return '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma cobrança registrada ainda.</td></tr>'
+  }
+
+  return mensalidades
+    .map(mv => {
+      const acao =
+        mv.status === 'pendente'
+          ? `<button type="button" class="btn btn-sm btn-outline-success btn-marcar-paga" data-id="${mv.id}">
+               <i class="fas fa-check me-1" aria-hidden="true"></i>Marcar como paga
+             </button>`
+          : '-'
+
+      return `
+        <tr>
+          <td>${formatarReferenciaMensalidade(mv.referencia)}</td>
+          <td>${formatarDataMensalidade(mv.dataInicio)} a ${formatarDataMensalidade(mv.dataFim)}</td>
+          <td>${mv.diasCobrados}/${mv.diasNoMes} dias</td>
+          <td>R$ ${Number(mv.valor || 0).toFixed(2).replace('.', ',')}</td>
+          <td><span class="badge-status ${CLASSE_STATUS_MENSALIDADE[mv.status] || ''}">${ROTULO_STATUS_MENSALIDADE[mv.status] || mv.status}</span></td>
+          <td>${acao}</td>
+        </tr>
+      `
+    })
+    .join('')
+}
+
+// Abre o modal com o histórico de ciclos de mensalidade (Mensalidade) do
+// mensalista — o mensalista não paga por ticket, paga esse ciclo mensal (ver
+// server/services/mensalidade.js).
+async function abrirCobrancasMensalista (id) {
+  const m = mensalistasCache.find(item => String(item.id) === String(id))
+  if (!m) return
+
+  let mensalidades = []
+  try {
+    mensalidades = await ApiService.getMensalidades(id)
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro ao carregar cobranças',
+      text: error.message
+    })
+    return
+  }
+
+  Swal.fire({
+    title: `Cobranças de ${ApiService.sanitizeText(m.nome)}`,
+    width: '48rem',
+    html: `
+      <div class="table-responsive text-start">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Mês</th>
+              <th scope="col">Período</th>
+              <th scope="col">Dias cobrados</th>
+              <th scope="col">Valor</th>
+              <th scope="col">Status</th>
+              <th scope="col">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-cobrancas-mensalista">${montarLinhasCobrancas(mensalidades)}</tbody>
+        </table>
+      </div>
+    `,
+    showConfirmButton: true,
+    confirmButtonText: 'Fechar',
+    didOpen: () => {
+      Swal.getHtmlContainer()
+        ?.querySelectorAll('.btn-marcar-paga')
+        .forEach(btn => {
+          btn.addEventListener('click', () =>
+            marcarMensalidadePaga(btn.getAttribute('data-id'), id)
+          )
+        })
+    }
+  })
+}
+
+// Marca um ciclo como pago e recarrega a tabela dentro do próprio modal
+// aberto, sem precisar fechar e reabrir.
+async function marcarMensalidadePaga (mensalidadeId, mensalistaId) {
+  try {
+    await ApiService.updateMensalidade(mensalidadeId, 'paga')
+    const mensalidades = await ApiService.getMensalidades(mensalistaId)
+    const tbody = document.getElementById('tbody-cobrancas-mensalista')
+    if (tbody) {
+      tbody.innerHTML = montarLinhasCobrancas(mensalidades)
+      tbody.querySelectorAll('.btn-marcar-paga').forEach(btn => {
+        btn.addEventListener('click', () =>
+          marcarMensalidadePaga(btn.getAttribute('data-id'), mensalistaId)
+        )
+      })
+    }
+    toastSucesso('Cobrança marcada como paga.')
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro ao atualizar cobrança',
       text: error.message
     })
   }

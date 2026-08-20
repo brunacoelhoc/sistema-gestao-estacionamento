@@ -17,7 +17,8 @@ const AC_STORAGE_KEYS = {
   highContrast: 'parkgestao:highContrast',
   dyslexicFont: 'parkgestao:dyslexicFont',
   reduceMotion: 'parkgestao:reduceMotion',
-  daltonismo: 'parkgestao:daltonismo'
+  daltonismo: 'parkgestao:daltonismo',
+  darkMode: 'parkgestao:darkMode'
 }
 
 const AC_FONT_SCALE_MIN = 0.85
@@ -72,10 +73,18 @@ function acAplicarReduceMotion (ativo) {
   document.body.classList.toggle('reduce-motion', ativo)
 }
 
+// Aplicado em #app-content (não em body/html): um `filter` CSS em qualquer
+// ancestral de um elemento `position: fixed` faz esse elemento fixo passar a
+// se comportar como se fosse relativo a esse ancestral, e não mais à viewport.
+// Como a barra de acessibilidade e o banner de LGPD são fixos e diretamente
+// filhos de <body>, aplicar o filtro no próprio body os "prendia" no fim da
+// página. #app-content envolve o restante do conteúdo (navbar/main/footer) e
+// fica fora do alcance dos dois elementos fixos.
 function acAplicarDaltonismo (tipo) {
-  document.body.classList.remove('protanopia', 'deuteranopia', 'tritanopia')
+  const alvo = document.getElementById('app-content') || document.body
+  alvo.classList.remove('protanopia', 'deuteranopia', 'tritanopia')
   if (tipo && tipo !== 'normal') {
-    document.body.classList.add(tipo)
+    alvo.classList.add(tipo)
   }
 }
 
@@ -110,6 +119,7 @@ acAplicarClasseBody(
 )
 acAplicarReduceMotion(acLerBooleano(AC_STORAGE_KEYS.reduceMotion))
 acAplicarDaltonismo(acLerStorage(AC_STORAGE_KEYS.daltonismo) || 'normal')
+acAplicarClasseBody('dark-mode', acLerBooleano(AC_STORAGE_KEYS.darkMode))
 
 // ---------------------------------------------------------------------------
 // 2. Liga os controles da barra de acessibilidade (presente em todas as páginas)
@@ -148,17 +158,15 @@ document.getElementById('btn-motion')?.addEventListener('click', () => {
   acAplicarReduceMotion(novoEstado)
   acSalvarStorage(AC_STORAGE_KEYS.reduceMotion, String(novoEstado))
   acAtualizarAriaPressed('btn-motion', novoEstado)
-
-  // Se o Vanta.js já estiver rodando nesta página, para na hora — não
-  // precisa esperar um recarregamento para a preferência fazer efeito.
-  if (novoEstado && typeof window.pararVantaSeAtivo === 'function') {
-    window.pararVantaSeAtivo()
-  }
 })
 
 document.getElementById('select-daltonism')?.addEventListener('change', e => {
   acAplicarDaltonismo(e.target.value)
   acSalvarStorage(AC_STORAGE_KEYS.daltonismo, e.target.value)
+})
+
+document.getElementById('btn-dark-mode')?.addEventListener('click', () => {
+  alternarPreferenciaBooleana('dark-mode', AC_STORAGE_KEYS.darkMode, 'btn-dark-mode')
 })
 
 function alternarPreferenciaBooleana (classe, chaveStorage, idBotao) {
@@ -190,6 +198,7 @@ acAtualizarAriaPressed(
   'btn-motion',
   acLerBooleano(AC_STORAGE_KEYS.reduceMotion)
 )
+acAtualizarAriaPressed('btn-dark-mode', acLerBooleano(AC_STORAGE_KEYS.darkMode))
 
 const acSelectDaltonismo = document.getElementById('select-daltonism')
 if (acSelectDaltonismo) {

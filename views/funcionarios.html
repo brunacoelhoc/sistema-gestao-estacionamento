@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Guarda de rota: exige sessão E papel "admin". Sem sessão -> login;
+         logado mas não-admin -> volta para o Dashboard. -->
+    <script>
+        (function () {
+            try {
+                var sessaoBruta = localStorage.getItem('parkgestao:session');
+                if (!sessaoBruta) {
+                    window.location.replace('login.html');
+                    return;
+                }
+                var sessao = JSON.parse(sessaoBruta);
+                if (!sessao || sessao.role !== 'admin') {
+                    window.location.replace('../index.html');
+                }
+            } catch (erro) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gestão de Funcionários (área administrativa) - ParkGestão">
+    <title>Gestão de Funcionários | ParkGestão</title>
+
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Estilos Customizados -->
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+
+    <!-- Skip Link -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+    <!-- BARRA DE ACESSIBILIDADE WCAG -->
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
+        role="region" aria-label="Barra de Acessibilidade">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
+                <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
+            </button>
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
+                <i class="fas fa-font" aria-hidden="true"></i> Dislexia
+            </button>
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
+                <i class="fas fa-running" aria-hidden="true"></i> Animação Off
+            </button>
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 text-white" type="button"
+                title="Alternar Modo Noturno" aria-label="Alternar modo noturno" aria-pressed="false">
+                <i class="fas fa-moon" aria-hidden="true"></i> Modo Noturno
+            </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+            <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
+                aria-label="Selecionar filtro para daltonismo">
+                <option value="normal">Daltonismo: Normal</option>
+                <option value="protanopia">Protanopia</option>
+                <option value="deuteranopia">Deuteranopia</option>
+                <option value="tritanopia">Tritanopia</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Envolve navbar/main/footer, mas NÃO a barra de acessibilidade nem o
+         banner LGPD (fixos), para que o filtro de daltonismo (CSS `filter`) não
+         quebre o posicionamento `fixed` desses dois elementos. -->
+    <div id="app-content">
+    <!-- NAVBAR PRINCIPAL -->
+    <header>
+        <nav class="navbar navbar-expand-xl navbar-light">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
+                    <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
+                    <span>ParkGestão</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="../index.html"><i class="fas fa-chart-line me-1"
+                                    aria-hidden="true"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
+                                    aria-hidden="true"></i> Tickets</a></li>
+                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
+                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i
+                                    class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
+                                    aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
+                                    aria-hidden="true"></i> Sobre</a></li>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item active d-none" id="link-funcionarios"
+                                        href="funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item d-none d-xl-flex align-items-center ms-xl-3">
+                            <!-- Indicador de Status da API -->
+                            <div id="api-status-indicator" class="d-flex align-items-center gap-1 text-xs text-muted"
+                                role="status" aria-live="polite">
+                                <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                                <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="main-content" class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h1 class="h3 fw-bold mb-0">
+                    <i class="fas fa-users-cog text-primary me-2" aria-hidden="true"></i>Gestão de Funcionários
+                </h1>
+                <p class="text-muted mb-0">Área administrativa — cadastre, edite e controle o acesso de funcionários.</p>
+            </div>
+            <button class="btn btn-primary" type="button" id="btn-novo-funcionario">
+                <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Novo Funcionário
+            </button>
+        </div>
+
+        <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
+        <div id="page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <span id="page-error-text">Não foi possível carregar os funcionários. Verifique sua conexão e tente
+                novamente.</span>
+            <button id="btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+            </button>
+        </div>
+
+        <!-- TABELA DE FUNCIONÁRIOS -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h2 class="h5 mb-0 fw-semibold">Funcionários Cadastrados</h2>
+                <div class="d-flex gap-2 flex-wrap">
+                    <label for="filtro-status-funcionario" class="visually-hidden">Filtrar por status</label>
+                    <select id="filtro-status-funcionario" class="form-select form-select-sm w-auto"
+                        aria-label="Filtrar funcionários por status">
+                        <option value="TODOS">Todos os status</option>
+                        <option value="ativo">Somente Ativos</option>
+                        <option value="inativo">Somente Inativos</option>
+                    </select>
+                    <label for="input-busca-funcionario" class="visually-hidden">Buscar funcionário por nome ou
+                        e-mail</label>
+                    <input type="text" id="input-busca-funcionario" class="form-control form-control-sm"
+                        placeholder="Buscar por nome ou e-mail..." aria-label="Buscar funcionário por nome ou e-mail"
+                        autocomplete="off">
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" role="table"
+                        aria-label="Tabela de funcionários">
+                        <caption class="visually-hidden">
+                            Lista de funcionários com nome, e-mail, telefone, papel de acesso e situação. Funcionários
+                            não podem ser excluídos, apenas inativados ou reativados.
+                        </caption>
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Nome</th>
+                                <th scope="col">CPF</th>
+                                <th scope="col">E-mail</th>
+                                <th scope="col">Telefone</th>
+                                <th scope="col">Aniversário</th>
+                                <th scope="col">Papel</th>
+                                <th scope="col">Situação</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-funcionarios" aria-live="polite" aria-busy="true">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"
+                                        aria-hidden="true"></span>
+                                    Carregando funcionários...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span id="paginacao-info-funcionarios" class="text-muted text-sm">Mostrando 0 de 0</span>
+                    <select id="select-tamanho-pagina-funcionarios" class="form-select form-select-sm w-auto"
+                        aria-label="Itens por página">
+                        <option value="10" selected>10 por página</option>
+                        <option value="50">50 por página</option>
+                        <option value="100">100 por página</option>
+                    </select>
+                </div>
+                <nav aria-label="Paginação de funcionários">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <button class="page-link" id="btn-pagina-anterior-funcionarios" type="button"
+                                aria-label="Página anterior">
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                            </button>
+                        </li>
+                        <li class="page-item">
+                            <span class="page-link" id="pagina-atual-label-funcionarios"
+                                aria-current="page">1</span>
+                        </li>
+                        <li class="page-item">
+                            <button class="page-link" id="btn-pagina-proxima-funcionarios" type="button"
+                                aria-label="Próxima página">
+                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER ACESSÍVEL MELHORADO -->
+    <footer class="py-5 border-top mt-5">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+
+                <!-- COLUNA 1: CONTATO E ENDEREÇO -->
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
+                        <a href="tel:11999999999" class="footer-muted text-decoration-none">(11) 99999-9999</a>
+                    </p>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
+                        <a href="mailto:contato@parkgestao.com.br"
+                            class="footer-muted text-decoration-none">contato@parkgestao.com.br</a>
+                    </p>
+                    <p class="mb-0 text-sm footer-muted">
+                        <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
+                        Av. Paulista, 1000 — São Paulo, SP
+                    </p>
+                </div>
+
+                <!-- COLUNA 2: LOGO E CRÉDITOS (CENTRO) -->
+                <div class="col-12 col-md-4 text-center">
+                    <a class="d-inline-flex align-items-center gap-2 fw-bold text-white text-decoration-none fs-4 mb-2"
+                        href="../index.html">
+                        <i class="fas fa-parking text-warning" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+                    <p class="mb-1 text-xs footer-muted">
+                        &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
+                    </p>
+                    <p class="mb-0 text-xs footer-muted">
+                        <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                        WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                    <p class="mb-0 mt-1 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                        <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                            style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                        <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
+                    </p>
+                </div>
+
+                <!-- COLUNA 3: NAVEGAÇÃO RÁPIDA / BOTÕES (DIREITA) -->
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
+                    <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
+                        <a href="tickets.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
+                        </a>
+                        <a href="vagas-tarifas.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-car me-2 text-warning" aria-hidden="true"></i>Vagas &amp; Tarifas
+                        </a>
+                        <a href="sobre.html#privacidade" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
+                            Privacidade
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </footer>
+    </div>
+    <!-- /#app-content -->
+
+    <!-- WIDGET VLIBRAS (Tradutor de Libras) -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+
+    <!-- DEPENDÊNCIAS (carregadas uma única vez, com defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <!-- MÓDULOS INTERNOS (ordem importa) -->
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/modules/table-scroll-hint.js"></script>
+    <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/toast.js"></script>
+    <script defer src="../assets/js/modules/paginacao.js"></script>
+    <script defer src="../assets/js/modules/gsap-init.js"></script>
+    <script defer src="../assets/js/main.js"></script>
+    <script defer src="../assets/js/controllers/funcionarios.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
+</body>
+
+</html>
