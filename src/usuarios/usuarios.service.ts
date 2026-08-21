@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable 
 import * as bcrypt from 'bcryptjs'
 import { Prisma, type Usuario } from '../../generated/prisma'
 import { AuthService } from '../auth/auth.service'
+import { mascararCpf } from '../common/utils/mascarar-cpf.util'
 import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto'
@@ -25,10 +26,23 @@ export class UsuariosService {
 
   // Só admin lista todos os usuários — evita expor a base inteira (inclusive
   // hash de senha) para qualquer funcionário logado. A checagem de admin é
-  // feita pelo AdminGuard na rota.
+  // feita pelo AdminGuard na rota. O CPF sai mascarado da listagem — o valor
+  // completo só é devolvido por buscarPorId, ao abrir um registro específico.
   async listar () {
     const usuarios = await this.prisma.usuario.findMany()
-    return usuarios.map(semSenha)
+    return usuarios.map(u => ({ ...semSenha(u), cpf: mascararCpf(u.cpf) }))
+  }
+
+  async buscarPorId (id: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id } })
+    return usuario ? semSenha(usuario) : null
+  }
+
+  async existeCpfDuplicado (cpf: string, excluirId?: string) {
+    const encontrado = await this.prisma.usuario.findFirst({
+      where: { cpf, ...(excluirId ? { id: { not: excluirId } } : {}) }
+    })
+    return Boolean(encontrado)
   }
 
   // Cadastro de funcionário feito pelo admin (painel "Funcionários").

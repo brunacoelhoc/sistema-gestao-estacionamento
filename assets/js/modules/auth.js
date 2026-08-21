@@ -1,14 +1,14 @@
 /**
  * Módulo de Autenticação (AuthService) & Perfil do Usuário
  *
- * O backend (server/) faz hash de senha com bcrypt, emite JWT, verifica a
+ * O backend (src/auth/) faz hash de senha com bcrypt, emite JWT, verifica a
  * assinatura do login com Google e gera/valida o código de recuperação de
- * senha (enviado por e-mail via server/services/email.js) — nada disso roda
- * no navegador.
+ * senha (enviado por e-mail via src/email/email.service.ts) — nada disso
+ * roda no navegador.
  *
  * Login com Google só funciona depois de configurar um Client ID real (ver
- * GOOGLE_CLIENT_ID logo abaixo e GOOGLE_CLIENT_ID em server/routes/auth.js —
- * precisam ser o mesmo valor). Sem isso, o botão nem aparece — ver
+ * GOOGLE_CLIENT_ID logo abaixo e GOOGLE_CLIENT_ID em src/auth/auth.service.ts
+ * — precisam ser o mesmo valor). Sem isso, o botão nem aparece — ver
  * inicializarBotaoGoogle.
  */
 
@@ -561,8 +561,8 @@ function inicializarMenuUsuario () {
       // interpolada) para que o valor seja sempre tratado como URL da
       // imagem, nunca como HTML — evita XSS caso algum avatar antigo/externo
       // contenha algo como `x" onerror="...`. A validação de formato em si
-      // (só data URI de imagem) é feita no backend, ver server/schemas/
-      // usuarioSchemas.js.
+      // (só data URI de imagem) é feita no backend, ver
+      // src/usuarios/dto/atualizar-usuario.dto.ts.
       avatarEl.textContent = ''
       const img = document.createElement('img')
       img.src = sessao.avatar

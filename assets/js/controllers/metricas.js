@@ -1,7 +1,13 @@
 /**
  * Lógica da Página de Métricas e Relatórios
- * Cálculo de KPIs, filtro por período, gráficos por meio de pagamento,
- * tabelas acessíveis e renderização com Chart.js.
+ * Filtro por período, gráficos por meio de pagamento, tabelas acessíveis e
+ * renderização com Chart.js.
+ *
+ * Os KPIs e os dados de cada gráfico já vêm calculados do back-end
+ * (GET /metricas, admin-only — ver src/metricas/metricas.service.ts). Esta
+ * tela nunca baixa a lista crua de tickets/mensalidades/mensalistas/vagas:
+ * só o agregado, e só quem tem token de admin recebe alguma coisa (senão o
+ * AdminGuard devolve 403).
  */
 
 let chartOcupacaoHorario = null
@@ -9,22 +15,9 @@ let chartReceitaMensal = null
 let chartCategorias = null
 let chartMeiosPagamento = null
 
-let globalVagas = []
-let globalTickets = []
-let globalMensalistas = []
-let globalMensalidades = []
-
-// Último conjunto de tickets/mensalidades já filtrado pelo período
-// selecionado, usado pelo modal de detalhes dos cards de KPI (mantém
-// consistência com o número exibido no card no momento do clique). Mensalista
-// não paga por ticket (ver server/services/mensalidade.js), então a receita
-// de verdade soma os tickets avulsos fechados COM os ciclos de mensalidade.
-let kpiTicketsFiltradosAtual = []
-let kpiMensalidadesFiltradasAtual = []
-
-// Últimos dados do gráfico de receita mensal, reaproveitados no relatório
-// exportável (XML/PDF/Excel) sem precisar recalcular.
-let ultimoRelatorioReceitaMensal = { labels: [], valores: [] }
+// Última resposta de GET /metricas, reaproveitada pelo modal de detalhes dos
+// KPIs e pela exportação (XML/PDF/Excel) sem precisar buscar de novo.
+let ultimaRespostaMetricas = null
 
 // Paleta de cores do projeto para os gráficos
 const PALETA = {
@@ -43,11 +36,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   configurarTemaDarkDoChartJs()
   await carregarDadosMetricas()
 
-  // Listener para Filtro por Período
+  // Filtro por período: recarrega do servidor com o novo período, em vez de
+  // reprocessar dados locais (não há mais dados crus no navegador).
   document
     .getElementById('filtro-periodo-metricas')
     ?.addEventListener('change', () => {
-      processarEMostrarMetricas()
+      carregarDadosMetricas()
     })
 
   // Botão de tentar novamente do banner de erro
@@ -80,12 +74,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     ?.addEventListener('click', exportarRelatorioExcel)
 })
 
-// Soma o valor dos ciclos de mensalidade (Mensalidade) — é o que
-// efetivamente cobra do mensalista, já que ele não paga por ticket.
-function somaMensalidades (mensalidades) {
-  return mensalidades.reduce((acc, mv) => acc + (Number(mv.valor) || 0), 0)
-}
-
 /**
  * Reúne os dados atuais da tela (respeitando o filtro de período) num único
  * objeto, usado pelas três funções de exportação abaixo.
@@ -96,29 +84,19 @@ function coletarDadosRelatorio () {
     ? selectPeriodo.options[selectPeriodo.selectedIndex].text
     : 'Mês atual'
 
-  const tickets = kpiTicketsFiltradosAtual
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-  const receitaTotal =
-    ticketsFechados.reduce(
-      (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
-      0
-    ) + somaMensalidades(kpiMensalidadesFiltradasAtual)
+  const kpis = ultimaRespostaMetricas?.kpis
+  const receitaMensal = ultimaRespostaMetricas?.graficos?.receitaMensal || []
 
   return {
     geradoEm: new Date(),
     periodo: periodoTexto,
     kpis: {
-      totalAtendimentos: tickets.length,
-      totalMensalistas: globalMensalistas.length,
-      receitaTotal,
-      tempoMedio: calcularTempoMedioPermanencia(ticketsFechados)
+      totalAtendimentos: kpis?.totalAtendimentos || 0,
+      totalMensalistas: kpis?.totalMensalistas || 0,
+      receitaTotal: kpis?.receitaTotal || 0,
+      tempoMedio: kpis?.tempoMedioPermanencia || '0h 0m'
     },
-    receitaMensal: ultimoRelatorioReceitaMensal.labels.map((label, i) => ({
-      mes: label,
-      valor: ultimoRelatorioReceitaMensal.valores[i] || 0
-    }))
+    receitaMensal
   }
 }
 
@@ -265,41 +243,29 @@ function exportarRelatorioExcel () {
 
 /**
  * Abre um modal com o detalhamento dos dados por trás de um card de KPI da
- * página de Métricas, respeitando o período selecionado no filtro.
+ * página de Métricas — os números já vêm prontos de GET /metricas.
  */
 function abrirDetalhesMetricaKpi (chave) {
-  if (typeof Swal === 'undefined') return
+  if (typeof Swal === 'undefined' || !ultimaRespostaMetricas) return
 
-  const tickets = kpiTicketsFiltradosAtual
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-  const ticketsAbertos = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'aberto'
-  )
+  const kpis = ultimaRespostaMetricas.kpis
 
   let title = ''
   let html = ''
 
   switch (chave) {
     case 'receita': {
-      const receitaTickets = ticketsFechados.reduce(
-        (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
-        0
-      )
-      const receitaMensalidades = somaMensalidades(kpiMensalidadesFiltradasAtual)
-      const receitaTotal = receitaTickets + receitaMensalidades
       title = 'Receita do Período'
       html = `<p class="text-muted mb-2">Soma dos tickets avulsos fechados com os ciclos de mensalidade cobrados dentro do período selecionado no filtro (mensalista não paga por ticket, paga o ciclo mensal).</p>
         <ul class="text-start">
-          <li>${ticketsFechados.length} ticket(s) avulso(s): <strong>R$ ${receitaTickets
+          <li>${kpis.ticketsFechados} ticket(s) avulso(s): <strong>R$ ${kpis.receitaTickets
         .toFixed(2)
         .replace('.', ',')}</strong></li>
-          <li>${kpiMensalidadesFiltradasAtual.length} ciclo(s) de mensalidade: <strong>R$ ${receitaMensalidades
+          <li>Ciclo(s) de mensalidade: <strong>R$ ${kpis.receitaMensalidades
         .toFixed(2)
         .replace('.', ',')}</strong></li>
         </ul>
-        <p class="fs-5 mb-0">Total: <strong>R$ ${receitaTotal
+        <p class="fs-5 mb-0">Total: <strong>R$ ${kpis.receitaTotal
         .toFixed(2)
         .replace('.', ',')}</strong>.</p>`
       break
@@ -308,32 +274,23 @@ function abrirDetalhesMetricaKpi (chave) {
       title = 'Total de Atendimentos'
       html = `<p class="text-muted mb-2">Quantidade de tickets (abertos ou fechados) registrados dentro do período selecionado.</p>
         <ul class="text-start">
-          <li>Fechados: <strong>${ticketsFechados.length}</strong></li>
-          <li>Em aberto: <strong>${ticketsAbertos.length}</strong></li>
+          <li>Fechados: <strong>${kpis.ticketsFechados}</strong></li>
+          <li>Em aberto: <strong>${kpis.ticketsAbertos}</strong></li>
         </ul>`
       break
-    case 'tempo-medio': {
-      const comTempo = ticketsFechados.filter(t => {
-        const ent = t.horaEntrada || t.dataEntrada
-        const sai = t.horaSaida || t.dataSaida
-        return ent && sai
-      })
+    case 'tempo-medio':
       title = 'Tempo Médio de Permanência'
       html = `<p class="text-muted mb-2">Média do tempo entre entrada e saída de todos os tickets fechados do período, com os dois horários registrados.</p>
-        <p class="fs-5 mb-0">Calculado sobre <strong>${comTempo.length}</strong> ticket(s) fechado(s).</p>`
+        <p class="fs-5 mb-0">Calculado sobre <strong>${kpis.ticketsFechados}</strong> ticket(s) fechado(s).</p>`
       break
-    }
-    case 'mensalistas': {
-      const ativos = globalMensalistas.filter(m => m.ativo === true).length
-      const inativos = globalMensalistas.length - ativos
+    case 'mensalistas':
       title = 'Total de Mensalistas'
       html = `<p class="text-muted mb-2">Cadastro completo de mensalistas (não é afetado pelo filtro de período).</p>
         <ul class="text-start">
-          <li>Ativos: <strong>${ativos}</strong></li>
-          <li>Inativos: <strong>${inativos}</strong></li>
+          <li>Ativos: <strong>${kpis.mensalistasAtivos}</strong></li>
+          <li>Inativos: <strong>${kpis.mensalistasInativos}</strong></li>
         </ul>`
       break
-    }
     default:
       return
   }
@@ -353,31 +310,19 @@ function configurarTemaDarkDoChartJs () {
   Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)'
 }
 
-// Carrega os dados brutos da API
+// Busca os KPIs/gráficos já calculados do servidor para o período selecionado
 async function carregarDadosMetricas () {
   const pageError = document.getElementById('page-error')
   const pageErrorText = document.getElementById('page-error-text')
 
   pageError?.classList.add('d-none')
 
+  const selectPeriodo = document.getElementById('filtro-periodo-metricas')
+  const periodo = selectPeriodo ? selectPeriodo.value : 'mes_atual'
+
   try {
-    const [vagas, tickets, mensalistas, mensalidades] = await Promise.all([
-      ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
-      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
-      ApiService.getMensalistas
-        ? ApiService.getMensalistas()
-        : Promise.resolve([]),
-      ApiService.getMensalidades
-        ? ApiService.getMensalidades()
-        : Promise.resolve([])
-    ])
-
-    globalVagas = vagas || []
-    globalTickets = tickets || []
-    globalMensalistas = mensalistas || []
-    globalMensalidades = mensalidades || []
-
-    processarEMostrarMetricas()
+    ultimaRespostaMetricas = await ApiService.getMetricas(periodo)
+    renderizarMetricas(ultimaRespostaMetricas)
   } catch (error) {
     console.error('Erro ao carregar dados de métricas:', error)
 
@@ -403,90 +348,6 @@ async function carregarDadosMetricas () {
   }
 }
 
-// Filtra os tickets com base no período selecionado no dropdown
-function filtrarTicketsPorPeriodo (tickets) {
-  const selectPeriodo = document.getElementById('filtro-periodo-metricas')
-  const periodo = selectPeriodo ? selectPeriodo.value : 'mes_atual'
-
-  const agora = new Date()
-
-  return tickets.filter(t => {
-    const dataRefStr =
-      t.horaSaida || t.dataSaida || t.horaEntrada || t.dataEntrada
-    if (!dataRefStr) return true
-    const d = new Date(dataRefStr)
-    if (isNaN(d)) return true
-
-    switch (periodo) {
-      case '7_dias': {
-        const limite7 = new Date()
-        limite7.setDate(agora.getDate() - 7)
-        return d >= limite7
-      }
-      case '30_dias': {
-        const limite30 = new Date()
-        limite30.setDate(agora.getDate() - 30)
-        return d >= limite30
-      }
-      case 'mes_atual':
-        return (
-          d.getMonth() === agora.getMonth() &&
-          d.getFullYear() === agora.getFullYear()
-        )
-      case 'todos':
-      default:
-        return true
-    }
-  })
-}
-
-// Processa e re-renderiza todos os componentes gráficos
-function processarEMostrarMetricas () {
-  const ticketsFiltrados = filtrarTicketsPorPeriodo(globalTickets)
-  const mensalidadesFiltradas = filtrarMensalidadesPorPeriodo(globalMensalidades)
-
-  atualizarKPIs(globalVagas, ticketsFiltrados, globalMensalistas, mensalidadesFiltradas)
-  renderizarGraficoOcupacaoHorario(ticketsFiltrados)
-  renderizarGraficoReceitaMensal(ticketsFiltrados, mensalidadesFiltradas)
-  renderizarGraficoMeiosPagamento(ticketsFiltrados)
-  renderizarGraficoCategorias(globalVagas)
-}
-
-// Mesma lógica de período de filtrarTicketsPorPeriodo, mas usando dataFim do
-// ciclo (quando a mensalidade foi/será cobrada) como data de referência.
-function filtrarMensalidadesPorPeriodo (mensalidades) {
-  const selectPeriodo = document.getElementById('filtro-periodo-metricas')
-  const periodo = selectPeriodo ? selectPeriodo.value : 'mes_atual'
-
-  const agora = new Date()
-
-  return mensalidades.filter(mv => {
-    const d = new Date(mv.dataFim)
-    if (isNaN(d)) return true
-
-    switch (periodo) {
-      case '7_dias': {
-        const limite7 = new Date()
-        limite7.setDate(agora.getDate() - 7)
-        return d >= limite7
-      }
-      case '30_dias': {
-        const limite30 = new Date()
-        limite30.setDate(agora.getDate() - 30)
-        return d >= limite30
-      }
-      case 'mes_atual':
-        return (
-          d.getMonth() === agora.getMonth() &&
-          d.getFullYear() === agora.getFullYear()
-        )
-      case 'todos':
-      default:
-        return true
-    }
-  })
-}
-
 // Texto do período atualmente selecionado no filtro (ex.: "Mês atual"),
 // usado para deixar claro nos cards de KPI a que intervalo os números
 // exibidos se referem.
@@ -495,76 +356,40 @@ function obterTextoPeriodoAtual () {
   return select ? select.options[select.selectedIndex].text : 'Mês atual'
 }
 
-// Compara a receita fechada do mês corrente com a do mês anterior (sempre
-// pelo calendário, independente do filtro de período ativo na tela) para
-// dar contexto imediato de tendência no card de Receita.
-function calcularComparacaoReceitaMesAnterior (todosOsTickets) {
-  const agora = new Date()
-  const mesAtual = agora.getMonth()
-  const anoAtual = agora.getFullYear()
-  const dataMesAnterior = new Date(anoAtual, mesAtual - 1, 1)
+// Pinta todos os componentes da tela a partir da resposta de GET /metricas
+function renderizarMetricas (resposta) {
+  atualizarKPIs(resposta.kpis)
+  renderizarGraficoOcupacaoHorario(resposta.graficos.ocupacaoPorHorario)
+  renderizarGraficoReceitaMensal(resposta.graficos.receitaMensal)
+  renderizarGraficoMeiosPagamento(resposta.graficos.meiosPagamento)
+  renderizarGraficoCategorias(resposta.graficos.categorias)
+}
 
-  let receitaMesAtual = 0
-  let receitaMesAnterior = 0
-
-  todosOsTickets
-    .filter(t => (t.status || '').toLowerCase() === 'fechado')
-    .forEach(t => {
-      const sai = t.horaSaida || t.dataSaida
-      if (!sai) return
-      const d = new Date(sai)
-      if (isNaN(d)) return
-      const valor = Number(t.valorTotal ?? t.valorCobrado) || 0
-
-      if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) {
-        receitaMesAtual += valor
-      } else if (
-        d.getMonth() === dataMesAnterior.getMonth() &&
-        d.getFullYear() === dataMesAnterior.getFullYear()
-      ) {
-        receitaMesAnterior += valor
-      }
-    })
-
-  const referenciaAtual = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}`
-  const referenciaAnterior = `${dataMesAnterior.getFullYear()}-${String(
-    dataMesAnterior.getMonth() + 1
-  ).padStart(2, '0')}`
-  globalMensalidades.forEach(mv => {
-    const valor = Number(mv.valor) || 0
-    if (mv.referencia === referenciaAtual) receitaMesAtual += valor
-    else if (mv.referencia === referenciaAnterior) receitaMesAnterior += valor
-  })
-
-  if (receitaMesAnterior === 0) {
-    return receitaMesAtual > 0
-      ? { texto: 'Sem receita no mês anterior para comparar', classe: 'text-light' }
-      : { texto: 'Sem dados suficientes para comparar', classe: 'text-light' }
+// Monta texto/ícone/cor de comparação com o mês anterior a partir dos
+// números crus devolvidos pelo servidor — formatação é a única coisa que
+// ainda vive no front (não decide nem calcula nada sensível).
+function formatarComparacaoReceitaMesAnterior ({ receitaMesAtual, receitaMesAnterior, variacaoPercentual }) {
+  if (variacaoPercentual === null) {
+    return {
+      texto: receitaMesAtual > 0
+        ? 'Sem receita no mês anterior para comparar'
+        : 'Sem dados suficientes para comparar',
+      classe: 'text-light'
+    }
   }
 
-  const variacao =
-    ((receitaMesAtual - receitaMesAnterior) / receitaMesAnterior) * 100
-  const sinal = variacao >= 0 ? '+' : ''
-  const classe = variacao >= 0 ? 'text-success' : 'text-danger'
-  const icone = variacao >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'
+  const sinal = variacaoPercentual >= 0 ? '+' : ''
+  const classe = variacaoPercentual >= 0 ? 'text-success' : 'text-danger'
+  const icone = variacaoPercentual >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'
 
   return {
-    texto: `<i class="fas ${icone} me-1" aria-hidden="true"></i>${sinal}${variacao.toFixed(
-      1
-    )}% vs mês anterior`,
+    texto: `<i class="fas ${icone} me-1" aria-hidden="true"></i>${sinal}${variacaoPercentual.toFixed(1)}% vs mês anterior`,
     classe
   }
 }
 
 // Atualiza os cards superiores de indicadores de desempenho (KPIs)
-function atualizarKPIs (vagas, tickets, mensalistas, mensalidades = []) {
-  kpiTicketsFiltradosAtual = tickets
-  kpiMensalidadesFiltradasAtual = mensalidades
-
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-
+function atualizarKPIs (kpis) {
   const animar =
     typeof animarContadorGsap === 'function'
       ? animarContadorGsap
@@ -575,35 +400,21 @@ function atualizarKPIs (vagas, tickets, mensalistas, mensalidades = []) {
   const periodoTexto = obterTextoPeriodoAtual()
 
   // Total de atendimentos
-  animar(
-    document.getElementById('metric-total-atendimentos'),
-    tickets.length
-  )
-  const elPeriodoAtendimentos = document.getElementById(
-    'metric-atendimentos-periodo-label'
-  )
+  animar(document.getElementById('metric-total-atendimentos'), kpis.totalAtendimentos)
+  const elPeriodoAtendimentos = document.getElementById('metric-atendimentos-periodo-label')
   if (elPeriodoAtendimentos) { elPeriodoAtendimentos.textContent = `Período: ${periodoTexto}` }
 
   // Total de mensalistas cadastrados
-  animar(
-    document.getElementById('metric-total-mensalistas'),
-    mensalistas.length
-  )
+  animar(document.getElementById('metric-total-mensalistas'), kpis.totalMensalistas)
 
   // Receita do Período (tickets avulsos fechados + ciclos de mensalidade)
-  const receitaTotal =
-    ticketsFechados.reduce(
-      (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
-      0
-    ) + somaMensalidades(mensalidades)
-
-  animar(document.getElementById('metric-receita-total'), receitaTotal, {
+  animar(document.getElementById('metric-receita-total'), kpis.receitaTotal, {
     formatar: v => `R$ ${v.toFixed(2).replace('.', ',')}`
   })
 
   const elComparacao = document.getElementById('metric-receita-comparacao')
   if (elComparacao) {
-    const comparacao = calcularComparacaoReceitaMesAnterior(globalTickets)
+    const comparacao = formatarComparacaoReceitaMesAnterior(kpis.comparacaoReceitaMesAnterior)
     elComparacao.innerHTML = comparacao.texto
     elComparacao.className = `text-xs ${comparacao.classe}`
   }
@@ -611,61 +422,20 @@ function atualizarKPIs (vagas, tickets, mensalistas, mensalidades = []) {
   // Tempo médio de permanência
   const elTempoMedio = document.getElementById('metric-tempo-medio')
   if (elTempoMedio) {
-    elTempoMedio.innerText = calcularTempoMedioPermanencia(ticketsFechados)
+    elTempoMedio.innerText = kpis.tempoMedioPermanencia
   }
-  const elPeriodoTempoMedio = document.getElementById(
-    'metric-tempo-medio-periodo-label'
-  )
+  const elPeriodoTempoMedio = document.getElementById('metric-tempo-medio-periodo-label')
   if (elPeriodoTempoMedio) { elPeriodoTempoMedio.textContent = `Calculado sobre: ${periodoTexto}` }
 }
 
-// Calcula o tempo médio de permanência dos veículos
-function calcularTempoMedioPermanencia (ticketsFechados) {
-  const validos = ticketsFechados.filter(t => {
-    const ent = t.horaEntrada || t.dataEntrada
-    const sai = t.horaSaida || t.dataSaida
-    if (!ent || !sai) return false
-    const dEntrada = new Date(ent)
-    const dSaida = new Date(sai)
-    return !isNaN(dEntrada) && !isNaN(dSaida) && dSaida >= dEntrada
-  })
-
-  if (validos.length === 0) return '0h 0m'
-
-  const totalMs = validos.reduce((acc, t) => {
-    const entrada = new Date(t.horaEntrada || t.dataEntrada)
-    const saida = new Date(t.horaSaida || t.dataSaida)
-    return acc + (saida - entrada)
-  }, 0)
-
-  const mediaMs = totalMs / validos.length
-  const totalMinutos = Math.round(mediaMs / 60000)
-  const horas = Math.floor(totalMinutos / 60)
-  const minutos = totalMinutos % 60
-
-  return `${horas}h ${minutos}m`
-}
-
 // Gráfico: Ocupação por Horário de Entrada
-function renderizarGraficoOcupacaoHorario (tickets) {
+function renderizarGraficoOcupacaoHorario (ocupacaoPorHorario) {
   const canvas = document.getElementById('chart-ocupacao-horario')
   if (!canvas || typeof Chart === 'undefined') return
   const ctx = canvas.getContext('2d')
 
-  const contagemPorHora = new Array(24).fill(0)
-  tickets.forEach(t => {
-    const ent = t.horaEntrada || t.dataEntrada
-    if (!ent) return
-    const d = new Date(ent)
-    if (!isNaN(d)) {
-      const hora = d.getHours()
-      contagemPorHora[hora]++
-    }
-  })
-
-  const labels = contagemPorHora.map(
-    (_, hora) => `${String(hora).padStart(2, '0')}h`
-  )
+  const labels = ocupacaoPorHorario.map(item => item.hora)
+  const contagens = ocupacaoPorHorario.map(item => item.contagem)
 
   if (chartOcupacaoHorario) chartOcupacaoHorario.destroy()
 
@@ -676,7 +446,7 @@ function renderizarGraficoOcupacaoHorario (tickets) {
       datasets: [
         {
           label: 'Entradas registradas',
-          data: contagemPorHora,
+          data: contagens,
           borderColor: PALETA.pendente,
           backgroundColor: 'rgba(255, 211, 182, 0.2)',
           fill: true,
@@ -696,72 +466,23 @@ function renderizarGraficoOcupacaoHorario (tickets) {
 
   const tbody = document.getElementById('tbody-ocupacao-horario')
   if (tbody) {
-    tbody.innerHTML = labels
+    tbody.innerHTML = ocupacaoPorHorario
       .map(
-        (label, i) =>
-          `<tr><td>${ApiService.sanitizeText(label)}</td><td>${
-            contagemPorHora[i]
-          }</td></tr>`
+        item =>
+          `<tr><td>${ApiService.sanitizeText(item.hora)}</td><td>${item.contagem}</td></tr>`
       )
       .join('')
   }
 }
 
 // Gráfico: Receita por Período
-function renderizarGraficoReceitaMensal (tickets, mensalidades = []) {
+function renderizarGraficoReceitaMensal (receitaMensal) {
   const canvas = document.getElementById('chart-receita-mensal')
   if (!canvas || typeof Chart === 'undefined') return
   const ctx = canvas.getContext('2d')
 
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-
-  const totaisPorMes = {}
-  ticketsFechados.forEach(t => {
-    const sai = t.horaSaida || t.dataSaida
-    if (!sai) return
-    const d = new Date(sai)
-    if (!isNaN(d)) {
-      const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-        2,
-        '0'
-      )}`
-      totaisPorMes[chave] =
-        (totaisPorMes[chave] || 0) +
-        (Number(t.valorTotal ?? t.valorCobrado) || 0)
-    }
-  })
-  // Mensalista não paga por ticket — soma o ciclo de mensalidade no mesmo
-  // "balde" mensal (referencia já vem no formato "YYYY-MM").
-  mensalidades.forEach(mv => {
-    totaisPorMes[mv.referencia] =
-      (totaisPorMes[mv.referencia] || 0) + (Number(mv.valor) || 0)
-  })
-
-  const chavesOrdenadas = Object.keys(totaisPorMes).sort()
-  const nomesMes = [
-    'Jan',
-    'Fev',
-    'Mar',
-    'Abr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Ago',
-    'Set',
-    'Out',
-    'Nov',
-    'Dez'
-  ]
-
-  const labels = chavesOrdenadas.map(chave => {
-    const [ano, mes] = chave.split('-')
-    return `${nomesMes[Number(mes) - 1]}/${ano.slice(2)}`
-  })
-  const valores = chavesOrdenadas.map(chave => totaisPorMes[chave])
-
-  ultimoRelatorioReceitaMensal = { labels, valores }
+  const labels = receitaMensal.map(item => item.mes)
+  const valores = receitaMensal.map(item => item.valor)
 
   if (chartReceitaMensal) chartReceitaMensal.destroy()
 
@@ -797,13 +518,11 @@ function renderizarGraficoReceitaMensal (tickets, mensalidades = []) {
   const tbody = document.getElementById('tbody-receita-mensal')
   if (tbody) {
     tbody.innerHTML =
-      labels.length > 0
-        ? labels
+      receitaMensal.length > 0
+        ? receitaMensal
           .map(
-            (label, i) =>
-                `<tr><td>${ApiService.sanitizeText(label)}</td><td>R$ ${valores[
-                  i
-                ]
+            item =>
+                `<tr><td>${ApiService.sanitizeText(item.mes)}</td><td>R$ ${item.valor
                   .toFixed(2)
                   .replace('.', ',')}</td></tr>`
           )
@@ -813,34 +532,10 @@ function renderizarGraficoReceitaMensal (tickets, mensalidades = []) {
 }
 
 // NOVO GRÁFICO: Receita / Distribuição por Meio de Pagamento
-function renderizarGraficoMeiosPagamento (tickets) {
+function renderizarGraficoMeiosPagamento (meiosPagamento) {
   const canvas = document.getElementById('chart-meios-pagamento')
   if (!canvas || typeof Chart === 'undefined') return
   const ctx = canvas.getContext('2d')
-
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-
-  const contagem = {
-    pix: 0,
-    cartao_credito: 0,
-    cartao_debito: 0,
-    dinheiro: 0,
-    isento: 0
-  }
-
-  ticketsFechados.forEach(t => {
-    let forma = (t.formaPagamento || '').toLowerCase()
-    if (!forma && t.mensalistaId) forma = 'isento'
-    if (!forma) forma = 'pix' // Padrão de fallback
-
-    if (contagem[forma] !== undefined) {
-      contagem[forma] += Number(t.valorTotal ?? t.valorCobrado) || 0
-    } else {
-      contagem.pix += Number(t.valorTotal ?? t.valorCobrado) || 0
-    }
-  })
 
   const labels = [
     'PIX',
@@ -850,11 +545,11 @@ function renderizarGraficoMeiosPagamento (tickets) {
     'Isento'
   ]
   const valores = [
-    contagem.pix,
-    contagem.cartao_credito,
-    contagem.cartao_debito,
-    contagem.dinheiro,
-    contagem.isento
+    meiosPagamento.pix,
+    meiosPagamento.cartaoCredito,
+    meiosPagamento.cartaoDebito,
+    meiosPagamento.dinheiro,
+    meiosPagamento.isento
   ]
   const cores = [
     PALETA.pix,
@@ -900,21 +595,13 @@ function renderizarGraficoMeiosPagamento (tickets) {
 }
 
 // Gráfico: Distribuição por Categoria de Vaga
-function renderizarGraficoCategorias (vagas) {
+function renderizarGraficoCategorias (categorias) {
   const canvas = document.getElementById('chart-categorias')
   if (!canvas || typeof Chart === 'undefined') return
   const ctx = canvas.getContext('2d')
 
-  const porTipo = {}
-  vagas.forEach(v => {
-    const tipo = (v.tipo || 'Outros').toUpperCase()
-    if (!porTipo[tipo]) porTipo[tipo] = { ocupadas: 0, total: 0 }
-    porTipo[tipo].total++
-    if ((v.status || '').toLowerCase() === 'ocupada') porTipo[tipo].ocupadas++
-  })
-
-  const labels = Object.keys(porTipo)
-  const dataOcupadas = labels.map(tipo => porTipo[tipo].ocupadas)
+  const labels = categorias.map(item => item.tipo)
+  const dataOcupadas = categorias.map(item => item.ocupadas)
   const cores = [PALETA.alerta, PALETA.info, PALETA.pendente, PALETA.sucesso]
 
   if (chartCategorias) chartCategorias.destroy()
@@ -948,13 +635,11 @@ function renderizarGraficoCategorias (vagas) {
   const tbody = document.getElementById('tbody-ocupacao-categoria')
   if (tbody) {
     tbody.innerHTML =
-      labels.length > 0
-        ? labels
+      categorias.length > 0
+        ? categorias
           .map(
-            tipo =>
-                `<tr><td>${ApiService.sanitizeText(tipo)}</td><td>${
-                  porTipo[tipo].ocupadas
-                }</td><td>${porTipo[tipo].total}</td></tr>`
+            item =>
+                `<tr><td>${ApiService.sanitizeText(item.tipo)}</td><td>${item.ocupadas}</td><td>${item.total}</td></tr>`
           )
           .join('')
         : '<tr><td colspan="3" class="text-center text-muted">Nenhuma vaga cadastrada</td></tr>'

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { AdminGuard } from '../common/guards/admin.guard'
 import { JwtAuthGuard, type UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
@@ -15,6 +15,20 @@ export class UsuariosController {
   @Get()
   listar () {
     return this.usuariosService.listar()
+  }
+
+  // Precisa vir antes de ":id" — senão o Nest trata "verificar-cpf" como um id.
+  @UseGuards(AdminGuard)
+  @Get('verificar-cpf')
+  async verificarCpf (@Query('cpf') cpf: string, @Query('excluirId') excluirId?: string) {
+    const duplicado = await this.usuariosService.existeCpfDuplicado(cpf, excluirId)
+    return { duplicado }
+  }
+
+  @UseGuards(AdminGuard)
+  @Get(':id')
+  buscarPorId (@Param('id') id: string) {
+    return this.usuariosService.buscarPorId(id)
   }
 
   @UseGuards(AdminGuard)

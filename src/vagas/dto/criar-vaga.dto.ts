@@ -17,7 +17,7 @@ export class CriarVagaDto {
 
   @IsOptional()
   @Transform(minusculo)
-  @IsIn(['livre', 'ocupada'], { message: 'Status de vaga inválido.' })
+  @IsIn(['livre', 'ocupada', 'manutencao'], { message: 'Status de vaga inválido.' })
   status?: string
 
   @IsOptional()

@@ -31,6 +31,7 @@ enum TipoVaga {
 enum StatusVaga {
   livre
   ocupada
+  manutencao
 }
 
 enum StatusTicket {
@@ -72,7 +73,7 @@ model Usuario {
  * Código de verificação de "esqueci minha senha", enviado por e-mail.
  * Guardamos só o hash do código (nunca o valor em texto puro) e ele vale
  * por tempo limitado e uso único — ver RESET_TTL_MINUTOS em
- * server/controllers/auth.js.
+ * src/auth/auth.service.ts.
  */
 model ResetSenhaCodigo {
   id         String   @id @default(cuid())
@@ -92,6 +93,10 @@ model Mensalista {
   cpf              String   @unique
   placa            String   @unique
   telefone         String
+  // Opcional — só existe pra poder mandar lembrete de cobrança por e-mail
+  // (ver EmailService); sem telefone não teria como contatar o cliente, mas
+  // sem e-mail o cadastro continua válido.
+  email            String?
   valorMensalidade Decimal  @default(0) @db.Decimal(10, 2)
   // Perfil do plano (ex.: "Mensal Integral", "Noturno", "Corporativo") —
   // texto livre como Tarifa.categoria, pra não exigir migration toda vez
@@ -136,6 +141,14 @@ model Mensalidade {
   alteradoPor   Usuario?  @relation(fields: [alteradoPorId], references: [id], onDelete: SetNull)
   alteradoPorId String?
   alteradoEm    DateTime?
+
+  // Comprovante de pagamento anexado na baixa manual (imagem ou PDF),
+  // guardado como data URI base64 — mesmo padrão já usado pro avatar do
+  // usuário (ver Usuario.avatar), sem depender de um bucket de arquivos
+  // externo. comprovanteNomeArquivo guarda o nome original só pra exibição/
+  // download; o dado em si (mimetype incluso) já vem embutido no data URI.
+  comprovanteAnexo       String?
+  comprovanteNomeArquivo String?
 
   @@unique([mensalistaId, referencia])
   @@map("mensalidades")

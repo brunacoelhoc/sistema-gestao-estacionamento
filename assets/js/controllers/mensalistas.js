@@ -61,11 +61,7 @@ function exportarMensalistas (formato) {
 
   const linhas = mensalistasFiltradosAtual.map(m => ({
     nome: m.nome,
-    cpf:
-      typeof LGPDModule !== 'undefined' &&
-      typeof LGPDModule.maskCPF === 'function'
-        ? LGPDModule.maskCPF(m.cpf)
-        : mascararCpfFallback(m.cpf),
+    cpf: m.cpf,
     telefone: m.telefone || '-',
     placa: m.placa,
     mensalidade: Number(m.valorMensalidade || 0).toFixed(2).replace('.', ','),
@@ -198,14 +194,6 @@ function aplicarFiltros () {
   renderizarTabelaMensalistas(filtrados)
 }
 
-// Mascara CPF para LGPD (ex: ***.***.**0-00)
-function mascararCpfFallback (cpf) {
-  if (!cpf) return ''
-  const digitos = cpf.replace(/\D/g, '')
-  if (digitos.length < 4) return '***.***.***-**'
-  return `***.***.**${digitos.slice(-4, -2)}-${digitos.slice(-2)}`
-}
-
 // Renderiza a tabela de mensalistas
 const paginadorMensalistas =
   typeof criarPaginador === 'function'
@@ -223,11 +211,8 @@ const paginadorMensalistas =
 function renderLinhaMensalista (m, tbody) {
   const tr = document.createElement('tr')
 
-  const cpfMascarado =
-    typeof LGPDModule !== 'undefined' &&
-    typeof LGPDModule.maskCPF === 'function'
-      ? LGPDModule.maskCPF(m.cpf)
-      : mascararCpfFallback(m.cpf)
+  // CPF já vem mascarado do back-end na listagem (ver mensalistas.service.ts)
+  const cpfMascarado = m.cpf
 
   const ativo = m.ativo === true
   const statusBadge = ativo
@@ -302,24 +287,21 @@ function renderizarTabelaMensalistas (lista) {
   ligarBotoesLinhaMensalista(tbody)
 }
 
-// Verifica duplicidade de CPF e Placa
-function verificarDuplicidade (cpf, placa, idAtual) {
-  const cpfClean = (cpf || '').replace(/\D/g, '')
+// Verifica duplicidade de CPF (checado no servidor — a listagem só tem o
+// CPF mascarado) e de Placa (não sensível, segue comparando local).
+async function verificarDuplicidade (cpf, placa, idAtual) {
   const placaClean = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 
-  const cpfDuplicado = mensalistasCache.some(
-    m =>
-      String(m.id) !== String(idAtual) &&
-      (m.cpf || '').replace(/\D/g, '') === cpfClean
-  )
   const placaDuplicada = mensalistasCache.some(
     m =>
       String(m.id) !== String(idAtual) &&
       (m.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '') === placaClean
   )
+  if (placaDuplicada) return 'Esta placa já está cadastrada para outro mensalista.'
 
+  const cpfDuplicado = await ApiService.verificarCpfMensalistaDuplicado(cpf, idAtual)
   if (cpfDuplicado) return 'Este CPF já está cadastrado para outro mensalista.'
-  if (placaDuplicada) { return 'Esta placa já está cadastrada para outro mensalista.' }
+
   return null
 }
 
@@ -331,6 +313,7 @@ async function salvarMensalista (e) {
   const nome = document.getElementById('mensalista-nome').value.trim()
   const cpf = document.getElementById('mensalista-cpf').value.trim()
   const telefone = document.getElementById('mensalista-telefone').value.trim()
+  const email = document.getElementById('mensalista-email').value.trim()
   const placa = document
     .getElementById('mensalista-placa')
     .value.trim()
@@ -378,6 +361,16 @@ async function salvarMensalista (e) {
     return
   }
 
+  // 3b. Validação de E-mail (opcional, mas se preenchido tem que ser válido)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'E-mail Inválido',
+      text: 'Informe um e-mail válido ou deixe o campo em branco.'
+    })
+    return
+  }
+
   // 4. Validação de Placa
   if (!validarPlaca(placa)) {
     Swal.fire({
@@ -409,7 +402,7 @@ async function salvarMensalista (e) {
   }
 
   // 6. Validação de Duplicidade
-  const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
+  const erroDuplicidade = await verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
     Swal.fire({
       icon: 'warning',
@@ -428,6 +421,7 @@ async function salvarMensalista (e) {
         nome,
         cpf,
         telefone,
+        email,
         placa,
         valorMensalidade,
         categoriaPlano
@@ -438,6 +432,7 @@ async function salvarMensalista (e) {
         nome,
         cpf,
         telefone,
+        email,
         placa,
         valorMensalidade,
         categoriaPlano,
@@ -461,14 +456,19 @@ async function salvarMensalista (e) {
 }
 
 // Prepara o modal para edição
-function editarMensalista (id) {
-  const m = mensalistasCache.find(item => String(item.id) === String(id))
-  if (!m) return
+async function editarMensalista (id) {
+  const mCache = mensalistasCache.find(item => String(item.id) === String(id))
+  if (!mCache) return
+
+  // A listagem só traz o CPF mascarado — busca o registro completo pra
+  // preencher o campo de edição com o valor real.
+  const m = (await ApiService.getMensalistaPorId(id)) || mCache
 
   document.getElementById('mensalista-id').value = m.id
   document.getElementById('mensalista-nome').value = m.nome
   document.getElementById('mensalista-cpf').value = m.cpf
   document.getElementById('mensalista-telefone').value = m.telefone || ''
+  document.getElementById('mensalista-email').value = m.email || ''
   document.getElementById('mensalista-placa').value = m.placa
   document.getElementById('mensalista-valor-mensalidade').value =
     m.valorMensalidade || ''
@@ -587,7 +587,7 @@ function montarLinhasCobrancas (mensalidades) {
 // Abre o modal com o histórico de ciclos de mensalidade (Mensalidade) do
 // mensalista — ele não paga por ticket, paga um ciclo de 30 dias corridos,
 // cobrado de uma vez na primeira entrada sem ciclo vigente (ver
-// server/services/mensalidade.js).
+// src/mensalidade-ciclo/mensalidade-ciclo.service.ts).
 async function abrirCobrancasMensalista (id) {
   const m = mensalistasCache.find(item => String(item.id) === String(id))
   if (!m) return

@@ -178,7 +178,8 @@ async function carregarDados () {
 }
 
 // Busca no backend a página atual de tickets, já considerando a busca e o
-// filtro de status ativos na tela (ver server/controllers/tickets.js#listar).
+// filtro de status ativos na tela (ver TicketsController.listar em
+// src/tickets/tickets.controller.ts).
 async function carregarTickets () {
   const pageError = document.getElementById('page-error')
   const pageErrorText = document.getElementById('page-error-text')
@@ -379,7 +380,8 @@ async function exportarTickets (formato) {
   let ticketsParaExportar
   try {
     // Sem `page`, o backend devolve a lista completa já filtrada (ver
-    // ApiService.getTickets e server/controllers/tickets.js#listar).
+    // ApiService.getTickets e TicketsController.listar em
+    // src/tickets/tickets.controller.ts).
     ticketsParaExportar = await ApiService.getTickets({ status: statusFiltro, termo })
   } catch (error) {
     console.error('Erro ao buscar tickets para exportação:', error)
@@ -451,9 +453,15 @@ function preencherSelectVagas () {
   selectVaga.innerHTML =
     '<option value="" selected disabled>Selecione uma vaga livre...</option>'
 
-  const vagasLivres = allVagas.filter(
-    v => (v.status || 'livre').toLowerCase() === 'livre'
-  )
+  const vagasLivres = allVagas
+    .filter(v => (v.status || 'livre').toLowerCase() === 'livre')
+    .sort((a, b) =>
+      String(a.codigo || a.numero || a.id).localeCompare(
+        String(b.codigo || b.numero || b.id),
+        undefined,
+        { numeric: true, sensitivity: 'base' }
+      )
+    )
 
   vagasLivres.forEach(vaga => {
     const option = document.createElement('option')
@@ -603,9 +611,10 @@ async function criarNovoTicket (e) {
   }
 
   // Regra "sem ticket duplo para a mesma placa" agora é validada no backend
-  // (dentro da transação de abertura — ver server/controllers/tickets.js),
-  // já que a tela não mantém mais a lista completa de tickets em memória
-  // para checar aqui. O erro, se acontecer, chega pelo catch abaixo.
+  // (dentro da transação de abertura — ver TicketsService.abrir em
+  // src/tickets/tickets.service.ts), já que a tela não mantém mais a lista
+  // completa de tickets em memória para checar aqui. O erro, se acontecer,
+  // chega pelo catch abaixo.
 
   if (!vagaId || !tarifaId) {
     Swal.fire({

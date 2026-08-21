@@ -2,8 +2,9 @@
  * Prévia, no cliente, do fechamento de ticket de um mensalista: prevê se vai
  * cobrar um novo ciclo de 30 dias ou sair isento porque já existe um ciclo
  * vigente. Espelha a mesma regra usada de verdade no fechamento (ver
- * buscarCicloVigente em server/services/mensalidade.js) para a prévia
- * mostrada antes de confirmar nunca divergir do valor cobrado pelo backend.
+ * buscarCicloVigente em src/mensalidade-ciclo/mensalidade-ciclo.service.ts)
+ * para a prévia mostrada antes de confirmar nunca divergir do valor cobrado
+ * pelo backend.
  *
  * Usado por assets/js/controllers/tickets.js e
  * assets/js/controllers/dashboard.js — ambos têm sua própria tela de

@@ -207,7 +207,7 @@ async function tratarCadastro (e) {
 /**
  * Fluxo de recuperação de senha em 2 etapas via SweetAlert2: o código de
  * verificação é gerado pelo backend e enviado por e-mail de verdade (ver
- * server/services/email.js) — aqui só coletamos o e-mail e, depois, o
+ * src/email/email.service.ts) — aqui só coletamos o e-mail e, depois, o
  * código que o usuário recebeu.
  */
 async function iniciarFluxoResetSenha () {

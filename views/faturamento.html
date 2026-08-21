@@ -194,7 +194,8 @@
         <!-- CARDS KPI -->
         <div class="row g-3 mb-3" aria-live="polite">
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-info h-100">
+                <div class="card-kpi kpi-info h-100" role="button" tabindex="0" data-kpi="previsto-mrr"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Faturamento Previsto (MRR)</span>
@@ -210,7 +211,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-success h-100">
+                <div class="card-kpi kpi-success h-100" role="button" tabindex="0" data-kpi="recebido-mes"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Recebido no Mês Atual</span>
@@ -226,7 +228,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-warning h-100">
+                <div class="card-kpi kpi-warning h-100" role="button" tabindex="0" data-kpi="ticket-medio"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Ticket Médio (mensalista ativo)</span>
@@ -242,7 +245,8 @@
             </div>
 
             <div class="col-12 col-sm-6 col-md-3">
-                <div class="card-kpi kpi-danger h-100">
+                <div class="card-kpi kpi-danger h-100" role="button" tabindex="0" data-kpi="sem-ciclo"
+                    aria-haspopup="dialog" title="Clique para mais informações">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
                             <span class="kpi-label">Sem Ciclo Ativo</span>
@@ -262,13 +266,39 @@
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-7">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center flex-wrap gap-2">
-                        <span><i class="fas fa-chart-pie text-primary me-2" aria-hidden="true"></i>Recebido por Forma de Pagamento</span>
-                        <span class="text-muted fw-normal text-xs">(cobranças pagas, conforme filtros ativos)</span>
+                    <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <span><i class="fas fa-chart-pie text-primary me-2" aria-hidden="true"></i>Recebido por Forma de Pagamento</span>
+                            <span class="text-muted fw-normal text-xs">(cobranças pagas, conforme filtros ativos)</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                            data-bs-target="#detalhes-forma-pagamento" aria-expanded="false"
+                            aria-controls="detalhes-forma-pagamento">
+                            <i class="fas fa-list me-1" aria-hidden="true"></i>Ver detalhes
+                        </button>
                     </div>
                     <div class="card-body py-3">
                         <div id="resumo-formas-pagamento" class="d-flex flex-wrap gap-4">
                             <span class="text-muted text-sm">Carregando...</span>
+                        </div>
+                    </div>
+                    <div class="collapse" id="detalhes-forma-pagamento">
+                        <div class="card-body pt-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0" aria-label="Detalhamento por forma de pagamento">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Forma de Pagamento</th>
+                                            <th scope="col">Qtd. Cobranças</th>
+                                            <th scope="col">Valor Total</th>
+                                            <th scope="col">% do Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-detalhes-forma-pagamento">
+                                        <tr><td colspan="4" class="text-muted text-center">Nenhum dado no filtro atual.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,8 +306,12 @@
 
             <div class="col-12 col-lg-5">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white py-2 fw-semibold">
-                        <i class="fas fa-user-slash text-danger me-2" aria-hidden="true"></i>Cancelamentos no Período (Churn)
+                    <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span><i class="fas fa-user-slash text-danger me-2" aria-hidden="true"></i>Cancelamentos no Período (Churn)</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                            data-bs-target="#detalhes-churn" aria-expanded="false" aria-controls="detalhes-churn">
+                            <i class="fas fa-list me-1" aria-hidden="true"></i>Ver detalhes
+                        </button>
                     </div>
                     <div class="card-body py-3 d-flex align-items-center justify-content-between">
                         <div>
@@ -287,6 +321,25 @@
                         <div class="text-end">
                             <div class="text-muted text-xs">Valor perdido</div>
                             <div id="churn-valor" class="h4 mb-0 fw-bold text-danger">R$ 0,00</div>
+                        </div>
+                    </div>
+                    <div class="collapse" id="detalhes-churn">
+                        <div class="card-body pt-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0" aria-label="Detalhamento dos cancelamentos">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Mensalista</th>
+                                            <th scope="col">Referência</th>
+                                            <th scope="col">Valor</th>
+                                            <th scope="col">Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-detalhes-churn">
+                                        <tr><td colspan="4" class="text-muted text-center">Nenhum cancelamento no filtro atual.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -526,6 +579,7 @@
     <script defer src="../assets/js/modules/toast.js"></script>
     <script defer src="../assets/js/modules/paginacao.js"></script>
     <script defer src="../assets/js/modules/exportar-tabela.js"></script>
+    <script defer src="../assets/js/modules/anexo-comprovante.js"></script>
     <script defer src="../assets/js/modules/gsap-init.js"></script>
     <script defer src="../assets/js/main.js"></script>
     <script defer src="../assets/js/controllers/faturamento.js"></script>

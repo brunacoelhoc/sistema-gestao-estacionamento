@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
@@ -23,5 +23,11 @@ export class MensalidadesController {
     @CurrentUser() usuario: UsuarioAutenticado
   ) {
     return this.mensalidadesService.atualizar(id, dto, usuario.id)
+  }
+
+  @Post(':id/lembrete')
+  @HttpCode(HttpStatus.OK)
+  enviarLembrete (@Param('id') id: string) {
+    return this.mensalidadesService.enviarLembrete(id)
   }
 }

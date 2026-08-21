@@ -72,8 +72,8 @@ export class TicketsService {
   abrir (dto: AbrirTicketDto) {
     return this.prisma.$transaction(async tx => {
       const vaga = await tx.vaga.findUnique({ where: { id: dto.vagaId } })
-      if (!vaga || vaga.status === 'ocupada') {
-        throw new ConflictException('A vaga selecionada já está ocupada ou é inválida.')
+      if (!vaga || vaga.status !== 'livre') {
+        throw new ConflictException('A vaga selecionada não está livre ou é inválida.')
       }
 
       const placaNormalizada = dto.placa.toUpperCase().trim()

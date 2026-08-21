@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module'
 import { validate } from './config/env.validation'
 import { MensalidadesModule } from './mensalidades/mensalidades.module'
 import { MensalistasModule } from './mensalistas/mensalistas.module'
+import { MetricasModule } from './metricas/metricas.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { TarifasModule } from './tarifas/tarifas.module'
 import { TicketsModule } from './tickets/tickets.module'
@@ -37,6 +38,7 @@ import { VagasModule } from './vagas/vagas.module'
     MensalistasModule,
     MensalidadesModule,
     TicketsModule,
+    MetricasModule,
     AnalyticsModule
   ],
   controllers: [AppController]

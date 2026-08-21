@@ -8,9 +8,8 @@ export class CriarTarifaDto {
   categoria!: string
 
   // `valor` é um alias legado de `valorHora` que ainda pode chegar de
-  // integrações antigas — ver server/schemas/tarifaSchemas.js. Precisa estar
-  // declarado aqui (mesmo sem uso direto) para não ser barrado pelo
-  // forbidNonWhitelisted do ValidationPipe global.
+  // integrações antigas. Precisa estar declarado aqui (mesmo sem uso direto)
+  // para não ser barrado pelo forbidNonWhitelisted do ValidationPipe global.
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

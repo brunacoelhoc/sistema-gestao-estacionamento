@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { ProfileCompleteGuard } from '../common/guards/profile-complete.guard'
 import { AtualizarMensalistaDto } from './dto/atualizar-mensalista.dto'
@@ -13,6 +13,18 @@ export class MensalistasController {
   @Get()
   listar () {
     return this.mensalistasService.listarTodos()
+  }
+
+  // Precisa vir antes de ":id" — senão o Nest trata "verificar-cpf" como um id.
+  @Get('verificar-cpf')
+  async verificarCpf (@Query('cpf') cpf: string, @Query('excluirId') excluirId?: string) {
+    const duplicado = await this.mensalistasService.existeCpfDuplicado(cpf, excluirId)
+    return { duplicado }
+  }
+
+  @Get(':id')
+  buscarPorId (@Param('id') id: string) {
+    return this.mensalistasService.buscarPorId(id)
   }
 
   @Post()

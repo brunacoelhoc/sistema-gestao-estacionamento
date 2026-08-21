@@ -9,7 +9,8 @@ export class VagasService {
 
   // Sem orderBy o Postgres devolve as linhas em ordem física arbitrária (não
   // alfabética, não de criação) e pode até mudar entre uma consulta e outra
-  // depois de um UPDATE — ver server/repositories/vagaRepository.js.
+  // depois de um UPDATE — sem isso, o combo de "Vaga Disponível" no front
+  // ficava embaralhado a cada recarregamento.
   listarTodas () {
     return this.prisma.vaga.findMany({ orderBy: { codigo: 'asc' } })
   }

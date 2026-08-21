@@ -34,6 +34,13 @@ async function bootstrap () {
     logger.warn('[CORS] CORS_ORIGIN não configurado em produção — bloqueando requisições cross-origin até ser configurado.')
   }
 
+  // Limite padrão do Express (100kb) é curto demais pro anexo de
+  // comprovante em Mensalidade, que viaja como data URI base64 no corpo do
+  // PATCH — 6mb dá margem confortável pra um arquivo de até uns 4mb (o
+  // encode base64 acrescenta ~33% de overhead), sem abrir espaço demais
+  // pra abuso de payload.
+  app.useBodyParser('json', { limit: '6mb' })
+
   app.use(helmet())
   app.use(cors(
     origensPermitidas

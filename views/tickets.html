@@ -250,6 +250,13 @@
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h2 class="h5 mb-0 fw-semibold">Histórico e Tickets Ativos</h2>
                 <div class="d-flex gap-2">
+                    <label for="filtro-status-ticket" class="visually-hidden">Filtrar por status</label>
+                    <select id="filtro-status-ticket" class="form-select form-select-sm w-auto"
+                        aria-label="Filtrar tickets por status">
+                        <option value="TODOS">Todos os status</option>
+                        <option value="aberto">Somente Abertos</option>
+                        <option value="fechado">Somente Fechados</option>
+                    </select>
                     <label for="input-busca-ticket" class="visually-hidden">Buscar ticket por placa</label>
                     <input type="text" id="input-busca-ticket" class="form-control form-control-sm text-uppercase"
                         placeholder="Buscar por placa..." aria-label="Buscar ticket por placa" autocomplete="off">

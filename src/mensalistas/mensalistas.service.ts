@@ -1,19 +1,34 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '../../generated/prisma'
+import { mascararCpf } from '../common/utils/mascarar-cpf.util'
 import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarMensalistaDto } from './dto/atualizar-mensalista.dto'
 import { CriarMensalistaDto } from './dto/criar-mensalista.dto'
+
+function ehConflitoUnico (erro: unknown): erro is Prisma.PrismaClientKnownRequestError {
+  return erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002'
+}
 
 @Injectable()
 export class MensalistasService {
   constructor (private readonly prisma: PrismaService) {}
 
-  listarTodos () {
-    return this.prisma.mensalista.findMany()
+  // Listagem nunca devolve o CPF completo — só quem abre um registro
+  // específico (edição) vê o valor real, via buscarPorId.
+  async listarTodos () {
+    const mensalistas = await this.prisma.mensalista.findMany()
+    return mensalistas.map(m => ({ ...m, cpf: mascararCpf(m.cpf) }))
   }
 
   buscarPorId (id: string) {
     return this.prisma.mensalista.findUnique({ where: { id } })
+  }
+
+  async existeCpfDuplicado (cpf: string, excluirId?: string) {
+    const encontrado = await this.prisma.mensalista.findFirst({
+      where: { cpf, ...(excluirId ? { id: { not: excluirId } } : {}) }
+    })
+    return Boolean(encontrado)
   }
 
   buscarAtivoPorPlaca (placa: string, client: Prisma.TransactionClient | PrismaService = this.prisma) {
@@ -24,18 +39,28 @@ export class MensalistasService {
   // ou reativar um mensalista não cobra nada por si só — a cobrança só
   // acontece quando ele de fato estaciona e fecha um ticket sem ter um ciclo
   // vigente (ver TicketsService.fechar e MensalidadeCicloService).
-  criar (dto: CriarMensalistaDto) {
-    return this.prisma.mensalista.create({
-      data: {
-        nome: dto.nome,
-        cpf: dto.cpf,
-        placa: dto.placa,
-        telefone: dto.telefone,
-        valorMensalidade: dto.valorMensalidade || 0,
-        categoriaPlano: dto.categoriaPlano || 'Mensal Integral',
-        ativo: dto.ativo !== undefined ? dto.ativo : true
+  async criar (dto: CriarMensalistaDto) {
+    try {
+      return await this.prisma.mensalista.create({
+        data: {
+          nome: dto.nome,
+          cpf: dto.cpf,
+          placa: dto.placa,
+          telefone: dto.telefone,
+          email: dto.email || null,
+          valorMensalidade: dto.valorMensalidade || 0,
+          categoriaPlano: dto.categoriaPlano || 'Mensal Integral',
+          ativo: dto.ativo !== undefined ? dto.ativo : true
+        }
+      })
+    } catch (erro) {
+      if (ehConflitoUnico(erro)) {
+        const alvo = (erro.meta?.target as string[] | undefined) || []
+        const campo = alvo.includes('cpf') ? 'CPF' : 'placa'
+        throw new ConflictException(`Já existe um mensalista cadastrado com este ${campo}.`)
       }
-    })
+      throw erro
+    }
   }
 
   async atualizar (id: string, dto: AtualizarMensalistaDto) {
@@ -49,11 +74,21 @@ export class MensalistasService {
     if (dto.cpf !== undefined) data.cpf = dto.cpf
     if (dto.placa !== undefined) data.placa = dto.placa
     if (dto.telefone !== undefined) data.telefone = dto.telefone
+    if (dto.email !== undefined) data.email = dto.email
     if (dto.valorMensalidade !== undefined) data.valorMensalidade = dto.valorMensalidade
     if (dto.categoriaPlano !== undefined) data.categoriaPlano = dto.categoriaPlano
     if (dto.ativo !== undefined) data.ativo = dto.ativo
 
-    return this.prisma.mensalista.update({ where: { id }, data })
+    try {
+      return await this.prisma.mensalista.update({ where: { id }, data })
+    } catch (erro) {
+      if (ehConflitoUnico(erro)) {
+        const alvo = (erro.meta?.target as string[] | undefined) || []
+        const campo = alvo.includes('cpf') ? 'CPF' : 'placa'
+        throw new ConflictException(`Já existe um mensalista cadastrado com este ${campo}.`)
+      }
+      throw erro
+    }
   }
 
   async remover (id: string) {

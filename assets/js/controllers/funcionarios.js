@@ -537,8 +537,12 @@ async function abrirModalNovoFuncionario () {
 }
 
 async function abrirModalEditarFuncionario (id) {
-  const usuario = funcionariosCache.find(u => String(u.id) === String(id))
-  if (!usuario) return
+  const usuarioCache = funcionariosCache.find(u => String(u.id) === String(id))
+  if (!usuarioCache) return
+
+  // A listagem só traz o CPF mascarado — busca o registro completo pra
+  // preencher o campo de edição com o valor real.
+  const usuario = (await ApiService.getUsuarioPorId(id)) || usuarioCache
 
   const enderecoAtual = desmontarEndereco(usuario.endereco)
   enderecoAtual.cep = usuario.cep || ''
@@ -657,8 +661,8 @@ async function abrirModalEditarFuncionario (id) {
       }
 
       if (cpf.replace(/\D/g, '') !== (usuario.cpf || '').replace(/\D/g, '')) {
-        const cpfExistente = await ApiService.getUsuarioPorCpf(cpf)
-        if (cpfExistente && String(cpfExistente.id) !== String(usuario.id)) {
+        const cpfDuplicado = await ApiService.getUsuarioPorCpf(cpf, usuario.id)
+        if (cpfDuplicado) {
           Swal.showValidationMessage('Já existe outro usuário com este CPF.')
           return false
         }

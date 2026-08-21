@@ -1,27 +1,14 @@
 /**
  * Módulo LGPD (Lei Geral de Proteção de Dados) & Utilitários de Privacidade
  * - Gerencia o aviso e consentimento de cookies/dados.
- * - Exporta o utilitário LGPDModule para validação e máscara de CPF.
+ * - Exporta o utilitário LGPDModule para validação de CPF (a máscara/
+ *   ocultação de exibição é feita no back-end, ver mascararCpf.util.ts).
  */
 
 // ==========================================
 // 1. UTILITÁRIOS DE DADOS (LGPDModule)
 // ==========================================
 window.LGPDModule = {
-  /**
-   * Sanitiza e aplica máscara padrão de CPF (000.000.000-00)
-   * @param {string} cpf
-   * @returns {string}
-   */
-  maskCPF (cpf) {
-    if (!cpf) return ''
-    const cleanCPF = String(cpf).replace(/\D/g, '').slice(0, 11)
-    return cleanCPF
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-  },
-
   /**
    * Valida apenas a estrutura do CPF (11 dígitos numéricos), sem cálculo de
    * dígito verificador — conforme especificação.

@@ -362,6 +362,18 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="mensalista-email" class="form-label fw-semibold">E-mail (opcional)</label>
+                            <input type="email" class="form-control" id="mensalista-email" name="email"
+                                placeholder="cliente@exemplo.com" aria-describedby="mensalista-email-help mensalista-email-feedback">
+                            <div id="mensalista-email-help" class="form-text">
+                                Usado só para enviar lembrete de cobrança por e-mail, em Faturamento.
+                            </div>
+                            <div id="mensalista-email-feedback" class="invalid-feedback">
+                                Informe um e-mail válido.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="mensalista-placa" class="form-label fw-semibold">Placa do Veículo <span
                                     class="text-danger" aria-hidden="true">*</span></label>
                             <input type="text" class="form-control text-uppercase" id="mensalista-placa" name="placa"

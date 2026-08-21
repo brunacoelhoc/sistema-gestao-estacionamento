@@ -20,6 +20,13 @@ interface ParametrosEmailReset {
   codigo: string
 }
 
+interface ParametrosEmailLembreteCobranca {
+  to: string
+  nome: string
+  valor: string
+  dataFim: string
+}
+
 @Injectable()
 export class EmailService {
   private readonly transporter: nodemailer.Transporter | null
@@ -71,6 +78,35 @@ export class EmailService {
           <p>Recebemos um pedido de redefinição de senha da sua conta. Use o código abaixo para continuar:</p>
           <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; text-align: center; background: #f1f5f9; padding: 12px; border-radius: 8px;">${codigo}</p>
           <p>Esse código é válido por <strong>15 minutos</strong>. Se você não pediu essa redefinição, pode ignorar este e-mail com segurança — sua senha continua a mesma.</p>
+        </div>
+      `
+    })
+  }
+
+  async enviarEmailLembreteCobranca ({ to, nome, valor, dataFim }: ParametrosEmailLembreteCobranca) {
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        'Envio de e-mail não está configurado neste servidor (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes no .env).'
+      )
+    }
+
+    await this.transporter.sendMail({
+      from: `"ParkGestão" <${this.smtpFrom}>`,
+      to,
+      subject: 'Lembrete de cobrança — ParkGestão',
+      text:
+        `Olá, ${nome}!\n\n` +
+        `Passando para lembrar sobre sua mensalidade de vaga no ParkGestão, no valor de R$ ${valor}.\n` +
+        `Seu ciclo atual é válido até ${dataFim}.\n\n` +
+        'Qualquer dúvida, fale com a nossa equipe.',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
+          <h2 style="color: #0d6efd; margin-bottom: 8px;">ParkGestão</h2>
+          <p>Olá, ${escapeHtml(nome)}!</p>
+          <p>Passando para lembrar sobre sua mensalidade de vaga no estacionamento.</p>
+          <p style="font-size: 22px; font-weight: bold; text-align: center; background: #f1f5f9; padding: 12px; border-radius: 8px;">R$ ${escapeHtml(valor)}</p>
+          <p>Seu ciclo atual é válido até <strong>${escapeHtml(dataFim)}</strong>.</p>
+          <p>Qualquer dúvida, fale com a nossa equipe.</p>
         </div>
       `
     })

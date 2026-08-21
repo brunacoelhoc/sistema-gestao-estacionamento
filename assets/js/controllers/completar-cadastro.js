@@ -2,7 +2,7 @@
  * Lógica da Página de Conclusão de Cadastro
  * Exibida só para contas criadas no primeiro login via Google (sem CPF).
  * Preenche o CPF, atualiza a sessão com o usuário/token novos devolvidos
- * pelo backend (ver PATCH /usuarios/:id em server/controllers/usuarios.js)
+ * pelo backend (ver PATCH /usuarios/:id em src/usuarios/usuarios.controller.ts)
  * e libera o acesso ao restante do sistema.
  */
 

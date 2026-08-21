@@ -104,6 +104,21 @@ class ApiService {
     return await this.request('mensalistas')
   }
 
+  static async getMensalistaPorId (id) {
+    if (!id) return null
+    return await this.request(`mensalistas/${encodeURIComponent(id)}`)
+  }
+
+  // Checagem de duplicidade feita no servidor — evita ter que trazer o CPF
+  // de todo mundo pro navegador só pra comparar localmente.
+  static async verificarCpfMensalistaDuplicado (cpf, excluirId) {
+    if (!cpf) return false
+    const params = new URLSearchParams({ cpf })
+    if (excluirId) params.set('excluirId', excluirId)
+    const resultado = await this.request(`mensalistas/verificar-cpf?${params.toString()}`)
+    return Boolean(resultado?.duplicado)
+  }
+
   static async getMensalistaByPlaca (placa) {
     if (!placa) return null
     const mensalistas = await this.getMensalistas()
@@ -123,7 +138,8 @@ class ApiService {
       ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
       telefone: this.sanitizeText(data.telefone || ''),
       valorMensalidade: Number(data.valorMensalidade || data.valor) || 0,
-      categoriaPlano: this.sanitizeText(data.categoriaPlano || 'Mensal Integral')
+      categoriaPlano: this.sanitizeText(data.categoriaPlano || 'Mensal Integral'),
+      ...(data.email ? { email: this.sanitizeText(data.email) } : {})
     }
 
     return await this.request('mensalistas', {
@@ -143,6 +159,7 @@ class ApiService {
       payload.valorMensalidade = Number(data.valorMensalidade || data.valor) || 0
     }
     if (data.categoriaPlano !== undefined) payload.categoriaPlano = this.sanitizeText(data.categoriaPlano)
+    if (data.email !== undefined) payload.email = data.email ? this.sanitizeText(data.email) : null
 
     return await this.request(`mensalistas/${id}`, {
       method: 'PATCH',
@@ -156,23 +173,39 @@ class ApiService {
     })
   }
 
-  // --- REQUISIÇÕES MENSALIDADES (ciclo mensal de cobrança do mensalista) ---
-  // O ticket em si não gera cobrança para mensalista ativo — quem cobra é o
-  // ciclo mensal (Mensalidade), aberto/encerrado automaticamente pelo
-  // backend ao ativar/inativar (ver server/services/mensalidade.js).
+  // --- REQUISIÇÕES MENSALIDADES (ciclo de 30 dias de cobrança do mensalista) ---
+  // O ticket em si não gera cobrança pra mensalista ativo — quem cobra é o
+  // ciclo (Mensalidade), aberto e já pago na primeira entrada sem ciclo
+  // vigente (ver TicketsService.fechar / MensalidadeCicloService no backend).
   static async getMensalidades (mensalistaId) {
     const query = mensalistaId ? `?mensalistaId=${encodeURIComponent(mensalistaId)}` : ''
     return await this.request(`mensalidades${query}`)
   }
 
   // Aceita tanto uma string de status (compatibilidade com chamadas antigas)
-  // quanto um objeto { status, formaPagamento }.
+  // quanto um objeto { status, formaPagamento, motivoCancelamento,
+  // comprovanteAnexo, comprovanteNomeArquivo }.
   static async updateMensalidade (id, dados) {
     const payload = typeof dados === 'string' ? { status: dados } : dados
     return await this.request(`mensalidades/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     })
+  }
+
+  static async enviarLembreteMensalidade (id) {
+    return await this.request(`mensalidades/${id}/lembrete`, {
+      method: 'POST'
+    })
+  }
+
+  // --- REQUISIÇÃO MÉTRICAS (admin-only) ---
+  // KPIs/gráficos já vêm calculados do servidor — a tela nunca baixa a
+  // lista crua de tickets/mensalidades/mensalistas/vagas (ver
+  // src/metricas/metricas.service.ts).
+  static async getMetricas (periodo) {
+    const query = periodo ? `?periodo=${encodeURIComponent(periodo)}` : ''
+    return await this.request(`metricas${query}`)
   }
 
   // --- REQUISICÕES VAGAS ---
@@ -183,7 +216,7 @@ class ApiService {
   static async createVaga (data) {
     const payload = {
       codigo: this.sanitizeText(data.codigo).toUpperCase(),
-      tipo: this.sanitizeText(data.tipo || 'carro').toLowerCase(),
+      tipo: this.sanitizeText(data.tipo || 'comum').toLowerCase(),
       status: this.sanitizeText(data.status || 'livre').toLowerCase(),
       acessivel: Boolean(data.acessivel)
     }
@@ -263,7 +296,8 @@ class ApiService {
    * Métricas). Com `{ page, pageSize, status, termo }`, pede uma página
    * filtrada ao backend — usado pela tabela da tela de Tickets, que não
    * baixa mais o histórico inteiro a cada visita (ver
-   * server/controllers/tickets.js#listar). `{ status, termo }` sem `page`
+   * TicketsController.listar em src/tickets/tickets.controller.ts).
+   * `{ status, termo }` sem `page`
    * também é aceito: devolve a lista completa já filtrada, usado pela
    * exportação (CSV/Excel), que precisa de todo o resultado, não só de uma
    * página.
@@ -285,7 +319,7 @@ class ApiService {
    * Criação/Abertura de Ticket.
    * A regra de negócio (checar se a vaga está livre, resolver mensalista
    * pela placa, marcar a vaga como ocupada) roda no backend numa única
-   * transação — ver server/routes/tickets.js.
+   * transação — ver TicketsService.abrir em src/tickets/tickets.service.ts.
    * @param {Object} params - { placa, vagaId, tarifaId, mensalistaId }
    */
   static async criarTicket ({ placa, vagaId, tarifaId, mensalistaId = null }) {
@@ -389,15 +423,19 @@ class ApiService {
     )
   }
 
-  static async getUsuarioPorCpf (cpf) {
-    if (!cpf) return null
-    const usuarios = await this.getUsuarios()
-    const cpfNormalizado = String(cpf).replace(/\D/g, '')
-    return (
-      usuarios.find(
-        u => (u.cpf || '').replace(/\D/g, '') === cpfNormalizado
-      ) || null
-    )
+  static async getUsuarioPorId (id) {
+    if (!id) return null
+    return await this.request(`usuarios/${encodeURIComponent(id)}`)
+  }
+
+  // Checagem de duplicidade feita no servidor — a listagem só traz o CPF
+  // mascarado, então não dá mais pra comparar localmente contra a lista.
+  static async getUsuarioPorCpf (cpf, excluirId) {
+    if (!cpf) return false
+    const params = new URLSearchParams({ cpf })
+    if (excluirId) params.set('excluirId', excluirId)
+    const resultado = await this.request(`usuarios/verificar-cpf?${params.toString()}`)
+    return Boolean(resultado?.duplicado)
   }
 
   static async createUsuario (data) {

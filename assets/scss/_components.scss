@@ -342,10 +342,30 @@
   color: $color-text-dark;
   min-height: calc(100vh - 250px);
   padding-bottom: 2rem;
+
+  // .text-success/.text-danger do Bootstrap (#198754/#dc3545) foram
+  // calibradas pra fundo claro — contra o fundo escuro deste painel (ex.: a
+  // legenda "+12% vs mês anterior" sob Receita do Período, setada via JS em
+  // metricas.js#calcularComparacaoReceitaMesAnterior) ficam quase ilegíveis.
+  // Variantes mais claras só aqui dentro, sem afetar o resto do site.
+  .text-success {
+    color: #4ade80 !important;
+  }
+
+  .text-danger {
+    color: #f87171 !important;
+  }
 }
 
 .metrics-kpi-card,
 .metrics-chart-card {
+  // Bootstrap seta `color: var(--bs-card-color)` (~#212529, quase preto)
+  // direto em `.card` — herdar a cor clara de .metrics-dark-panel não
+  // adianta, porque uma declaração direta no próprio elemento sempre vence
+  // um valor herdado do ancestral. Sem isso, legendas sem classe de cor
+  // própria (ex.: "Calculado sobre: Mês atual", .text-xs.opacity-75) saíam
+  // cinza-quase-preto sobre fundo escuro — praticamente invisíveis.
+  color: $color-text-dark;
   background-color: $color-surface-dark;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1rem;
