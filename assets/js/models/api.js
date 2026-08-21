@@ -54,9 +54,11 @@ class ApiService {
 
       if (!response.ok) {
         let mensagem = `Erro HTTP: ${response.status} - ${response.statusText}`
+        let codigo = null
         try {
           const corpo = await response.json()
           if (corpo?.erro) mensagem = corpo.erro
+          codigo = corpo?.codigo || null
         } catch (erroDeParse) {
           // Resposta sem corpo JSON (ex.: erro de rede/proxy) — mantém a
           // mensagem genérica montada acima.
@@ -67,6 +69,19 @@ class ApiService {
         // tela só mostrava "verifique sua conexão", escondendo a causa real.
         if (response.status === 401 && token && typeof AuthService !== 'undefined') {
           AuthService.tratarSessaoExpirada()
+        }
+
+        // 403 com este código = conta do Google sem CPF tentando acessar uma
+        // rota de negócio (ver requireProfileComplete no backend). O guard
+        // inline de cada página já cobre a navegação direta; isto cobre o
+        // caso de uma aba já aberta antes do cadastro ser completado.
+        if (response.status === 403 && codigo === 'PERFIL_INCOMPLETO') {
+          const caminho = window.location.pathname.includes('/views/')
+            ? 'completar-cadastro.html'
+            : 'views/completar-cadastro.html'
+          if (!window.location.pathname.endsWith('completar-cadastro.html')) {
+            window.location.href = caminho
+          }
         }
 
         throw new Error(mensagem)
@@ -106,7 +121,8 @@ class ApiService {
       cpf: this.sanitizeText(data.cpf),
       placa: this.sanitizeText(data.placa).toUpperCase().trim(),
       ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
-      telefone: this.sanitizeText(data.telefone || '')
+      telefone: this.sanitizeText(data.telefone || ''),
+      valorMensalidade: Number(data.valorMensalidade || data.valor) || 0
     }
 
     return await this.request('mensalistas', {
@@ -119,11 +135,12 @@ class ApiService {
     const payload = {}
     if (data.nome !== undefined) payload.nome = this.sanitizeText(data.nome)
     if (data.cpf !== undefined) payload.cpf = this.sanitizeText(data.cpf)
-    if (data.placa !== undefined)
-      payload.placa = this.sanitizeText(data.placa).toUpperCase().trim()
-    if (data.telefone !== undefined)
-      payload.telefone = this.sanitizeText(data.telefone)
+    if (data.placa !== undefined) { payload.placa = this.sanitizeText(data.placa).toUpperCase().trim() }
+    if (data.telefone !== undefined) { payload.telefone = this.sanitizeText(data.telefone) }
     if (data.ativo !== undefined) payload.ativo = Boolean(data.ativo)
+    if (data.valorMensalidade !== undefined || data.valor !== undefined) {
+      payload.valorMensalidade = Number(data.valorMensalidade || data.valor) || 0
+    }
 
     return await this.request(`mensalistas/${id}`, {
       method: 'PATCH',
@@ -146,10 +163,13 @@ class ApiService {
     return await this.request(`mensalidades${query}`)
   }
 
-  static async updateMensalidade (id, status) {
+  // Aceita tanto uma string de status (compatibilidade com chamadas antigas)
+  // quanto um objeto { status, formaPagamento }.
+  static async updateMensalidade (id, dados) {
+    const payload = typeof dados === 'string' ? { status: dados } : dados
     return await this.request(`mensalidades/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ status })
+      body: JSON.stringify(payload)
     })
   }
 
@@ -162,7 +182,8 @@ class ApiService {
     const payload = {
       codigo: this.sanitizeText(data.codigo).toUpperCase(),
       tipo: this.sanitizeText(data.tipo || 'carro').toLowerCase(),
-      status: this.sanitizeText(data.status || 'livre').toLowerCase()
+      status: this.sanitizeText(data.status || 'livre').toLowerCase(),
+      acessivel: Boolean(data.acessivel)
     }
 
     return await this.request('vagas', {
@@ -173,12 +194,10 @@ class ApiService {
 
   static async updateVaga (id, data) {
     const payload = {}
-    if (data.codigo !== undefined)
-      payload.codigo = this.sanitizeText(data.codigo).toUpperCase()
-    if (data.tipo !== undefined)
-      payload.tipo = this.sanitizeText(data.tipo).toLowerCase()
-    if (data.status !== undefined)
-      payload.status = String(data.status).toLowerCase()
+    if (data.codigo !== undefined) { payload.codigo = this.sanitizeText(data.codigo).toUpperCase() }
+    if (data.tipo !== undefined) { payload.tipo = this.sanitizeText(data.tipo).toLowerCase() }
+    if (data.status !== undefined) { payload.status = String(data.status).toLowerCase() }
+    if (data.acessivel !== undefined) { payload.acessivel = Boolean(data.acessivel) }
 
     return await this.request(`vagas/${id}`, {
       method: 'PATCH',
@@ -219,8 +238,7 @@ class ApiService {
 
   static async updateTarifa (id, data) {
     const payload = {}
-    if (data.categoria !== undefined)
-      payload.categoria = this.sanitizeText(data.categoria)
+    if (data.categoria !== undefined) { payload.categoria = this.sanitizeText(data.categoria) }
     if (data.valorHora !== undefined || data.valor !== undefined) {
       payload.valorHora = Number(data.valorHora || data.valor) || 0
     }
@@ -238,8 +256,27 @@ class ApiService {
   }
 
   // --- REQUISICÕES TICKETS & REGRAS DE NEGÓCIO ---
-  static async getTickets () {
-    return await this.request('tickets')
+  /**
+   * Sem `params`, devolve a lista completa (usado pelo Dashboard e por
+   * Métricas). Com `{ page, pageSize, status, termo }`, pede uma página
+   * filtrada ao backend — usado pela tabela da tela de Tickets, que não
+   * baixa mais o histórico inteiro a cada visita (ver
+   * server/controllers/tickets.js#listar). `{ status, termo }` sem `page`
+   * também é aceito: devolve a lista completa já filtrada, usado pela
+   * exportação (CSV/Excel), que precisa de todo o resultado, não só de uma
+   * página.
+   */
+  static async getTickets (params) {
+    if (!params) return await this.request('tickets')
+
+    const query = new URLSearchParams()
+    if (params.page) query.set('page', params.page)
+    if (params.pageSize) query.set('pageSize', params.pageSize)
+    if (params.status) query.set('status', params.status)
+    if (params.termo) query.set('termo', params.termo)
+
+    const qs = query.toString()
+    return await this.request(`tickets${qs ? `?${qs}` : ''}`)
   }
 
   /**
@@ -317,11 +354,12 @@ class ApiService {
     })
   }
 
-  static async confirmarResetSenha (email, novaSenha) {
+  static async confirmarResetSenha (email, codigo, novaSenha) {
     return await this.request('auth/reset/confirmar', {
       method: 'POST',
       body: JSON.stringify({
         email: this.sanitizeText(email).toLowerCase().trim(),
+        codigo,
         novaSenha
       })
     })
@@ -387,19 +425,14 @@ class ApiService {
     const payload = {}
     if (data.nome !== undefined) payload.nome = this.sanitizeText(data.nome)
     if (data.cpf !== undefined) payload.cpf = this.sanitizeText(data.cpf)
-    if (data.email !== undefined)
-      payload.email = this.sanitizeText(data.email).toLowerCase().trim()
+    if (data.email !== undefined) { payload.email = this.sanitizeText(data.email).toLowerCase().trim() }
     if (data.senha !== undefined && data.senha !== '') payload.senha = data.senha
     if (data.senhaAtual !== undefined) payload.senhaAtual = data.senhaAtual
-    if (data.telefone !== undefined)
-      payload.telefone = this.sanitizeText(data.telefone)
-    if (data.endereco !== undefined)
-      payload.endereco = this.sanitizeText(data.endereco)
-    if (data.dataNascimento !== undefined)
-      payload.dataNascimento = data.dataNascimento
+    if (data.telefone !== undefined) { payload.telefone = this.sanitizeText(data.telefone) }
+    if (data.endereco !== undefined) { payload.endereco = this.sanitizeText(data.endereco) }
+    if (data.dataNascimento !== undefined) { payload.dataNascimento = data.dataNascimento }
     if (data.avatar !== undefined) payload.avatar = data.avatar
-    if (data.role !== undefined)
-      payload.role = data.role === 'admin' ? 'admin' : 'funcionario'
+    if (data.role !== undefined) { payload.role = data.role === 'admin' ? 'admin' : 'funcionario' }
     if (data.ativo !== undefined) payload.ativo = Boolean(data.ativo)
 
     return await this.request(`usuarios/${id}`, {

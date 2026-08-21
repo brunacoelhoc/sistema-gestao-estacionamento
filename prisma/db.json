@@ -160,169 +160,701 @@
       "id": "v1",
       "codigo": "A1",
       "tipo": "comum",
-      "status": "ocupada"
+      "status": "ocupada",
+      "acessivel": true
     },
     {
       "id": "v2",
       "codigo": "A2",
       "tipo": "comum",
-      "status": "ocupada"
+      "status": "ocupada",
+      "acessivel": true
     },
     {
       "id": "v3",
       "codigo": "A3",
       "tipo": "comum",
-      "status": "ocupada"
+      "status": "ocupada",
+      "acessivel": false
     },
     {
       "id": "v4",
       "codigo": "A4",
       "tipo": "comum",
-      "status": "ocupada"
+      "status": "ocupada",
+      "acessivel": false
     },
     {
       "id": "v5",
       "codigo": "A5",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v6",
       "codigo": "A6",
-      "tipo": "comum",
-      "status": "livre"
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v7",
       "codigo": "A7",
-      "tipo": "comum",
-      "status": "livre"
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v8",
       "codigo": "A8",
-      "tipo": "comum",
-      "status": "livre"
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v9",
       "codigo": "A9",
-      "tipo": "comum",
-      "status": "livre"
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v10",
       "codigo": "B1",
-      "tipo": "coberta",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v11",
       "codigo": "B2",
-      "tipo": "coberta",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v12",
       "codigo": "B3",
-      "tipo": "coberta",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v13",
       "codigo": "B4",
-      "tipo": "coberta",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v14",
       "codigo": "B5",
-      "tipo": "coberta",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v15",
       "codigo": "B6",
       "tipo": "coberta",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v16",
       "codigo": "B7",
       "tipo": "coberta",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v17",
       "codigo": "B8",
       "tipo": "coberta",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v18",
       "codigo": "B9",
       "tipo": "coberta",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v19",
       "codigo": "C1",
-      "tipo": "mensalista",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v20",
       "codigo": "C2",
-      "tipo": "mensalista",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v21",
       "codigo": "C3",
-      "tipo": "mensalista",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v22",
       "codigo": "C4",
-      "tipo": "mensalista",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v23",
       "codigo": "C5",
-      "tipo": "mensalista",
-      "status": "livre"
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v24",
       "codigo": "D1",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v25",
       "codigo": "D2",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": true
     },
     {
       "id": "v26",
       "codigo": "D3",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v27",
       "codigo": "D4",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
     },
     {
       "id": "v28",
       "codigo": "D5",
       "tipo": "comum",
-      "status": "livre"
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v29",
+      "codigo": "A10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v30",
+      "codigo": "B10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v31",
+      "codigo": "C6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v32",
+      "codigo": "C7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v33",
+      "codigo": "C8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v34",
+      "codigo": "C9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v35",
+      "codigo": "C10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v36",
+      "codigo": "D6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v37",
+      "codigo": "D7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v38",
+      "codigo": "D8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v39",
+      "codigo": "D9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v40",
+      "codigo": "D10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v41",
+      "codigo": "E1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v42",
+      "codigo": "E2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v43",
+      "codigo": "E3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v44",
+      "codigo": "E4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v45",
+      "codigo": "E5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v46",
+      "codigo": "E6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v47",
+      "codigo": "E7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v48",
+      "codigo": "E8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v49",
+      "codigo": "E9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v50",
+      "codigo": "E10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v51",
+      "codigo": "F1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v52",
+      "codigo": "F2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v53",
+      "codigo": "F3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v54",
+      "codigo": "F4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v55",
+      "codigo": "F5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v56",
+      "codigo": "F6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v57",
+      "codigo": "F7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v58",
+      "codigo": "F8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v59",
+      "codigo": "F9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v60",
+      "codigo": "F10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v61",
+      "codigo": "G1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v62",
+      "codigo": "G2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v63",
+      "codigo": "G3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v64",
+      "codigo": "G4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v65",
+      "codigo": "G5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v66",
+      "codigo": "G6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v67",
+      "codigo": "G7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v68",
+      "codigo": "G8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v69",
+      "codigo": "G9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v70",
+      "codigo": "G10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v71",
+      "codigo": "H1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v72",
+      "codigo": "H2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v73",
+      "codigo": "H3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v74",
+      "codigo": "H4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v75",
+      "codigo": "H5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v76",
+      "codigo": "H6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v77",
+      "codigo": "H7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v78",
+      "codigo": "H8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v79",
+      "codigo": "H9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v80",
+      "codigo": "H10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v81",
+      "codigo": "I1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v82",
+      "codigo": "I2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v83",
+      "codigo": "I3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v84",
+      "codigo": "I4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v85",
+      "codigo": "I5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v86",
+      "codigo": "I6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v87",
+      "codigo": "I7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v88",
+      "codigo": "I8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v89",
+      "codigo": "I9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v90",
+      "codigo": "I10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v91",
+      "codigo": "J1",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v92",
+      "codigo": "J2",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v93",
+      "codigo": "J3",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v94",
+      "codigo": "J4",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v95",
+      "codigo": "J5",
+      "tipo": "comum",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v96",
+      "codigo": "J6",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v97",
+      "codigo": "J7",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": true
+    },
+    {
+      "id": "v98",
+      "codigo": "J8",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v99",
+      "codigo": "J9",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
+    },
+    {
+      "id": "v100",
+      "codigo": "J10",
+      "tipo": "coberta",
+      "status": "livre",
+      "acessivel": false
     }
   ],
   "tarifas": [

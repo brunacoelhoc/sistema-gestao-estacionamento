@@ -50,8 +50,7 @@ function criarPaginador ({
     estado.itens.slice(inicio, fim).forEach(item => renderLinha(item, tbody))
     aposRenderizar?.(tbody)
 
-    if (infoEl)
-      infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total}`
+    if (infoEl) { infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total}` }
     if (labelEl) labelEl.textContent = `${estado.pagina} de ${totalPaginas}`
     btnAnterior?.classList.toggle('disabled', estado.pagina === 1)
     btnProxima?.classList.toggle('disabled', estado.pagina === totalPaginas)

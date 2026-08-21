@@ -143,6 +143,12 @@ async function carregarMensalistas () {
   } catch (error) {
     console.error('Erro ao carregar mensalistas:', error)
 
+    // Sessão expirada (401) já é tratada por AuthService.tratarSessaoExpirada
+    // — logout + redirect pro login já disparados a essa altura.
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
+
     if (pageError && pageErrorText) {
       pageErrorText.textContent =
         'Não foi possível carregar os mensalistas. Verifique sua conexão e tente novamente.'
@@ -202,14 +208,14 @@ function mascararCpfFallback (cpf) {
 const paginadorMensalistas =
   typeof criarPaginador === 'function'
     ? criarPaginador({
-        idSufixo: 'mensalistas',
-        tbodyId: 'tbody-mensalistas',
-        colspanVazio: 7,
-        textoVazio:
+      idSufixo: 'mensalistas',
+      tbodyId: 'tbody-mensalistas',
+      colspanVazio: 7,
+      textoVazio:
           '<i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum mensalista encontrado.',
-        renderLinha: renderLinhaMensalista,
-        aposRenderizar: ligarBotoesLinhaMensalista
-      })
+      renderLinha: renderLinhaMensalista,
+      aposRenderizar: ligarBotoesLinhaMensalista
+    })
     : null
 
 function renderLinhaMensalista (m, tbody) {
@@ -310,15 +316,13 @@ function verificarDuplicidade (cpf, placa, idAtual) {
   )
 
   if (cpfDuplicado) return 'Este CPF já está cadastrado para outro mensalista.'
-  if (placaDuplicada)
-    return 'Esta placa já está cadastrada para outro mensalista.'
+  if (placaDuplicada) { return 'Esta placa já está cadastrada para outro mensalista.' }
   return null
 }
 
 // Submissão do formulário (Criar / Editar)
 async function salvarMensalista (e) {
   e.preventDefault()
-  const form = e.target
 
   const id = document.getElementById('mensalista-id').value || null
   const nome = document.getElementById('mensalista-nome').value.trim()
@@ -358,7 +362,17 @@ async function salvarMensalista (e) {
     return
   }
 
-  // 3. Validação de Placa
+  // 3. Validação de Telefone (obrigatório)
+  if ((telefone || '').replace(/\D/g, '').length < 10) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Telefone Obrigatório',
+      text: 'Informe um telefone válido com DDD para o mensalista.'
+    })
+    return
+  }
+
+  // 4. Validação de Placa
   if (!validarPlaca(placa)) {
     Swal.fire({
       icon: 'warning',
@@ -368,7 +382,7 @@ async function salvarMensalista (e) {
     return
   }
 
-  // 4. Validação da Mensalidade
+  // 5. Validação da Mensalidade
   if (!valorMensalidade || valorMensalidade <= 0) {
     Swal.fire({
       icon: 'warning',
@@ -378,7 +392,7 @@ async function salvarMensalista (e) {
     return
   }
 
-  // 5. Validação de Duplicidade
+  // 6. Validação de Duplicidade
   const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
     Swal.fire({
@@ -532,11 +546,15 @@ function montarLinhasCobrancas (mensalidades) {
              </button>`
           : '-'
 
+      const diasTexto = mv.diasCobrados === mv.diasNoMes
+        ? 'Ciclo completo (30 dias)'
+        : `${mv.diasCobrados}/${mv.diasNoMes} dias (ciclo antigo, proporcional)`
+
       return `
         <tr>
           <td>${formatarReferenciaMensalidade(mv.referencia)}</td>
           <td>${formatarDataMensalidade(mv.dataInicio)} a ${formatarDataMensalidade(mv.dataFim)}</td>
-          <td>${mv.diasCobrados}/${mv.diasNoMes} dias</td>
+          <td>${diasTexto}</td>
           <td>R$ ${Number(mv.valor || 0).toFixed(2).replace('.', ',')}</td>
           <td><span class="badge-status ${CLASSE_STATUS_MENSALIDADE[mv.status] || ''}">${ROTULO_STATUS_MENSALIDADE[mv.status] || mv.status}</span></td>
           <td>${acao}</td>
@@ -547,7 +565,8 @@ function montarLinhasCobrancas (mensalidades) {
 }
 
 // Abre o modal com o histórico de ciclos de mensalidade (Mensalidade) do
-// mensalista — o mensalista não paga por ticket, paga esse ciclo mensal (ver
+// mensalista — ele não paga por ticket, paga um ciclo de 30 dias corridos,
+// cobrado de uma vez na primeira entrada sem ciclo vigente (ver
 // server/services/mensalidade.js).
 async function abrirCobrancasMensalista (id) {
   const m = mensalistasCache.find(item => String(item.id) === String(id))
@@ -573,8 +592,8 @@ async function abrirCobrancasMensalista (id) {
         <table class="table table-sm align-middle">
           <thead>
             <tr>
-              <th scope="col">Mês</th>
-              <th scope="col">Período</th>
+              <th scope="col">Referência</th>
+              <th scope="col">Ciclo (30 dias)</th>
               <th scope="col">Dias cobrados</th>
               <th scope="col">Valor</th>
               <th scope="col">Status</th>

@@ -23,12 +23,13 @@ Thumbs.db
 .sass-cache/
 *.css.map
 
-# json-server (backup automático gerado ao editar dados pela API)
-db.json.bak
+# Backup local do seed (não confundir com prisma/db.json, que é versionado)
+prisma/db.json.bak
 
 # Build/dist temporários (caso algum dia haja etapa de build separada)
 dist/
 /generated/prisma
+*.tsbuildinfo
 
 # Caches de skills de assistentes de IA (não fazem parte do projeto)
 .agents/

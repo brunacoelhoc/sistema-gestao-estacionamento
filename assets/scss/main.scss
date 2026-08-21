@@ -37,6 +37,40 @@ main {
 }
 
 /* --------------------------------------------------------------------------
+   2b. WRAPPER #app-content (LAYOUT DE RODAPÉ FIXO NO FIM DA TELA)
+   #app-content envolve header/hero/main/footer (ver comentário no HTML), mas
+   por ser um <div> comum ele não herda o layout flex/coluna do <body> — só é
+   tratado como um único item flex do body, sem repassar isso para os filhos.
+   Resultado: o `margin-top: auto` do footer (abaixo) não tinha em relação a
+   quê "empurrar" para baixo, então em páginas com pouco conteúdo (ex.: tabela
+   filtrada até sobrar poucas linhas) o rodapé subia para logo depois do
+   conteúdo, deixando um vão em branco entre ele e o fim da viewport. Tornar
+   #app-content também flex/coluna com altura mínima de 100vh resolve: agora é
+   ele quem garante que o rodapé sempre fique colado na base da tela.
+   -------------------------------------------------------------------------- */
+#app-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --------------------------------------------------------------------------
+   2c. CAMPOS NUMÉRICOS SEM AS SETAS NATIVAS (spin buttons)
+   Usado em valores monetários (mensalidade, tarifas) — as setas de
+   incremento/decremento do navegador não fazem sentido para reais/centavos e
+   competem visualmente com o placeholder "Ex: 180.00".
+   -------------------------------------------------------------------------- */
+input[type='number'] {
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
    3. SKIP LINK (Acessibilidade Teclado - WCAG AAA)
    -------------------------------------------------------------------------- */
 // Fica oculto no topo e surge suavemente quando recebe foco via TAB
@@ -87,12 +121,18 @@ textarea,
   padding: 0.85rem 1.5rem;
   transition: background-color $transition-normal, box-shadow $transition-normal;
 
-  // Rede de segurança para telas estreitas ou fonte aumentada pelo controle
-  // de acessibilidade (A+): em vez de estourar a largura da página, a marca
-  // e o menu quebram para a linha de baixo.
+  // Logo + perfil (avatar/status) sempre na primeira linha, com o menu de
+  // navegação em uma segunda linha logo abaixo — em todas as larguras de
+  // tela, não só quando o espaço aperta.
   > .container {
+    flex-direction: column;
+    align-items: stretch;
     flex-wrap: wrap;
     row-gap: 0.5rem;
+  }
+
+  .navbar-top-row {
+    column-gap: 0.75rem;
   }
 
   .navbar-brand {
@@ -101,6 +141,14 @@ textarea,
     span {
       color: $color-text-light;
     }
+  }
+
+  // A partir do breakpoint de expansão, o menu ocupa a linha toda (a própria
+  // .navbar-collapse já é esticada por .container) para poder centralizar
+  // os links dentro dela — sem isso, o <ul> só teria a largura do próprio
+  // conteúdo e o justify-content não teria efeito nenhum.
+  .navbar-collapse {
+    justify-content: center;
   }
 
   // O menu (visível a partir do breakpoint de expansão) também pode quebrar

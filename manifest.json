@@ -1,0 +1,19 @@
+{
+  "name": "ParkGestão - Sistema de Gestão de Estacionamento",
+  "short_name": "ParkGestão",
+  "description": "Sistema de gestão de estacionamento acessível (WCAG 2.1 AAA) e em conformidade com a LGPD.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d6efd",
+  "theme_color": "#0d6efd",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

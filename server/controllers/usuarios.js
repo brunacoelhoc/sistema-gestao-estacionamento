@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs')
-const prisma = require('../config/prisma')
+const usuarioRepository = require('../repositories/usuarioRepository')
+const { gerarToken } = require('./auth')
 
 function semSenha (usuario) {
   const { senha, ...resto } = usuario
@@ -9,33 +10,28 @@ function semSenha (usuario) {
 // Só admin lista todos os usuários — evita expor a base inteira (inclusive
 // hash de senha) para qualquer funcionário logado.
 async function listar (req, res) {
-  const usuarios = await prisma.usuario.findMany()
+  const usuarios = await usuarioRepository.listarTodos()
   res.json(usuarios.map(semSenha))
 }
 
 // Cadastro de funcionário feito pelo admin (painel "Funcionários").
 async function criar (req, res) {
   const { nome, cpf, email, senha, telefone, endereco, dataNascimento, role } = req.body
-  if (!nome || !email || !senha) {
-    return res.status(400).json({ erro: 'Nome, e-mail e senha são obrigatórios.' })
-  }
 
   try {
-    const usuario = await prisma.usuario.create({
-      data: {
-        nome,
-        cpf: cpf || null,
-        email,
-        senha: await bcrypt.hash(senha, 12),
-        telefone: telefone || null,
-        endereco: endereco || null,
-        dataNascimento: dataNascimento ? new Date(dataNascimento) : null,
-        role: role === 'admin' ? 'admin' : 'funcionario',
-        ativo: true,
-        aceitouTermos: true,
-        provedor: 'local',
-        senhaTemporaria: true
-      }
+    const usuario = await usuarioRepository.criar({
+      nome,
+      cpf: cpf || null,
+      email,
+      senha: await bcrypt.hash(senha, 12),
+      telefone: telefone || null,
+      endereco: endereco || null,
+      dataNascimento: dataNascimento ? new Date(dataNascimento) : null,
+      role: role === 'admin' ? 'admin' : 'funcionario',
+      ativo: true,
+      aceitouTermos: true,
+      provedor: 'local',
+      senhaTemporaria: true
     })
     res.status(201).json(semSenha(usuario))
   } catch (erro) {
@@ -76,7 +72,7 @@ async function atualizar (req, res) {
     // obrigatória (temporária/expirada) não manda senhaAtual, então pula
     // essa checagem — o usuário já provou identidade ao logar.
     if (senhaAtual) {
-      const usuarioAtual = await prisma.usuario.findUnique({ where: { id: req.params.id } })
+      const usuarioAtual = await usuarioRepository.buscarPorId(req.params.id)
       const confere = usuarioAtual?.senha && (await bcrypt.compare(senhaAtual, usuarioAtual.senha))
       if (!confere) {
         return res.status(400).json({ erro: 'Senha atual incorreta.' })
@@ -97,8 +93,17 @@ async function atualizar (req, res) {
   }
 
   try {
-    const usuario = await prisma.usuario.update({ where: { id: req.params.id }, data: dados })
-    res.json(semSenha(usuario))
+    const usuario = await usuarioRepository.atualizar(req.params.id, dados)
+
+    // Quando o próprio dono da conta preenche o CPF (ex.: onboarding de
+    // login via Google — ver views/completar-cadastro.html), o token JWT já
+    // emitido continua com o claim antigo (cpfPendente: true) até expirar.
+    // Reemitir aqui evita deixar a sessão "presa" fora das rotas protegidas
+    // por requireProfileComplete até um novo login.
+    const resposta = semSenha(usuario)
+    if (souEuMesmo) resposta.token = gerarToken(usuario)
+
+    res.json(resposta)
   } catch (erro) {
     if (erro.code === 'P2002') {
       const campo = erro.meta?.target?.includes('cpf') ? 'CPF' : 'e-mail'

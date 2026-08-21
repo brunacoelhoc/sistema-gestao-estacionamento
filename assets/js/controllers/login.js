@@ -31,7 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ?.addEventListener('click', iniciarFluxoResetSenha)
 
   if (typeof AuthService !== 'undefined') {
-    AuthService.inicializarBotaoGoogle('google-signin-button', () => {
+    AuthService.inicializarBotaoGoogle('google-signin-button', sessao => {
+      // Primeiro login via Google não vem com CPF (o Google não fornece
+      // esse dado) — antes de liberar o Dashboard, manda para a tela de
+      // conclusão de cadastro. Logins seguintes da mesma conta já têm CPF
+      // salvo e pulam direto para o Dashboard.
+      if (AuthService.precisaCompletarCadastro(sessao)) {
+        window.location.href = 'completar-cadastro.html'
+        return
+      }
       marcarParaMostrarFraseNoProximoCarregamento()
       window.location.href = '../index.html'
     })
@@ -197,9 +205,10 @@ async function tratarCadastro (e) {
 }
 
 /**
- * Fluxo de recuperação de senha em 2 etapas via SweetAlert2. Como não há
- * servidor de e-mail neste projeto, o "código de verificação" é mostrado na
- * própria tela (deixando isso claro para o usuário) em vez de enviado.
+ * Fluxo de recuperação de senha em 2 etapas via SweetAlert2: o código de
+ * verificação é gerado pelo backend e enviado por e-mail de verdade (ver
+ * server/services/email.js) — aqui só coletamos o e-mail e, depois, o
+ * código que o usuário recebeu.
  */
 async function iniciarFluxoResetSenha () {
   const { value: email } = await Swal.fire({
@@ -217,24 +226,21 @@ async function iniciarFluxoResetSenha () {
 
   if (!email) return
 
-  let codigo
   try {
-    codigo = await AuthService.solicitarResetSenha(email)
+    await AuthService.solicitarResetSenha(email)
   } catch (erro) {
     Swal.fire({ icon: 'error', title: 'Não foi possível continuar', text: erro.message })
     return
   }
 
   await Swal.fire({
-    icon: 'info',
-    title: 'Código gerado',
+    icon: 'success',
+    title: 'Código enviado!',
     html: `
-      <p class="mb-1">Em um sistema real, este código seria enviado por e-mail.</p>
-      <p class="mb-1">Como este é um ambiente de demonstração, aqui está o seu código:</p>
-      <p class="fs-3 fw-bold letter-spacing-2">${codigo}</p>
-      <p class="text-muted text-xs mb-0">Válido por 15 minutos.</p>
+      <p class="mb-1">Enviamos um código de verificação para <strong>${ApiService.sanitizeText(email)}</strong>.</p>
+      <p class="text-muted text-xs mb-0">Confira sua caixa de entrada (e o spam). Válido por 15 minutos.</p>
     `,
-    confirmButtonText: 'Continuar'
+    confirmButtonText: 'Já recebi o código'
   })
 
   const { value: formValues } = await Swal.fire({

@@ -5,11 +5,16 @@
 
 let funcionariosCache = []
 
-// Formata uma data ISO (yyyy-mm-dd, valor nativo de <input type="date">) para
-// o padrão brasileiro dd/mm/aaaa. Retorna "-" se não houver data.
+// Formata uma data para o padrão brasileiro dd/mm/aaaa. Aceita tanto o
+// yyyy-mm-dd puro de <input type="date"> quanto o ISO completo com timestamp
+// que a API devolve (ex.: "1998-04-12T00:00:00.000Z") — usar só os 10
+// primeiros caracteres evita tanto o timestamp "vazar" para dentro da data
+// exibida quanto o deslocamento de dia que new Date(iso) + toLocaleDateString
+// causaria ao converter a meia-noite UTC para o fuso local. Retorna "-" se
+// não houver data.
 function formatarDataBr (dataIso) {
   if (!dataIso) return '-'
-  const partes = String(dataIso).split('-')
+  const partes = String(dataIso).slice(0, 10).split('-')
   if (partes.length !== 3) return '-'
   const [ano, mes, dia] = partes
   return `${dia}/${mes}/${ano}`
@@ -167,7 +172,7 @@ function desmontarEndereco (enderecoCompleto) {
   const [ruaNumero, bairroCidade, estado] = partes
   const matchRuaNumero = ruaNumero.match(/^(.*),\s*(.*)$/)
   const rua = matchRuaNumero ? matchRuaNumero[1].trim() : ruaNumero.trim()
-  let numeroBruto = matchRuaNumero ? matchRuaNumero[2].trim() : ''
+  const numeroBruto = matchRuaNumero ? matchRuaNumero[2].trim() : ''
   const matchComplemento = numeroBruto.match(/^(.*)\((.*)\)$/)
   const numero = matchComplemento ? matchComplemento[1].trim() : numeroBruto
   const complemento = matchComplemento ? matchComplemento[2].trim() : ''
@@ -214,6 +219,12 @@ async function carregarFuncionarios () {
     aplicarFiltros()
   } catch (error) {
     console.error('Erro ao carregar funcionários:', error)
+
+    // Sessão expirada (401) já é tratada por AuthService.tratarSessaoExpirada
+    // — logout + redirect pro login já disparados a essa altura.
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
 
     if (pageError && pageErrorText) {
       pageErrorText.textContent =
@@ -262,14 +273,14 @@ function aplicarFiltros () {
 const paginadorFuncionarios =
   typeof criarPaginador === 'function'
     ? criarPaginador({
-        idSufixo: 'funcionarios',
-        tbodyId: 'tbody-funcionarios',
-        colspanVazio: 8,
-        textoVazio:
+      idSufixo: 'funcionarios',
+      tbodyId: 'tbody-funcionarios',
+      colspanVazio: 8,
+      textoVazio:
           '<i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum funcionário encontrado.',
-        renderLinha: renderLinhaFuncionario,
-        aposRenderizar: ligarBotoesLinhaFuncionario
-      })
+      renderLinha: renderLinhaFuncionario,
+      aposRenderizar: ligarBotoesLinhaFuncionario
+    })
     : null
 
 function renderizarTabelaFuncionarios (lista) {
@@ -367,7 +378,7 @@ async function abrirModalNovoFuncionario () {
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Telefone <span class="text-danger">*</span></label>
         <input id="swal-func-telefone" class="form-control" inputmode="tel" maxlength="15"
-          placeholder="(11) 99999-9999">
+          placeholder="(11) 98765-4321">
       </div>
       ${blocoEnderecoHtml('swal-func')}
       <div class="text-start mb-3">
@@ -557,7 +568,7 @@ async function abrirModalEditarFuncionario (id) {
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Data de nascimento <span class="text-danger">*</span></label>
         <input id="swal-func-nascimento" type="date" class="form-control"
-          max="${new Date().toISOString().slice(0, 10)}" value="${usuario.dataNascimento || ''}">
+          max="${new Date().toISOString().slice(0, 10)}" value="${(usuario.dataNascimento || '').slice(0, 10)}">
       </div>
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Papel de acesso <span class="text-danger">*</span></label>

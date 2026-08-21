@@ -1,35 +1,22 @@
-const prisma = require('../config/prisma')
+const tarifaRepository = require('../repositories/tarifaRepository')
 
 async function listar (req, res) {
-  res.json(await prisma.tarifa.findMany())
+  res.json(await tarifaRepository.listarTodas())
 }
 
 async function criar (req, res) {
-  const { categoria, valorHora, valor } = req.body
-  const valorFinal = Number(valorHora ?? valor)
-  if (!categoria || Number.isNaN(valorFinal)) {
-    return res.status(400).json({ erro: 'Categoria e valor por hora são obrigatórios.' })
-  }
+  const { categoria, valorHora } = req.body
 
-  const tarifa = await prisma.tarifa.create({
-    data: { categoria, valorHora: valorFinal }
-  })
+  const tarifa = await tarifaRepository.criar({ categoria, valorHora })
   res.status(201).json(tarifa)
 }
 
 async function atualizar (req, res) {
-  const dados = {}
-  const { categoria, valorHora, valor } = req.body
-  if (categoria !== undefined) dados.categoria = categoria
-  if (valorHora !== undefined || valor !== undefined) {
-    dados.valorHora = Number(valorHora ?? valor)
-  }
-
-  res.json(await prisma.tarifa.update({ where: { id: req.params.id }, data: dados }))
+  res.json(await tarifaRepository.atualizar(req.params.id, req.body))
 }
 
 async function remover (req, res) {
-  await prisma.tarifa.delete({ where: { id: req.params.id } })
+  await tarifaRepository.remover(req.params.id)
   res.status(204).end()
 }
 

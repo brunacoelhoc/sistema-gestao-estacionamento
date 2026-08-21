@@ -54,6 +54,7 @@ class LGPDConsentManager {
 
   checkConsent () {
     const status = localStorage.getItem(this.storageKey)
+    window.analyticsPermitido = status === 'accepted'
     if (!status) {
       this.renderBanner()
     }
@@ -75,7 +76,7 @@ class LGPDConsentManager {
       <div class="container d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
         <div class="text-sm">
           <i class="fas fa-user-shield text-info me-2" aria-hidden="true"></i>
-          <strong>Respeitamos sua privacidade:</strong> Este sistema utiliza armazenamento local e processa dados cadastrais de mensalistas e veículos estritamente para a operação do estacionamento, em conformidade com a <strong>LGPD</strong>.
+          <strong>Respeitamos sua privacidade:</strong> Este sistema utiliza armazenamento local e processa dados cadastrais de mensalistas e veículos para a operação do estacionamento. Com seu aceite, também registramos quais telas você visita e por quanto tempo, de forma anônima, para melhorar o sistema — em conformidade com a <strong>LGPD</strong>.
         </div>
         <div class="d-flex gap-2 flex-shrink-0">
           <button id="btn-lgpd-reject" class="btn btn-outline-light btn-sm px-3 fw-semibold" type="button">
@@ -104,6 +105,11 @@ class LGPDConsentManager {
 
   setConsent (status) {
     localStorage.setItem(this.storageKey, status)
+    window.analyticsPermitido = status === 'accepted'
+    // Avisa outros módulos (ex.: telemetria.js) que o consentimento acabou
+    // de mudar, caso já estejam rodando nesta mesma página.
+    document.dispatchEvent(new CustomEvent('lgpd:consentimento', { detail: status }))
+
     const banner = document.getElementById('lgpd-banner')
     if (banner) {
       banner.remove()

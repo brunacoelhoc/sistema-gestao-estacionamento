@@ -213,9 +213,9 @@ function exportarRelatorioPDF () {
     body:
       dados.receitaMensal.length > 0
         ? dados.receitaMensal.map(item => [
-            item.mes,
-            item.valor.toFixed(2).replace('.', ',')
-          ])
+          item.mes,
+          item.valor.toFixed(2).replace('.', ',')
+        ])
         : [['-', 'Nenhum dado no período']],
     theme: 'striped',
     headStyles: { fillColor: [25, 135, 84] }
@@ -250,9 +250,9 @@ function exportarRelatorioExcel () {
   const abaReceita = XLSX.utils.json_to_sheet(
     dados.receitaMensal.length > 0
       ? dados.receitaMensal.map(item => ({
-          Mês: item.mes,
-          'Receita (R$)': Number(item.valor.toFixed(2))
-        }))
+        Mês: item.mes,
+        'Receita (R$)': Number(item.valor.toFixed(2))
+      }))
       : [{ Mês: '-', 'Receita (R$)': 'Nenhum dado no período' }]
   )
 
@@ -380,6 +380,12 @@ async function carregarDadosMetricas () {
     processarEMostrarMetricas()
   } catch (error) {
     console.error('Erro ao carregar dados de métricas:', error)
+
+    // Sessão expirada (401) já é tratada por AuthService.tratarSessaoExpirada
+    // — logout + redirect pro login já disparados a essa altura.
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
 
     if (pageError && pageErrorText) {
       pageErrorText.textContent =
@@ -576,8 +582,7 @@ function atualizarKPIs (vagas, tickets, mensalistas, mensalidades = []) {
   const elPeriodoAtendimentos = document.getElementById(
     'metric-atendimentos-periodo-label'
   )
-  if (elPeriodoAtendimentos)
-    elPeriodoAtendimentos.textContent = `Período: ${periodoTexto}`
+  if (elPeriodoAtendimentos) { elPeriodoAtendimentos.textContent = `Período: ${periodoTexto}` }
 
   // Total de mensalistas cadastrados
   animar(
@@ -611,8 +616,7 @@ function atualizarKPIs (vagas, tickets, mensalistas, mensalidades = []) {
   const elPeriodoTempoMedio = document.getElementById(
     'metric-tempo-medio-periodo-label'
   )
-  if (elPeriodoTempoMedio)
-    elPeriodoTempoMedio.textContent = `Calculado sobre: ${periodoTexto}`
+  if (elPeriodoTempoMedio) { elPeriodoTempoMedio.textContent = `Calculado sobre: ${periodoTexto}` }
 }
 
 // Calcula o tempo médio de permanência dos veículos
@@ -795,15 +799,15 @@ function renderizarGraficoReceitaMensal (tickets, mensalidades = []) {
     tbody.innerHTML =
       labels.length > 0
         ? labels
-            .map(
-              (label, i) =>
+          .map(
+            (label, i) =>
                 `<tr><td>${ApiService.sanitizeText(label)}</td><td>R$ ${valores[
                   i
                 ]
                   .toFixed(2)
                   .replace('.', ',')}</td></tr>`
-            )
-            .join('')
+          )
+          .join('')
         : '<tr><td colspan="2" class="text-center text-muted">Nenhum dado registrado</td></tr>'
   }
 }
@@ -946,13 +950,13 @@ function renderizarGraficoCategorias (vagas) {
     tbody.innerHTML =
       labels.length > 0
         ? labels
-            .map(
-              tipo =>
+          .map(
+            tipo =>
                 `<tr><td>${ApiService.sanitizeText(tipo)}</td><td>${
                   porTipo[tipo].ocupadas
                 }</td><td>${porTipo[tipo].total}</td></tr>`
-            )
-            .join('')
+          )
+          .join('')
         : '<tr><td colspan="3" class="text-center text-muted">Nenhuma vaga cadastrada</td></tr>'
   }
 }

@@ -28,6 +28,7 @@
 - [♿ Acessibilidade (WCAG 2.1 AAA)](#-acessibilidade-wcag-21-aaa)
 - [🛡️ LGPD](#️-lgpd)
 - [🔑 Login com Google (opcional)](#-login-com-google-opcional)
+- [📧 Recuperação de senha por e-mail](#-recuperação-de-senha-por-e-mail)
 - [📐 Padrão de commits](#-padrão-de-commits)
 - [👩‍💻 Autora](#-autora)
 
@@ -90,15 +91,17 @@ projeto/
 ├── prisma/
 │   ├── schema.prisma              # Modelo de dados (Model do back-end)
 │   ├── migrations/
+│   ├── db.json                    # Dados de exemplo usados por prisma/seed.js
 │   └── seed.js                    # Popula o banco a partir de db.json
 ├── server/                        # 🧠 Back-end Express, em MVC
 │   ├── index.js / app.js
 │   ├── config/prisma.js           # Conexão com o banco (Prisma + driver adapter)
-│   ├── routes/                    # Rotas HTTP — só wiring, sem lógica
+│   ├── routes/                    # Rotas HTTP — só wiring + validação, sem lógica
 │   ├── controllers/                # Lógica de cada rota
+│   ├── repositories/              # Acesso ao banco (isola o Prisma dos controllers)
+│   ├── schemas/                   # Validação de entrada (Zod)
 │   ├── services/mensalidade.js    # Regra do ciclo mensal do mensalista
 │   └── middleware/auth.js         # JWT (requireAuth / requireAdmin)
-├── db.json                        # Dados de exemplo usados por prisma/seed.js
 └── generated/prisma/               # Cliente Prisma gerado (não versionado)
 ```
 
@@ -126,6 +129,20 @@ npm run dev
 ```
 
 Com a API rodando (`http://localhost:3001` por padrão), abra `index.html` no navegador — o jeito mais simples é a extensão **Live Server** do VS Code, já que o front-end é estático e só precisa ser servido por HTTP (não pelo `file://`) para os módulos JS funcionarem direito.
+
+**Alternativa com Docker** (sem precisar instalar Postgres na máquina): o `docker-compose.yml` sobe a API + um Postgres já configurado.
+
+```bash
+cp .env.example .env      # se ainda não tiver feito
+docker compose up --build
+
+# Num outro terminal, popular com dados de exemplo (só na primeira vez)
+docker compose exec api npm run db:seed
+```
+
+A API sobe em `http://localhost:3001` (o `docker compose up` já aplica as migrations via `prisma migrate deploy` antes de iniciar). O front-end continua fora do compose — abra `index.html` pelo Live Server normalmente, apontando pra essa API. O `DATABASE_URL` do `.env` é ignorado pelo container da API, que usa o serviço `db` do compose; as demais variáveis (`JWT_SECRET`, `GOOGLE_CLIENT_ID` etc.) vêm do `.env` normalmente.
+
+**Produção:** `npm run build` compila o SCSS já minificado (sem watch) e `npm start` sobe a API em modo normal (sem o `sass:watch` do `npm run dev`). O front-end continua sendo arquivos estáticos — sirva `index.html`, `404.html`, `views/` e `assets/` por qualquer servidor HTTP/CDN, apontando para a URL da API publicada.
 
 **Variáveis de ambiente (`.env`):**
 
@@ -182,7 +199,7 @@ Na tela de **Mensalistas**, o botão <kbd>💵 Ver cobranças</kbd> em cada linh
 - `views/funcionarios.html`, visível só para contas "admin", cadastra/edita/inativa funcionários.
 - Modo escuro, com o mesmo padrão de preferência salva localmente usado nos outros recursos de acessibilidade.
 
-> ⚠️ **Limitação conhecida:** a recuperação de senha é simulada — sem servidor de e-mail neste projeto acadêmico, o "código de verificação" aparece na própria tela em vez de ser enviado por e-mail (`server/controllers/auth.js` + `assets/js/modules/auth.js`).
+A recuperação de senha ("Esqueci minha senha") envia um código de verificação de 6 dígitos por e-mail de verdade — precisa de SMTP configurado, veja a seção [📧 Recuperação de senha por e-mail](#-recuperação-de-senha-por-e-mail).
 
 ---
 
@@ -213,6 +230,26 @@ O botão "Entrar com Google" usa **Google Identity Services** (gratuito) e preci
 3. Copie o Client ID gerado e cole em **dois lugares** (mesmo valor nos dois): a constante `GOOGLE_CLIENT_ID` no topo de `assets/js/modules/auth.js`, e a variável `GOOGLE_CLIENT_ID` no `.env`.
 
 Client ID não é segredo — o fluxo de ID token do Google Identity Services não usa Client Secret.
+
+---
+
+## 📧 Recuperação de senha por e-mail
+
+O fluxo "Esqueci minha senha" (tela de login) gera um código de 6 dígitos, guarda só o **hash** dele no banco (com expiração de 15 minutos e uso único) e envia por e-mail de verdade via **SMTP** (`server/services/email.js`). Sem essas variáveis configuradas, a API recusa o pedido com um erro claro (503) em vez de falhar silenciosamente.
+
+Configure no `.env`:
+
+| Variável | Para que serve |
+|---|---|
+| `SMTP_HOST` | Endereço do servidor SMTP |
+| `SMTP_PORT` | Porta SMTP (padrão: `587`; use `465` para SSL implícito) |
+| `SMTP_USER` | Usuário/e-mail de autenticação |
+| `SMTP_PASS` | Senha ou senha de app do provedor |
+| `SMTP_FROM` | Opcional — remetente exibido; se vazio, usa `SMTP_USER` |
+
+**Opções práticas:**
+- **Gmail** — em [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), gere uma "senha de app" (exige verificação em 2 etapas ativada) e use `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER=seu-email@gmail.com`, `SMTP_PASS=<senha de app>`.
+- **Ethereal Email** ([ethereal.email](https://ethereal.email/)) — cria uma conta SMTP de teste gratuita na hora, sem enviar e-mail de verdade para ninguém; os e-mails ficam disponíveis numa caixa de entrada falsa, ótimo para testar o fluxo sem depender de uma conta real.
 
 ---
 

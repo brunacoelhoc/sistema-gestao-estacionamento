@@ -1,12 +1,10 @@
 /**
  * Módulo de Autenticação (AuthService) & Perfil do Usuário
  *
- * O backend (server/) faz hash de senha com bcrypt, emite JWT e verifica a
- * assinatura do login com Google — nada disso roda mais só no navegador.
- *
- * LIMITAÇÃO CONHECIDA que ainda permanece: a recuperação de senha é
- * simulada — como não há servidor de e-mail neste projeto acadêmico, o
- * "código de verificação" é mostrado na própria tela em vez de enviado.
+ * O backend (server/) faz hash de senha com bcrypt, emite JWT, verifica a
+ * assinatura do login com Google e gera/valida o código de recuperação de
+ * senha (enviado por e-mail via server/services/email.js) — nada disso roda
+ * no navegador.
  *
  * Login com Google só funciona depois de configurar um Client ID real (ver
  * GOOGLE_CLIENT_ID logo abaixo e GOOGLE_CLIENT_ID em server/routes/auth.js —
@@ -15,8 +13,6 @@
  */
 
 const AUTH_SESSION_KEY = 'parkgestao:session'
-const AUTH_RESET_PREFIX = 'parkgestao:resetCode:'
-const AUTH_RESET_TTL_MINUTOS = 15
 
 // Evita disparar o modal de sessão expirada mais de uma vez quando várias
 // chamadas à API falham com 401 ao mesmo tempo (ex.: Promise.all do dashboard).
@@ -350,6 +346,17 @@ class AuthService {
   }
 
   /**
+   * Contas criadas no primeiro login via Google (ver POST /auth/google)
+   * nascem sem CPF — o CPF só existe hoje como identificador de login local
+   * e não vem do perfil do Google. Enquanto não for preenchido (ver
+   * views/completar-cadastro.html), a conta fica bloqueada nas rotas de
+   * negócio pelo backend (requireProfileComplete).
+   */
+  static precisaCompletarCadastro (usuario) {
+    return !usuario?.cpf
+  }
+
+  /**
    * Verifica se a troca de senha é obrigatória para o usuário: senha
    * temporária (definida pelo admin, nunca trocada) ou senha com mais de
    * SENHA_VALIDADE_DIAS dias sem ser alterada (política de segurança).
@@ -486,46 +493,20 @@ class AuthService {
     }
   }
 
-  // --- RECUPERAÇÃO DE SENHA (simulada — sem envio real de e-mail) ---
-  // A checagem "existe conta com esse e-mail / não é conta Google" agora é
-  // feita pelo backend (POST /auth/reset/solicitar), sem exigir sessão —
-  // getUsuarioPorEmail não serviria aqui pelo mesmo motivo do cadastro.
+  // --- RECUPERAÇÃO DE SENHA ---
+  // Geração e validação do código de verificação são feitas pelo backend
+  // (POST /auth/reset/solicitar e /auth/reset/confirmar) — o código nunca
+  // passa pelo navegador fora do e-mail que o usuário recebe.
   static async solicitarResetSenha (email) {
     await ApiService.solicitarResetSenha(email)
-
-    const codigo = String(Math.floor(100000 + Math.random() * 900000))
-    const expiraEm = Date.now() + AUTH_RESET_TTL_MINUTOS * 60 * 1000
-
-    localStorage.setItem(
-      AUTH_RESET_PREFIX + email.toLowerCase().trim(),
-      JSON.stringify({ codigo, expiraEm })
-    )
-
-    return codigo
   }
 
   static async confirmarResetSenha (email, codigo, novaSenha) {
-    const chave = AUTH_RESET_PREFIX + email.toLowerCase().trim()
-    let registro = null
-    try {
-      registro = JSON.parse(localStorage.getItem(chave))
-    } catch (erro) {
-      registro = null
-    }
-
-    if (!registro || registro.codigo !== codigo) {
-      throw new Error('Código de verificação inválido.')
-    }
-    if (Date.now() > registro.expiraEm) {
-      localStorage.removeItem(chave)
-      throw new Error('Código expirado. Solicite um novo.')
-    }
     if (!avaliarForcaSenha(novaSenha).valida) {
       throw new Error(MENSAGEM_SENHA_FRACA)
     }
 
-    await ApiService.confirmarResetSenha(email, novaSenha)
-    localStorage.removeItem(chave)
+    await ApiService.confirmarResetSenha(email, codigo, novaSenha)
   }
 
   // --- GUARDAS DE ROTA (usadas depois do guard inline no <head>, como
@@ -576,7 +557,18 @@ function inicializarMenuUsuario () {
 
   if (avatarEl) {
     if (sessao.avatar) {
-      avatarEl.innerHTML = `<img src="${sessao.avatar}" alt="" class="user-avatar-img">`
+      // Atribuído via propriedade .src (não innerHTML com string
+      // interpolada) para que o valor seja sempre tratado como URL da
+      // imagem, nunca como HTML — evita XSS caso algum avatar antigo/externo
+      // contenha algo como `x" onerror="...`. A validação de formato em si
+      // (só data URI de imagem) é feita no backend, ver server/schemas/
+      // usuarioSchemas.js.
+      avatarEl.textContent = ''
+      const img = document.createElement('img')
+      img.src = sessao.avatar
+      img.alt = ''
+      img.className = 'user-avatar-img'
+      avatarEl.appendChild(img)
     } else {
       avatarEl.textContent = AuthService.iniciais(sessao.nome)
     }
@@ -731,7 +723,7 @@ async function abrirModalMeuPerfil () {
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Telefone</label>
         <input id="perfil-telefone" class="form-control" value="${ApiService.sanitizeText(sessao.telefone || '')}"
-          inputmode="tel" maxlength="15" placeholder="(11) 99999-9999">
+          inputmode="tel" maxlength="15" placeholder="(11) 98765-4321">
       </div>
       ${blocoSenha}
     `,
@@ -745,9 +737,18 @@ async function abrirModalMeuPerfil () {
       const preview = document.getElementById('perfil-avatar-preview')
       const atualizarPreview = () => {
         if (!preview) return
-        preview.innerHTML = avatarSelecionado
-          ? `<img src="${avatarSelecionado}" alt="" class="perfil-avatar-preview-img">`
-          : iniciaisAtuais
+        // Mesmo motivo do avatar da navbar (ver inicializarMenuUsuario,
+        // acima): .src via propriedade, não interpolado em innerHTML.
+        preview.textContent = ''
+        if (avatarSelecionado) {
+          const img = document.createElement('img')
+          img.src = avatarSelecionado
+          img.alt = ''
+          img.className = 'perfil-avatar-preview-img'
+          preview.appendChild(img)
+        } else {
+          preview.textContent = iniciaisAtuais
+        }
       }
 
       // Galeria de avatares prontos (bichinhos)

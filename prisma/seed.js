@@ -1,6 +1,6 @@
 /**
- * Script de seed: importa os dados que hoje vivem em db.json (json-server)
- * para as tabelas criadas pelo Prisma no PostgreSQL.
+ * Script de seed: importa os dados de prisma/db.json para as tabelas criadas
+ * pelo Prisma no PostgreSQL.
  *
  * Uso: node prisma/seed.js
  *
@@ -23,7 +23,7 @@ function paraData (valor) {
 }
 
 async function main () {
-  const dbPath = path.join(__dirname, '..', 'db.json')
+  const dbPath = path.join(__dirname, 'db.json')
   const dados = JSON.parse(fs.readFileSync(dbPath, 'utf-8'))
 
   for (const v of dados.vagas || []) {
@@ -34,7 +34,8 @@ async function main () {
         id: v.id,
         codigo: v.codigo,
         tipo: v.tipo,
-        status: v.status
+        status: v.status,
+        acessivel: Boolean(v.acessivel)
       }
     })
   }

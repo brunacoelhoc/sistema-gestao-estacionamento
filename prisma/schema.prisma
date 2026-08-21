@@ -45,37 +45,58 @@ enum StatusMensalidade {
 }
 
 model Usuario {
-  id                String    @id @default(cuid())
-  nome              String
-  cpf               String?   @unique
-  email             String    @unique
-  senha             String?
-  telefone          String?
-  endereco          String?
-  dataNascimento    DateTime?
-  avatar            String?
-  role              Papel     @default(funcionario)
-  ativo             Boolean   @default(true)
-  aceitouTermos     Boolean   @default(false)
-  provedor          Provedor  @default(local)
-  senhaTemporaria   Boolean   @default(false)
-  senhaAlteradaEm   DateTime?
-  criadoEm          DateTime  @default(now())
+  id              String    @id @default(cuid())
+  nome            String
+  cpf             String?   @unique
+  email           String    @unique
+  senha           String?
+  telefone        String?
+  endereco        String?
+  dataNascimento  DateTime?
+  avatar          String?
+  role            Papel     @default(funcionario)
+  ativo           Boolean   @default(true)
+  aceitouTermos   Boolean   @default(false)
+  provedor        Provedor  @default(local)
+  senhaTemporaria Boolean   @default(false)
+  senhaAlteradaEm DateTime?
+  criadoEm        DateTime  @default(now())
+
+  resetSenhaCodigos ResetSenhaCodigo[]
 
   @@map("usuarios")
 }
 
-model Mensalista {
-  id                String   @id @default(cuid())
-  nome              String
-  cpf               String   @unique
-  placa             String   @unique
-  telefone          String?
-  valorMensalidade  Decimal  @default(0) @db.Decimal(10, 2)
-  ativo             Boolean  @default(true)
+/**
+ * Código de verificação de "esqueci minha senha", enviado por e-mail.
+ * Guardamos só o hash do código (nunca o valor em texto puro) e ele vale
+ * por tempo limitado e uso único — ver RESET_TTL_MINUTOS em
+ * server/controllers/auth.js.
+ */
+model ResetSenhaCodigo {
+  id         String   @id @default(cuid())
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId  String
+  codigoHash String
+  expiraEm   DateTime
+  usado      Boolean  @default(false)
+  criadoEm   DateTime @default(now())
 
-  tickets           Ticket[]
-  mensalidades      Mensalidade[]
+  @@map("reset_senha_codigos")
+}
+
+model Mensalista {
+  id               String   @id @default(cuid())
+  nome             String
+  cpf              String   @unique
+  placa            String   @unique
+  telefone         String
+  valorMensalidade Decimal  @default(0) @db.Decimal(10, 2)
+  ativo            Boolean  @default(true)
+  criadoEm         DateTime @default(now())
+
+  tickets      Ticket[]
+  mensalidades Mensalidade[]
 
   @@map("mensalistas")
 }
@@ -87,27 +108,29 @@ model Mensalista {
  * proporcional aos dias em que esteve ativo naquele mês.
  */
 model Mensalidade {
-  id            String            @id @default(cuid())
-  mensalista    Mensalista        @relation(fields: [mensalistaId], references: [id])
-  mensalistaId  String
-  referencia    String            // ano-mês do ciclo, ex.: "2026-08"
-  dataInicio    DateTime
-  dataFim       DateTime
-  diasCobrados  Int
-  diasNoMes     Int
-  valor         Decimal           @db.Decimal(10, 2)
-  status        StatusMensalidade @default(pendente)
-  criadoEm      DateTime          @default(now())
+  id             String            @id @default(cuid())
+  mensalista     Mensalista        @relation(fields: [mensalistaId], references: [id])
+  mensalistaId   String
+  referencia     String // ano-mês do ciclo, ex.: "2026-08"
+  dataInicio     DateTime
+  dataFim        DateTime
+  diasCobrados   Int
+  diasNoMes      Int
+  valor          Decimal           @db.Decimal(10, 2)
+  status         StatusMensalidade @default(pendente)
+  formaPagamento String?
+  criadoEm       DateTime          @default(now())
 
   @@unique([mensalistaId, referencia])
   @@map("mensalidades")
 }
 
 model Vaga {
-  id      String     @id @default(cuid())
-  codigo  String     @unique
-  tipo    TipoVaga   @default(comum)
-  status  StatusVaga @default(livre)
+  id        String     @id @default(cuid())
+  codigo    String     @unique
+  tipo      TipoVaga   @default(comum)
+  status    StatusVaga @default(livre)
+  acessivel Boolean    @default(false)
 
   tickets Ticket[]
 
@@ -115,32 +138,50 @@ model Vaga {
 }
 
 model Tarifa {
-  id         String   @id @default(cuid())
-  categoria  String
-  valorHora  Decimal  @db.Decimal(10, 2)
+  id        String  @id @default(cuid())
+  categoria String
+  valorHora Decimal @db.Decimal(10, 2)
 
-  tickets    Ticket[]
+  tickets Ticket[]
 
   @@map("tarifas")
 }
 
 model Ticket {
-  id              String        @id @default(cuid())
-  placa           String
-  status          StatusTicket  @default(aberto)
-  dataEntrada     DateTime      @default(now())
-  dataSaida       DateTime?
-  valorTotal      Decimal?      @db.Decimal(10, 2)
-  formaPagamento  String?
+  id             String       @id @default(cuid())
+  placa          String
+  status         StatusTicket @default(aberto)
+  dataEntrada    DateTime     @default(now())
+  dataSaida      DateTime?
+  valorTotal     Decimal?     @db.Decimal(10, 2)
+  formaPagamento String?
 
-  vaga            Vaga          @relation(fields: [vagaId], references: [id])
-  vagaId          String
+  vaga   Vaga   @relation(fields: [vagaId], references: [id])
+  vagaId String
 
-  tarifa          Tarifa?       @relation(fields: [tarifaId], references: [id])
-  tarifaId        String?
+  tarifa   Tarifa? @relation(fields: [tarifaId], references: [id])
+  tarifaId String?
 
-  mensalista      Mensalista?   @relation(fields: [mensalistaId], references: [id])
-  mensalistaId    String?
+  mensalista   Mensalista? @relation(fields: [mensalistaId], references: [id])
+  mensalistaId String?
 
   @@map("tickets")
+}
+
+/**
+ * Evento de uso da interface (product analytics), só gravado depois que a
+ * pessoa aceita o aviso de LGPD (ver assets/js/modules/lgpd.js e
+ * assets/js/modules/telemetria.js). De propósito sem nenhuma coluna que
+ * identifique quem gerou o evento (sem usuarioId, sem IP).
+ */
+model EventoUso {
+  id        String   @id @default(cuid())
+  tipo      String
+  tela      String
+  duracaoMs Int?
+  criadoEm  DateTime @default(now())
+
+  @@index([tela])
+  @@index([criadoEm])
+  @@map("eventos_uso")
 }

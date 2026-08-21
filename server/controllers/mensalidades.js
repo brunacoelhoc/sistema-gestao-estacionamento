@@ -1,22 +1,12 @@
-const prisma = require('../config/prisma')
+const mensalidadeRepository = require('../repositories/mensalidadeRepository')
 
 async function listar (req, res) {
   const { mensalistaId } = req.query
-  res.json(
-    await prisma.mensalidade.findMany({
-      where: mensalistaId ? { mensalistaId } : undefined,
-      orderBy: { referencia: 'desc' }
-    })
-  )
+  res.json(await mensalidadeRepository.listar(mensalistaId ? { mensalistaId } : undefined))
 }
 
 async function atualizar (req, res) {
-  const { status } = req.body
-  if (!['pendente', 'paga', 'cancelada'].includes(status)) {
-    return res.status(400).json({ erro: 'Status inválido. Use pendente, paga ou cancelada.' })
-  }
-
-  res.json(await prisma.mensalidade.update({ where: { id: req.params.id }, data: { status } }))
+  res.json(await mensalidadeRepository.atualizar(req.params.id, req.body))
 }
 
 module.exports = { listar, atualizar }

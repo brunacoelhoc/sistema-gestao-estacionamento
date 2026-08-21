@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
+  <defs>
+    <!-- Simula protanopia (ausência de cones sensíveis ao vermelho) -->
+    <filter id="protanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.567 0.433 0.000 0 0
+        0.558 0.442 0.000 0 0
+        0.000 0.242 0.758 0 0
+        0.000 0.000 0.000 1 0" />
+    </filter>
+
+    <!-- Simula deuteranopia (ausência de cones sensíveis ao verde) -->
+    <filter id="deuteranopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.625 0.375 0.000 0 0
+        0.700 0.300 0.000 0 0
+        0.000 0.300 0.700 0 0
+        0.000 0.000 0.000 1 0" />
+    </filter>
+
+    <!-- Simula tritanopia (ausência de cones sensíveis ao azul) -->
+    <filter id="tritanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.950 0.050 0.000 0 0
+        0.000 0.433 0.567 0 0
+        0.000 0.475 0.525 0 0
+        0.000 0.000 0.000 1 0" />
+    </filter>
+  </defs>
+</svg>

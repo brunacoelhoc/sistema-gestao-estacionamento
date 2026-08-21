@@ -1,0 +1,74 @@
+    <header>
+        <nav class="navbar navbar-expand-xl navbar-light">
+            <div class="container">
+                <div class="navbar-top-row d-flex align-items-center justify-content-between w-100">
+                    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{TO_ROOT}}index.html">
+                        <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+
+                    <div class="d-flex align-items-center gap-2 gap-xl-3">
+                        <div id="api-status-indicator" class="d-none d-md-flex align-items-center gap-1 text-xs text-muted"
+                            role="status" aria-live="polite">
+                            <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                            <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                        </div>
+
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-none" id="link-funcionarios" href="{{TO_VIEWS}}funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="{{TO_ROOT}}index.html"><i
+                                    class="fas fa-chart-line me-1" aria-hidden="true"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{TO_VIEWS}}tickets.html"><i
+                                    class="fas fa-ticket-alt me-1" aria-hidden="true"></i> Tickets</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{TO_VIEWS}}vagas-tarifas.html"><i
+                                    class="fas fa-car me-1" aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{TO_VIEWS}}mensalistas.html"><i
+                                    class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{TO_VIEWS}}faturamento.html"><i
+                                    class="fas fa-file-invoice-dollar me-1" aria-hidden="true"></i> Faturamento</a></li>
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="{{TO_VIEWS}}metricas.html"><i
+                                    class="fas fa-chart-pie me-1" aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{TO_VIEWS}}sobre.html"><i
+                                    class="fas fa-info-circle me-1" aria-hidden="true"></i> Sobre</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>

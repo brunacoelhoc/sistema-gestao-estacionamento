@@ -1,73 +1,63 @@
-const prisma = require('../config/prisma')
-const { abrirCiclo, encerrarCicloAntecipado } = require('../services/mensalidade')
+const mensalistaRepository = require('../repositories/mensalistaRepository')
 
 async function listar (req, res) {
-  res.json(await prisma.mensalista.findMany())
+  res.json(await mensalistaRepository.listarTodos())
 }
 
+// O ciclo de mensalidade (30 dias corridos) não nasce mais aqui: cadastrar
+// ou reativar um mensalista não cobra nada por si só — a cobrança só
+// acontece quando ele de fato estaciona e fecha um ticket sem ter um ciclo
+// vigente (ver server/controllers/tickets.js#fechar e
+// server/services/mensalidade.js).
 async function criar (req, res) {
   const { nome, cpf, placa, telefone, valorMensalidade, ativo } = req.body
-  if (!nome || !cpf || !placa) {
-    return res.status(400).json({ erro: 'Nome, CPF e placa são obrigatórios.' })
-  }
+  const ativoInicial = ativo !== undefined ? ativo : true
 
-  const ativoInicial = ativo !== undefined ? Boolean(ativo) : true
-
-  const mensalista = await prisma.$transaction(async tx => {
-    const criado = await tx.mensalista.create({
-      data: {
-        nome,
-        cpf,
-        placa: placa.toUpperCase().trim(),
-        telefone: telefone || null,
-        valorMensalidade: valorMensalidade || 0,
-        ativo: ativoInicial
-      }
-    })
-
-    if (ativoInicial) await abrirCiclo(tx, criado)
-
-    return criado
+  const mensalista = await mensalistaRepository.criar({
+    nome,
+    cpf,
+    placa,
+    telefone,
+    valorMensalidade: valorMensalidade || 0,
+    ativo: ativoInicial
   })
 
   res.status(201).json(mensalista)
 }
 
 async function atualizar (req, res) {
-  const atual = await prisma.mensalista.findUnique({ where: { id: req.params.id } })
+  const atual = await mensalistaRepository.buscarPorId(req.params.id)
   if (!atual) {
     return res.status(404).json({ erro: 'Mensalista não encontrado.' })
   }
 
-  const dados = {}
-  const { nome, cpf, placa, telefone, valorMensalidade, ativo } = req.body
-  if (nome !== undefined) dados.nome = nome
-  if (cpf !== undefined) dados.cpf = cpf
-  if (placa !== undefined) dados.placa = placa.toUpperCase().trim()
-  if (telefone !== undefined) dados.telefone = telefone
-  if (valorMensalidade !== undefined) dados.valorMensalidade = valorMensalidade
-  if (ativo !== undefined) dados.ativo = Boolean(ativo)
-
-  const mensalista = await prisma.$transaction(async tx => {
-    const atualizado = await tx.mensalista.update({ where: { id: req.params.id }, data: dados })
-
-    // O ciclo de mensalidade só reage a uma mudança real de status — trocar
-    // outros campos (nome, telefone etc.) não mexe na cobrança vigente.
-    if (dados.ativo === true && !atual.ativo) {
-      await abrirCiclo(tx, atualizado)
-    } else if (dados.ativo === false && atual.ativo) {
-      await encerrarCicloAntecipado(tx, atualizado)
-    }
-
-    return atualizado
-  })
-
+  const mensalista = await mensalistaRepository.atualizar(req.params.id, req.body)
   res.json(mensalista)
 }
 
 async function remover (req, res) {
-  await prisma.mensalista.delete({ where: { id: req.params.id } })
-  res.status(204).end()
+  try {
+    await mensalistaRepository.remover(req.params.id)
+    res.status(204).end()
+  } catch (erro) {
+    // Violação de foreign key — mensalista tem ciclos de mensalidade no
+    // histórico (Mensalidade referencia mensalistaId com RESTRICT). Não dá
+    // pra apagar sem perder o histórico de cobrança, então recusamos com uma
+    // mensagem clara em vez de deixar vazar o erro cru do Prisma/Postgres.
+    //
+    // Com o driver adapter do Postgres (@prisma/adapter-pg), erros de banco
+    // não vêm no `erro.code` padrão do Prisma (ex.: P2003) — chegam
+    // embrulhados em `erro.meta.driverAdapterError`, com o código original
+    // do Postgres em `cause.originalCode` (23001 = restrict_violation,
+    // 23503 = foreign_key_violation).
+    const codigoPostgres = erro.meta?.driverAdapterError?.cause?.originalCode
+    if (erro.code === 'P2003' || codigoPostgres === '23001' || codigoPostgres === '23503') {
+      return res.status(409).json({
+        erro: 'Este mensalista tem histórico de cobranças e não pode ser excluído. Use "Inativar" em vez disso.'
+      })
+    }
+    throw erro
+  }
 }
 
 module.exports = { listar, criar, atualizar, remover }

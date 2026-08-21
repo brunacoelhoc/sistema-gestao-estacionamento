@@ -46,8 +46,8 @@ function exportarParaCSV (nomeArquivo, colunas, linhas) {
     .map(linha => colunas.map(c => escapar(linha[c.chave])).join(';'))
     .join('\n')
 
-  // BOM UTF-8 (﻿) para o Excel reconhecer a acentuação; separador ";"
-  // (padrão do Excel configurado em pt-BR, que usa "," como decimal).
+  // BOM UTF-8 para o Excel reconhecer a acentuação; separador ";" (padrão do
+  // Excel configurado em pt-BR, que usa "," como decimal).
   const BOM_UTF8 = '﻿'
   const conteudo = BOM_UTF8 + cabecalho + '\n' + corpo
 

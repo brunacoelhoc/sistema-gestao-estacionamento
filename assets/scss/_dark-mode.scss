@@ -56,6 +56,15 @@ body.dark-mode {
     border-color: rgba(255, 255, 255, 0.08) !important;
   }
 
+  // Rótulos e subtextos de suporte dos cards de KPI (ex.: "Faturamento
+  // Total", variação percentual abaixo do valor): _components.scss define um
+  // cinza-azulado (#64748b) pensado para fundo claro, que perde contraste
+  // demais sobre o navy escuro do card. Cinza claro garante legibilidade.
+  .kpi-label,
+  .kpi-subtext {
+    color: #e0e0e0 !important;
+  }
+
   .text-dark {
     color: $color-text-dark !important;
   }

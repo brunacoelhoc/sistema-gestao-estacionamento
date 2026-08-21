@@ -3,26 +3,43 @@
  * Controle de emissão, listagem, busca, paginação, regras de mensalista e baixa de tickets.
  */
 
-let allTickets = []
+// allVagas/allMensalistas/allTarifas continuam carregadas por inteiro (são
+// listas pequenas, usadas pelos combos do formulário e pelas regras de
+// negócio client-side). Tickets é a única lista grande da tela — em vez de
+// um array completo, guardamos só a página atual + o total, pedidos ao
+// backend a cada busca/filtro/troca de página (ver carregarTickets).
 let allVagas = []
 let allMensalistas = []
 let allTarifas = []
 
-let ticketsFiltrados = []
+let ticketsPaginaAtual = []
+let totalTicketsFiltrados = 0
 let paginaAtual = 1
 let TICKETS_POR_PAGINA = 10
+let debounceBuscaTicket = null
 const TEMPO_TOLERANCIA_MINUTOS = 15 // Tolerância de cortesia padrão
+
+// O id do ticket é um cuid longo (ex.: "cm3k9x0p10000abcd1234efgh") — bom
+// para o banco, ilegível na tabela. Exibe só os 8 primeiros caracteres; o
+// UUID completo continua intacto no banco e em toda chamada à API (data-id,
+// fechamento de ticket etc.), só a exibição é truncada.
+function formatarIdExibicao (id) {
+  return (id || '').slice(0, 8)
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   initInputMasks()
   await carregarDados()
 
-  // Busca por placa/vaga (reseta para a primeira página a cada nova busca)
+  // Busca por placa/vaga (reseta para a primeira página a cada nova busca).
+  // Debounced porque agora cada tecla digitada pede uma página nova ao
+  // backend, em vez de só filtrar um array já carregado.
   document
     .getElementById('input-busca-ticket')
     ?.addEventListener('input', () => {
       paginaAtual = 1
-      filtrarTickets()
+      clearTimeout(debounceBuscaTicket)
+      debounceBuscaTicket = setTimeout(() => carregarTickets(), 300)
     })
 
   // Filtro de status do ticket (Todos, Aberto, Fechado)
@@ -30,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('filtro-status-ticket')
     ?.addEventListener('change', () => {
       paginaAtual = 1
-      filtrarTickets()
+      carregarTickets()
     })
 
   // Verificação de mensalista ao digitar a placa no modal de novo ticket
@@ -56,13 +73,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('btn-exportar-tickets-excel')
     ?.addEventListener('click', () => exportarTickets('excel'))
 
-  // Paginação
+  // Paginação — cada troca de página/tamanho agora busca a página no
+  // backend (ver carregarTickets), em vez de só re-renderizar um array local.
   document
     .getElementById('btn-pagina-anterior')
     ?.addEventListener('click', () => {
       if (paginaAtual > 1) {
         paginaAtual--
-        renderizarPagina()
+        carregarTickets()
       }
     })
 
@@ -71,11 +89,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     ?.addEventListener('click', () => {
       const totalPaginas = Math.max(
         1,
-        Math.ceil(ticketsFiltrados.length / TICKETS_POR_PAGINA)
+        Math.ceil(totalTicketsFiltrados / TICKETS_POR_PAGINA)
       )
       if (paginaAtual < totalPaginas) {
         paginaAtual++
-        renderizarPagina()
+        carregarTickets()
       }
     })
 
@@ -84,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ?.addEventListener('change', e => {
       TICKETS_POR_PAGINA = Number(e.target.value) || 10
       paginaAtual = 1
-      renderizarPagina()
+      carregarTickets()
     })
 })
 
@@ -106,18 +124,16 @@ function validarPlaca (placa) {
   return regexAntigo.test(cleanPlaca) || regexMercosul.test(cleanPlaca)
 }
 
-// Carrega os dados das APIs
+// Carrega os dados de apoio do formulário (vagas, tarifas, mensalistas) e,
+// em seguida, a primeira página de tickets.
 async function carregarDados () {
   const pageError = document.getElementById('page-error')
   const pageErrorText = document.getElementById('page-error-text')
-  const tbody = document.getElementById('tbody-tickets')
 
   pageError?.classList.add('d-none')
-  tbody?.setAttribute('aria-busy', 'true')
 
   try {
-    const [tickets, vagas, mensalistas, tarifas] = await Promise.all([
-      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
+    const [vagas, mensalistas, tarifas] = await Promise.all([
       ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
       ApiService.getMensalistas
         ? ApiService.getMensalistas()
@@ -125,20 +141,74 @@ async function carregarDados () {
       ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([])
     ])
 
-    allTickets = tickets || []
     allVagas = vagas || []
     allMensalistas = mensalistas || []
     allTarifas = tarifas || []
-
-    paginaAtual = 1
-    filtrarTickets()
 
     preencherSelectVagas()
     preencherSelectTarifas()
     preencherSelectMensalistas()
     atualizarAvisoFormulario()
+
+    paginaAtual = 1
+    await carregarTickets()
   } catch (error) {
     console.error('Erro ao carregar dados dos tickets:', error)
+
+    // Sessão expirada (401) já é tratada por AuthService.tratarSessaoExpirada
+    // — logout + redirect pro login já disparados a essa altura.
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
+
+    if (pageError && pageErrorText) {
+      pageErrorText.textContent =
+        'Não foi possível carregar as informações dos tickets. Verifique sua conexão.'
+      pageError.classList.remove('d-none')
+    }
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro de Conexão',
+        text: 'Não foi possível carregar as informações dos tickets.'
+      })
+    }
+  }
+}
+
+// Busca no backend a página atual de tickets, já considerando a busca e o
+// filtro de status ativos na tela (ver server/controllers/tickets.js#listar).
+async function carregarTickets () {
+  const pageError = document.getElementById('page-error')
+  const pageErrorText = document.getElementById('page-error-text')
+  const tbody = document.getElementById('tbody-tickets')
+
+  tbody?.setAttribute('aria-busy', 'true')
+
+  const termo = (document.getElementById('input-busca-ticket')?.value || '').trim()
+  const statusFiltro = document.getElementById('filtro-status-ticket')?.value || 'TODOS'
+
+  try {
+    const resposta = await ApiService.getTickets({
+      page: paginaAtual,
+      pageSize: TICKETS_POR_PAGINA,
+      status: statusFiltro,
+      termo
+    })
+
+    ticketsPaginaAtual = resposta?.dados || []
+    totalTicketsFiltrados = resposta?.total || 0
+    paginaAtual = Math.min(paginaAtual, resposta?.totalPaginas || 1)
+
+    pageError?.classList.add('d-none')
+    renderizarPagina()
+  } catch (error) {
+    console.error('Erro ao carregar tickets:', error)
+
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
 
     if (pageError && pageErrorText) {
       pageErrorText.textContent =
@@ -158,7 +228,7 @@ async function carregarDados () {
   }
 }
 
-// Renderiza a tabela de tickets paginada
+// Renderiza a página de tickets já trazida do backend
 function renderizarPagina () {
   const tbody = document.getElementById('tbody-tickets')
   const infoEl = document.getElementById('paginacao-info')
@@ -173,7 +243,7 @@ function renderizarPagina () {
   if (!tbody) return
   tbody.innerHTML = ''
 
-  const total = ticketsFiltrados.length
+  const total = totalTicketsFiltrados
 
   if (total === 0) {
     tbody.innerHTML = `
@@ -191,16 +261,12 @@ function renderizarPagina () {
   }
 
   const totalPaginas = Math.max(1, Math.ceil(total / TICKETS_POR_PAGINA))
-  paginaAtual = Math.min(paginaAtual, totalPaginas)
-
   const inicio = (paginaAtual - 1) * TICKETS_POR_PAGINA
   const fim = Math.min(inicio + TICKETS_POR_PAGINA, total)
-  const pagina = ticketsFiltrados.slice(inicio, fim)
 
-  pagina.forEach(ticket => renderizarLinhaTicket(ticket, tbody))
+  ticketsPaginaAtual.forEach(ticket => renderizarLinhaTicket(ticket, tbody))
 
-  if (infoEl)
-    infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total} tickets`
+  if (infoEl) { infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total} tickets` }
   if (labelEl) labelEl.textContent = `Página ${paginaAtual} de ${totalPaginas}`
   btnAnterior?.classList.toggle('disabled', paginaAtual === 1)
   btnProxima?.classList.toggle('disabled', paginaAtual === totalPaginas)
@@ -252,8 +318,8 @@ function renderizarLinhaTicket (ticket, tbody) {
   const dataEntradaStr =
     ticket.horaEntrada || ticket.dataEntrada
       ? new Date(ticket.horaEntrada || ticket.dataEntrada).toLocaleString(
-          'pt-BR'
-        )
+        'pt-BR'
+      )
       : '-'
   const dataSaidaStr =
     ticket.horaSaida || ticket.dataSaida
@@ -275,8 +341,8 @@ function renderizarLinhaTicket (ticket, tbody) {
   const pagamentoBadge =
     statusKey === 'fechado'
       ? getFormaPagamentoBadge(
-          ticket.formaPagamento || (ticket.mensalistaId ? 'isento' : '')
-        )
+        ticket.formaPagamento || (ticket.mensalistaId ? 'isento' : '')
+      )
       : ''
 
   const btnAcao =
@@ -288,7 +354,7 @@ function renderizarLinhaTicket (ticket, tbody) {
 
   const tr = document.createElement('tr')
   tr.innerHTML = `
-    <td class="fw-bold text-muted">#${ApiService.sanitizeText(ticket.id)}</td>
+    <td class="fw-bold text-muted" title="${ApiService.sanitizeText(ticket.id)}">#${ApiService.sanitizeText(formatarIdExibicao(ticket.id))}</td>
     <td class="fw-bold">${ApiService.sanitizeText(ticket.placa)}</td>
     <td><span class="badge bg-light text-dark border">${ApiService.sanitizeText(
       codVaga
@@ -303,10 +369,30 @@ function renderizarLinhaTicket (ticket, tbody) {
   tbody.appendChild(tr)
 }
 
-// Monta as linhas "achatadas" (prontas para planilha) a partir da lista já
-// filtrada pela busca/status ativos na tela, e delega para o exportador
-// genérico (CSV ou Excel).
-function exportarTickets (formato) {
+// Monta as linhas "achatadas" (prontas para planilha) a partir de TODOS os
+// tickets que batem com a busca/status ativos na tela — não só a página
+// exibida na tabela —, e delega para o exportador genérico (CSV ou Excel).
+async function exportarTickets (formato) {
+  const termo = (document.getElementById('input-busca-ticket')?.value || '').trim()
+  const statusFiltro = document.getElementById('filtro-status-ticket')?.value || 'TODOS'
+
+  let ticketsParaExportar
+  try {
+    // Sem `page`, o backend devolve a lista completa já filtrada (ver
+    // ApiService.getTickets e server/controllers/tickets.js#listar).
+    ticketsParaExportar = await ApiService.getTickets({ status: statusFiltro, termo })
+  } catch (error) {
+    console.error('Erro ao buscar tickets para exportação:', error)
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao exportar',
+        text: 'Não foi possível buscar os tickets para exportação.'
+      })
+    }
+    return
+  }
+
   const colunas = [
     { chave: 'id', rotulo: 'ID' },
     { chave: 'placa', rotulo: 'Placa' },
@@ -319,7 +405,7 @@ function exportarTickets (formato) {
     { chave: 'formaPagamento', rotulo: 'Forma de Pagamento' }
   ]
 
-  const linhas = ticketsFiltrados.map(ticket => {
+  const linhas = (ticketsParaExportar || []).map(ticket => {
     const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
     const mensalista = ticket.mensalistaId
       ? allMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
@@ -355,42 +441,6 @@ function exportarTickets (formato) {
   } else {
     exportarParaCSV('tickets-parkgestao.csv', colunas, linhas)
   }
-}
-
-// Filtro por termo (placa ou código da vaga) e status do ticket
-function filtrarTickets () {
-  const termo = (document.getElementById('input-busca-ticket')?.value || '')
-    .trim()
-    .toUpperCase()
-  const statusFiltro = (
-    document.getElementById('filtro-status-ticket')?.value || 'TODOS'
-  ).toLowerCase()
-
-  const ordenados = [...allTickets].sort((a, b) => {
-    const dataA = new Date(a.horaEntrada || a.dataEntrada || 0)
-    const dataB = new Date(b.horaEntrada || b.dataEntrada || 0)
-    return dataB - dataA
-  })
-
-  ticketsFiltrados = ordenados.filter(t => {
-    const combinaStatus =
-      statusFiltro === 'todos' ||
-      (t.status || '').toLowerCase() === statusFiltro
-
-    const vaga = allVagas.find(v => String(v.id) === String(t.vagaId))
-    const codigoVaga = vaga
-      ? String(vaga.codigo || vaga.numero || '').toUpperCase()
-      : ''
-
-    const combinaTermo =
-      !termo ||
-      (t.placa || '').toUpperCase().includes(termo) ||
-      codigoVaga.includes(termo)
-
-    return combinaStatus && combinaTermo
-  })
-
-  renderizarPagina()
 }
 
 // Preenche o combo de Vagas (apenas status "livre")
@@ -525,7 +575,7 @@ function verificarMensalistaNaDigitacao (placa) {
     )} (Mensalidade: R$ ${valorMensal})</span>`
     if (selectMensalista) selectMensalista.value = mensalistaEncontrado.id
   } else {
-    infoDiv.innerHTML = `<span class="text-muted"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Veículo avulso (tarifado normalmente)</span>`
+    infoDiv.innerHTML = '<span class="text-muted"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Veículo avulso (tarifado normalmente)</span>'
     if (selectMensalista) selectMensalista.value = ''
   }
 }
@@ -552,21 +602,10 @@ async function criarNovoTicket (e) {
     return
   }
 
-  // Regra: Impede ticket duplo para a mesma placa no pátio
-  const jaAberto = allTickets.some(
-    t =>
-      (t.placa || '').toUpperCase() === placa &&
-      (t.status || 'aberto').toLowerCase() === 'aberto'
-  )
-
-  if (jaAberto) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Veículo no Pátio',
-      text: `A placa ${placa} já possui um ticket aberto registrado.`
-    })
-    return
-  }
+  // Regra "sem ticket duplo para a mesma placa" agora é validada no backend
+  // (dentro da transação de abertura — ver server/controllers/tickets.js),
+  // já que a tela não mantém mais a lista completa de tickets em memória
+  // para checar aqui. O erro, se acontecer, chega pelo catch abaixo.
 
   if (!vagaId || !tarifaId) {
     Swal.fire({
@@ -635,7 +674,9 @@ async function criarNovoTicket (e) {
 
 // Fechamento de Ticket com cálculo preciso e seleção de meio de pagamento
 async function finalizarTicket (ticketId) {
-  const ticket = allTickets.find(t => String(t.id) === String(ticketId))
+  // O ticket sendo fechado sempre está na página atualmente renderizada —
+  // o botão "Fechar Ticket" só existe para linhas da página exibida.
+  const ticket = ticketsPaginaAtual.find(t => String(t.id) === String(ticketId))
   if (!ticket) {
     Swal.fire({ icon: 'error', title: 'Erro', text: 'Ticket não encontrado.' })
     return
@@ -662,11 +703,19 @@ async function finalizarTicket (ticketId) {
 
   let valorCalculado = 0
   const ehMensalista = Boolean(ticket.mensalistaId)
+  let previsaoCiclo = null
 
   if (ehMensalista) {
-    // Mensalista é cobrado pelo valor da mensalidade cadastrada, não pela
-    // tarifa avulsa por hora.
-    valorCalculado = Number(mensalista?.valorMensalidade || 0)
+    // Prévia client-side do ciclo de 30 dias — espelha a regra real do
+    // backend (ver assets/js/modules/mensalista-ciclo.js) pra este valor
+    // nunca divergir do que vai ser efetivamente cobrado ao confirmar.
+    const mensalidadesDoMensalista = await ApiService.getMensalidades(ticket.mensalistaId)
+    previsaoCiclo = preverCicloMensalista(
+      mensalidadesDoMensalista,
+      ticket.dataEntrada || ticket.horaEntrada,
+      mensalista?.valorMensalidade
+    )
+    valorCalculado = previsaoCiclo.valor
   } else {
     const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
 
@@ -681,17 +730,31 @@ async function finalizarTicket (ticketId) {
   }
 
   // Prepara modal com seleção de meio de pagamento
-  const selectPagamentoHTML = ehMensalista
-    ? `<div class="alert alert-info py-2 mb-3"><strong>Mensalidade Aplicada:</strong> Veículo cadastrado como Mensalista — cobrança referente ao plano mensal.</div>
-      <div class="mb-3 text-start">
-        <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
-        <select id="swal-forma-pagamento" class="form-select">
-          <option value="pix" selected>📱 PIX</option>
-          <option value="cartao_credito">💳 Cartão de Crédito</option>
-          <option value="cartao_debito">💳 Cartão de Débito</option>
-          <option value="dinheiro">💵 Dinheiro</option>
-        </select>
+  const avisoMensalista = previsaoCiclo?.cobraAgora
+    ? `<div class="alert alert-warning py-2 mb-3">
+        <strong>Novo ciclo de 30 dias:</strong> este mensalista não tem um ciclo vigente —
+        esta cobrança abre um novo período, liberado até
+        <strong>${formatarDataCicloMensalista(previsaoCiclo.dataFim)}</strong>.
       </div>`
+    : `<div class="alert alert-info py-2 mb-3">
+        <strong>Mensalista liberado:</strong> ciclo já pago, válido até
+        <strong>${formatarDataCicloMensalista(previsaoCiclo?.dataFim)}</strong> — este ticket sai isento.
+      </div>`
+
+  const selectPagamentoHTML = ehMensalista
+    ? `${avisoMensalista}${
+        previsaoCiclo?.cobraAgora
+          ? `<div class="mb-3 text-start">
+              <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
+              <select id="swal-forma-pagamento" class="form-select">
+                <option value="pix" selected>📱 PIX</option>
+                <option value="cartao_credito">💳 Cartão de Crédito</option>
+                <option value="cartao_debito">💳 Cartão de Débito</option>
+                <option value="dinheiro">💵 Dinheiro</option>
+              </select>
+            </div>`
+          : ''
+      }`
     : `
       <div class="mb-3 text-start">
         <label for="swal-forma-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
@@ -726,6 +789,7 @@ async function finalizarTicket (ticketId) {
     confirmButtonText: '<i class="fas fa-check me-1"></i> Confirmar Saída',
     cancelButtonText: 'Cancelar',
     preConfirm: () => {
+      if (ehMensalista && !previsaoCiclo?.cobraAgora) return 'isento'
       const select = document.getElementById('swal-forma-pagamento')
       return select ? select.value : 'pix'
     }
@@ -741,14 +805,23 @@ async function finalizarTicket (ticketId) {
   try {
     // ApiService.fecharTicket é o único ponto que calcula e persiste o valor
     // cobrado, garantindo que ele nunca divirja do valor mostrado acima.
-    await ApiService.fecharTicket(ticketId, { formaPagamento })
+    const resultado = await ApiService.fecharTicket(ticketId, { formaPagamento })
 
     const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
+
+    const ciclo = resultado?.mensalistaCiclo
+    const htmlMensalista = ciclo
+      ? `<p class="mt-2 mb-0 text-muted">${
+          ciclo.cobradoAgora
+            ? `<strong>Mensalista:</strong> novo ciclo cobrado agora. Liberado até <strong>${formatarDataCicloMensalista(ciclo.dataFim)}</strong>.`
+            : `<strong>Mensalista:</strong> valor já cobrado e pago pelo cliente. Liberado até <strong>${formatarDataCicloMensalista(ciclo.dataFim)}</strong>.`
+        }</p>`
+      : ''
 
     const { isDenied } = await Swal.fire({
       icon: 'success',
       title: 'Ticket Encerrado!',
-      text: `Saída do veículo ${ticket.placa} registrada com sucesso.`,
+      html: `<p class="mb-0">Saída do veículo ${ApiService.sanitizeText(ticket.placa)} registrada com sucesso.</p>${htmlMensalista}`,
       confirmButtonColor: '#0e3a2f',
       confirmButtonText: 'OK',
       showDenyButton: true,

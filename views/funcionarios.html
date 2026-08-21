@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
     <!-- Guarda de rota: exige sessão E papel "admin". Sem sessão -> login;
          logado mas não-admin -> volta para o Dashboard. -->
     <script>
@@ -16,6 +17,10 @@
                 var sessao = JSON.parse(sessaoBruta);
                 if (!sessao || sessao.role !== 'admin') {
                     window.location.replace('../index.html');
+                    return;
+                }
+                if (!sessao.cpf) {
+                    window.location.replace('completar-cadastro.html');
                 }
             } catch (erro) {
                 window.location.replace('login.html');
@@ -27,6 +32,8 @@
     <title>Gestão de Funcionários | ParkGestão</title>
 
     <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#0d6efd">
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -98,30 +105,21 @@
     <header>
         <nav class="navbar navbar-expand-xl navbar-light">
             <div class="container">
-                <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
-                    <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
-                    <span>ParkGestão</span>
-                </a>
+                <div class="navbar-top-row d-flex align-items-center justify-content-between w-100">
+                    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
+                        <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><a class="nav-link" href="../index.html"><i class="fas fa-chart-line me-1"
-                                    aria-hidden="true"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
-                                    aria-hidden="true"></i> Tickets</a></li>
-                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
-                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i
-                                    class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
-                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
-                                    aria-hidden="true"></i> Métricas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
-                                    aria-hidden="true"></i> Sobre</a></li>
-                        <li class="nav-item dropdown ms-lg-2">
+                    <div class="d-flex align-items-center gap-2 gap-xl-3">
+                        <div id="api-status-indicator" class="d-none d-md-flex align-items-center gap-1 text-xs text-muted"
+                            role="status" aria-live="polite">
+                            <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                            <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                        </div>
+
+                        <div class="dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
                                 id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <span id="user-avatar" class="user-avatar-circle">--</span>
@@ -135,8 +133,7 @@
                                     </button>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item active d-none" id="link-funcionarios"
-                                        href="funcionarios.html">
+                                    <a class="dropdown-item active d-none" id="link-funcionarios" href="funcionarios.html">
                                         <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
                                     </a>
                                 </li>
@@ -149,16 +146,31 @@
                                     </button>
                                 </li>
                             </ul>
-                        </li>
-                        <li class="nav-item d-none d-xl-flex align-items-center ms-xl-3">
-                            <!-- Indicador de Status da API -->
-                            <div id="api-status-indicator" class="d-flex align-items-center gap-1 text-xs text-muted"
-                                role="status" aria-live="polite">
-                                <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
-                                    style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
-                                <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
-                            </div>
-                        </li>
+                        </div>
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="../index.html"><i class="fas fa-chart-line me-1"
+                                    aria-hidden="true"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
+                                    aria-hidden="true"></i> Tickets</a></li>
+                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
+                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i
+                                    class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="faturamento.html"><i class="fas fa-file-invoice-dollar me-1"
+                                    aria-hidden="true"></i> Faturamento</a></li>
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
+                                    aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
+                                    aria-hidden="true"></i> Sobre</a></li>
                     </ul>
                 </div>
             </div>
@@ -284,7 +296,7 @@
                     <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
-                        <a href="tel:11999999999" class="footer-muted text-decoration-none">(11) 99999-9999</a>
+                        <a href="tel:11987654321" class="footer-muted text-decoration-none">(11) 98765-4321</a>
                     </p>
                     <p class="mb-2 text-sm">
                         <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
@@ -364,6 +376,7 @@
     <script defer src="../assets/js/modules/table-scroll-hint.js"></script>
     <script defer src="../assets/js/models/api.js"></script>
     <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/telemetria.js"></script>
     <script defer src="../assets/js/modules/toast.js"></script>
     <script defer src="../assets/js/modules/paginacao.js"></script>
     <script defer src="../assets/js/modules/gsap-init.js"></script>

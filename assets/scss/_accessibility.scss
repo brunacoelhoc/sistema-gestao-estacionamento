@@ -254,6 +254,23 @@ html.reduce-motion {
 }
 
 /* --------------------------------------------------------------------------
+   8. BOTÃO DE MODO NOTURNO — CONTRASTE NO HOVER/FOCUS (WCAG AA)
+   O .btn-outline-light padrão do Bootstrap, ao passar do mouse/focar, pode
+   deixar fundo e texto praticamente na mesma cor clara (ilegível) dentro da
+   barra de acessibilidade. Fixamos um fundo escuro sólido com texto/ícone
+   claros nesses estados, garantindo contraste mínimo AA sempre.
+   -------------------------------------------------------------------------- */
+#btn-dark-mode {
+  &:hover,
+  &:focus,
+  &:focus-visible {
+    background-color: #1e293b !important;
+    border-color: #1e293b !important;
+    color: #ffffff !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
    7. FOCO ACESSÍVEL PARA NAVEGAÇÃO POR TECLADO
    -------------------------------------------------------------------------- */
 a:focus-visible,

@@ -73,8 +73,7 @@ function criarPaginador ({
     estado.itens.slice(inicio, fim).forEach(item => renderLinha(item, tbody))
     aposRenderizar?.(tbody)
 
-    if (infoEl)
-      infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total}`
+    if (infoEl) { infoEl.textContent = `Mostrando ${inicio + 1}–${fim} de ${total}` }
     if (labelEl) labelEl.textContent = `${estado.pagina} de ${totalPaginas}`
     btnAnterior?.classList.toggle('disabled', estado.pagina === 1)
     btnProxima?.classList.toggle('disabled', estado.pagina === totalPaginas)
@@ -516,8 +515,7 @@ function atualizarKPIs (vagas, tickets) {
       elTicketMedio.textContent = ticketMedioTexto
     }
   }
-  if (document.getElementById('kpi-tempo-medio'))
-    document.getElementById('kpi-tempo-medio').textContent = tempoMedioTexto
+  if (document.getElementById('kpi-tempo-medio')) { document.getElementById('kpi-tempo-medio').textContent = tempoMedioTexto }
 }
 
 // Calcula tempo médio de permanência
@@ -573,12 +571,7 @@ function renderLinhaRanking (item, tbody) {
   const tr = document.createElement('tr')
 
   let badgePosicao = `<span class="fw-bold text-muted">${item.posicao}º</span>`
-  if (item.posicao === 1)
-    badgePosicao = `<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>1º</span>`
-  else if (item.posicao === 2)
-    badgePosicao = `<span class="badge bg-secondary">2º</span>`
-  else if (item.posicao === 3)
-    badgePosicao = `<span class="badge bg-dark">3º</span>`
+  if (item.posicao === 1) { badgePosicao = '<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>1º</span>' } else if (item.posicao === 2) { badgePosicao = '<span class="badge bg-secondary">2º</span>' } else if (item.posicao === 3) { badgePosicao = '<span class="badge bg-dark">3º</span>' }
 
   const tipoFormatado = item.tipo
     ? item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1).toLowerCase()
@@ -617,15 +610,15 @@ function renderLinhaTicketRecente (ticket, tbody) {
   const dataEntradaVal = ticket.horaEntrada || ticket.dataEntrada
   const horaEntrada = dataEntradaVal
     ? new Date(dataEntradaVal).toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
+      hour: '2-digit',
+      minute: '2-digit'
+    })
     : '-'
 
   const mensalista = ticket.mensalistaId
     ? mensalistasParaTicketsRecentes.find(
-        m => String(m.id) === String(ticket.mensalistaId)
-      )
+      m => String(m.id) === String(ticket.mensalistaId)
+    )
     : null
   const clienteHtml = mensalista
     ? `<span class="badge-status status-mensalista"><i class="fas fa-id-card me-1" aria-hidden="true"></i>${ApiService.sanitizeText(
@@ -691,9 +684,19 @@ async function encerrarTicket (ticketId, botao) {
 
   let valorCalculado = 0
   const ehMensalista = Boolean(ticket.mensalistaId)
+  let previsaoCiclo = null
 
   if (ehMensalista) {
-    valorCalculado = 0
+    const mensalista = globalMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
+    // Prévia client-side do ciclo de 30 dias — espelha a regra real do
+    // backend (ver assets/js/modules/mensalista-ciclo.js).
+    const mensalidadesDoMensalista = await ApiService.getMensalidades(ticket.mensalistaId)
+    previsaoCiclo = preverCicloMensalista(
+      mensalidadesDoMensalista,
+      ticket.dataEntrada || ticket.horaEntrada,
+      mensalista?.valorMensalidade
+    )
+    valorCalculado = previsaoCiclo.valor
   } else if (diffMinutos <= TEMPO_TOLERANCIA_MINUTOS) {
     valorCalculado = 0
   } else {
@@ -703,8 +706,30 @@ async function encerrarTicket (ticketId, botao) {
     valorCalculado = horasPagas * valorHora
   }
 
+  const avisoMensalista = previsaoCiclo?.cobraAgora
+    ? `<div class="alert alert-warning py-2 mb-3">
+        <strong>Novo ciclo de 30 dias:</strong> sem ciclo vigente — liberado até
+        <strong>${formatarDataCicloMensalista(previsaoCiclo.dataFim)}</strong>.
+      </div>`
+    : `<div class="alert alert-info py-2 mb-3">
+        <strong>Mensalista liberado:</strong> ciclo já pago, válido até
+        <strong>${formatarDataCicloMensalista(previsaoCiclo?.dataFim)}</strong>.
+      </div>`
+
   const selectPagamentoHTML = ehMensalista
-    ? `<div class="alert alert-info py-2 mb-3"><strong>Isenção Aplicada:</strong> Veículo de Mensalista.</div>`
+    ? `${avisoMensalista}${
+        previsaoCiclo?.cobraAgora
+          ? `<div class="mb-3 text-start">
+              <label for="swal-dashboard-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
+              <select id="swal-dashboard-pagamento" class="form-select">
+                <option value="pix" selected>📱 PIX</option>
+                <option value="cartao_credito">💳 Cartão de Crédito</option>
+                <option value="cartao_debito">💳 Cartão de Débito</option>
+                <option value="dinheiro">💵 Dinheiro</option>
+              </select>
+            </div>`
+          : ''
+      }`
     : `
       <div class="mb-3 text-start">
         <label for="swal-dashboard-pagamento" class="form-label fw-semibold">Forma de Pagamento:</label>
@@ -740,7 +765,7 @@ async function encerrarTicket (ticketId, botao) {
     confirmButtonText: '<i class="fas fa-check me-1"></i> Confirmar Saída',
     cancelButtonText: 'Cancelar',
     preConfirm: () => {
-      if (ehMensalista) return 'isento'
+      if (ehMensalista && !previsaoCiclo?.cobraAgora) return 'isento'
       const select = document.getElementById('swal-dashboard-pagamento')
       return select ? select.value : 'pix'
     }
@@ -753,16 +778,25 @@ async function encerrarTicket (ticketId, botao) {
   try {
     // ApiService.fecharTicket é o único ponto que calcula e persiste o valor
     // cobrado, garantindo que ele nunca divirja do valor mostrado acima.
-    await ApiService.fecharTicket(ticketId, { formaPagamento })
+    const resultado = await ApiService.fecharTicket(ticketId, { formaPagamento })
 
     const vaga = globalVagas.find(
       v => String(v.id) === String(ticket.vagaId)
     )
 
+    const ciclo = resultado?.mensalistaCiclo
+    const htmlMensalista = ciclo
+      ? `<p class="mt-2 mb-0 text-muted">${
+          ciclo.cobradoAgora
+            ? `<strong>Mensalista:</strong> novo ciclo cobrado agora. Liberado até <strong>${formatarDataCicloMensalista(ciclo.dataFim)}</strong>.`
+            : `<strong>Mensalista:</strong> valor já cobrado e pago pelo cliente. Liberado até <strong>${formatarDataCicloMensalista(ciclo.dataFim)}</strong>.`
+        }</p>`
+      : ''
+
     const { isDenied } = await Swal.fire({
       icon: 'success',
       title: 'Saída Registrada!',
-      text: `Veículo ${ticket.placa} liberado com sucesso.`,
+      html: `<p class="mb-0">Veículo ${ApiService.sanitizeText(ticket.placa)} liberado com sucesso.</p>${htmlMensalista}`,
       confirmButtonColor: '#0e3a2f',
       confirmButtonText: 'OK',
       showDenyButton: true,

@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
     <!-- Guarda de rota: se já existe sessão salva, não faz sentido mostrar o
          login de novo — manda direto para o Dashboard. Fica logo no topo do
          <head>, antes de qualquer CSS/HTML renderizar, para não "piscar" a
@@ -21,6 +22,8 @@
     <title>Entrar | ParkGestão</title>
 
     <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#0d6efd">
 
     <!-- Fonte Inter (Google Fonts) — usada em $font-family-base no SCSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,7 +194,7 @@
                                             <label for="cadastro-telefone" class="form-label fw-bold">Telefone</label>
                                             <input type="text" id="cadastro-telefone" class="form-control" required
                                                 autocomplete="tel" inputmode="tel" maxlength="15"
-                                                placeholder="(11) 99999-9999">
+                                                placeholder="(11) 98765-4321">
                                         </div>
                                         <div class="mb-3 text-start">
                                             <label for="cadastro-senha" class="form-label fw-bold">Senha</label>
@@ -286,6 +289,7 @@
     <script defer src="../assets/js/modules/lgpd.js"></script>
     <script defer src="../assets/js/models/api.js"></script>
     <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/telemetria.js"></script>
     <script defer src="../assets/js/modules/toast.js"></script>
     <script defer src="../assets/js/modules/frase-do-dia.js"></script>
     <script defer src="../assets/js/modules/gsap-init.js"></script>

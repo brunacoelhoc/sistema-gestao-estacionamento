@@ -45,14 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('btn-exportar-tarifas-excel')
     ?.addEventListener('click', () => exportarTarifas('excel'))
 
-  // Listener para formulários de cadastro na página
-  document
-    .getElementById('form-nova-tarifa')
-    ?.addEventListener('submit', cadastrarNovaTarifa)
-  document
-    .getElementById('form-nova-vaga')
-    ?.addEventListener('submit', cadastrarNovaVaga)
-
   // Botão "Tentar novamente"
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
     carregarTodosOsDados()
@@ -123,6 +115,12 @@ async function carregarTodosOsDados () {
   } catch (error) {
     console.error('Erro ao carregar dados de Vagas e Tarifas:', error)
 
+    // Sessão expirada (401) já é tratada por AuthService.tratarSessaoExpirada
+    // — logout + redirect pro login já disparados a essa altura.
+    if (typeof AuthService !== 'undefined' && !AuthService.estaLogado()) {
+      return
+    }
+
     if (pageError) pageError.classList.remove('d-none')
 
     if (typeof Swal !== 'undefined') {
@@ -191,16 +189,22 @@ function renderizarGridVagas (vagasList) {
       itens.forEach(({ vaga, numeroVaga }) => {
         const rawStatus = (vaga.status || 'livre').toLowerCase()
         const info = STATUS_VAGA[rawStatus] || STATUS_VAGA.livre
+        const acessivel = Boolean(vaga.acessivel)
 
         const bolinha = document.createElement('button')
         bolinha.type = 'button'
-        bolinha.className = `vaga-circulo vaga-circulo-${rawStatus.replace('ç', 'c').replace('ã', 'a')}`
+        bolinha.className = `vaga-circulo vaga-circulo-${rawStatus.replace('ç', 'c').replace('ã', 'a')}${
+          acessivel ? ' vaga-circulo-acessivel' : ''
+        }`
         bolinha.setAttribute(
           'aria-label',
-          `Vaga ${numeroVaga}, tipo ${vaga.tipo || 'comum'}, status ${info.texto}`
+          `Vaga ${numeroVaga}, tipo ${vaga.tipo || 'comum'}${acessivel ? ', acessível (PCD)' : ''}, status ${info.texto}`
         )
-        bolinha.title = `${numeroVaga} — ${info.texto}`
-        bolinha.innerHTML = `<span>${sanitizar(numeroVaga)}</span>`
+        bolinha.title = `${numeroVaga} — ${info.texto}${acessivel ? ' — Acessível (PCD)' : ''}`
+        bolinha.innerHTML = `
+          <span>${sanitizar(numeroVaga)}</span>
+          ${acessivel ? '<span class="vaga-pcd-badge" aria-hidden="true"><i class="fas fa-wheelchair"></i></span>' : ''}
+        `
 
         bolinha.addEventListener('click', () => abrirOpcoesVaga(vaga))
 
@@ -214,6 +218,15 @@ function renderizarGridVagas (vagasList) {
   gridContainer.appendChild(cinema)
 }
 
+// "acessivel" não é um valor de vaga.tipo (é um booleano à parte, ver
+// migration 20260821124153_add_vaga_acessivel) — os filtros de tipo (Mapa
+// Visual e tabela) tratam esse valor como um caso especial que casa pelo
+// campo vaga.acessivel em vez de comparar contra vaga.tipo.
+function vagaBateFiltroTipo (vaga, tipoFiltro) {
+  if (tipoFiltro === 'acessivel') return Boolean(vaga.acessivel)
+  return (vaga.tipo || '').trim().toLowerCase() === tipoFiltro
+}
+
 function filtrarVagasPorTipo (tipo) {
   const tipoFormatado = (tipo || '').trim().toLowerCase()
 
@@ -224,10 +237,7 @@ function filtrarVagasPorTipo (tipo) {
   ) {
     renderizarGridVagas(todasVagas)
   } else {
-    const filtradas = todasVagas.filter(vaga => {
-      const tipoVaga = (vaga.tipo || '').trim().toLowerCase()
-      return tipoVaga === tipoFormatado
-    })
+    const filtradas = todasVagas.filter(vaga => vagaBateFiltroTipo(vaga, tipoFormatado))
 
     renderizarGridVagas(filtradas)
   }
@@ -357,38 +367,6 @@ async function abrirModalNovaTarifa () {
   }
 }
 
-async function cadastrarNovaTarifa (event) {
-  if (event) event.preventDefault()
-
-  const elCategoria =
-    document.getElementById('input-tarifa-categoria') ||
-    document.getElementById('tarifa-categoria')
-  const elValor =
-    document.getElementById('input-tarifa-valor') ||
-    document.getElementById('tarifa-valor')
-
-  const categoria = elCategoria ? elCategoria.value.trim() : ''
-  const valorInput = elValor ? elValor.value.trim() : ''
-  const valorHora = Number(valorInput.replace(',', '.'))
-
-  if (!categoria || valorInput === '' || isNaN(valorHora) || valorHora <= 0) {
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Campos Obrigatórios',
-        text: 'Por favor, preencha todos os campos corretamente antes de salvar a tarifa.'
-      })
-    }
-    return
-  }
-
-  const salvou = await executarSalvarTarifa({ categoria, valorHora })
-  if (salvou) {
-    if (elCategoria) elCategoria.value = ''
-    if (elValor) elValor.value = ''
-  }
-}
-
 async function executarSalvarTarifa (dadosTarifa) {
   try {
     if (typeof ApiService !== 'undefined') {
@@ -443,6 +421,12 @@ async function abrirModalNovaVaga () {
           <option value="manutencao">Manutenção</option>
         </select>
       </div>
+      <div class="text-start mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="swal-novo-acessivel">
+        <label class="form-check-label" for="swal-novo-acessivel">
+          <i class="fas fa-wheelchair me-1" aria-hidden="true"></i>Vaga acessível (PCD)
+        </label>
+      </div>
     `,
     focusConfirm: false,
     showCancelButton: true,
@@ -452,6 +436,7 @@ async function abrirModalNovaVaga () {
       const codigo = document.getElementById('swal-novo-codigo').value.trim()
       const tipo = document.getElementById('swal-novo-tipo').value
       const status = document.getElementById('swal-novo-status').value
+      const acessivel = document.getElementById('swal-novo-acessivel').checked
 
       if (!codigo) {
         Swal.showValidationMessage('Informe o código da vaga.')
@@ -465,7 +450,7 @@ async function abrirModalNovaVaga () {
         return false
       }
 
-      return { codigo, tipo, status }
+      return { codigo, tipo, status, acessivel }
     }
   })
 
@@ -508,11 +493,10 @@ function aplicarFiltrosTabelaVagas () {
     const numero = String(
       vaga.codigo || vaga.numero || vaga.id || ''
     ).toLowerCase()
-    const tipoVaga = String(vaga.tipo || '').toLowerCase()
     const statusVaga = String(vaga.status || 'livre').toLowerCase()
 
     const bateBusca = !busca || numero.includes(busca)
-    const bateTipo = tipo === 'todos' || tipoVaga === tipo
+    const bateTipo = tipo === 'todos' || vagaBateFiltroTipo(vaga, tipo)
     const bateStatus = status === 'todos' || statusVaga === status
 
     return bateBusca && bateTipo && bateStatus
@@ -541,12 +525,14 @@ function exportarVagas (formato) {
   const colunas = [
     { chave: 'codigo', rotulo: 'Código' },
     { chave: 'tipo', rotulo: 'Tipo' },
+    { chave: 'acessivel', rotulo: 'Acessível (PCD)' },
     { chave: 'status', rotulo: 'Status' }
   ]
 
   const linhas = vagasFiltradasAtual.map(vaga => ({
     codigo: vaga.codigo || vaga.numero || vaga.id,
     tipo: vaga.tipo || 'comum',
+    acessivel: vaga.acessivel ? 'Sim' : 'Não',
     status: STATUS_VAGA[(vaga.status || 'livre').toLowerCase()]?.texto ||
       vaga.status ||
       'Livre'
@@ -583,13 +569,13 @@ function exportarTarifas (formato) {
 const paginadorVagas =
   typeof criarPaginador === 'function'
     ? criarPaginador({
-        idSufixo: 'vagas',
-        tbodyId: 'tbody-vagas',
-        colspanVazio: 4,
-        textoVazio:
+      idSufixo: 'vagas',
+      tbodyId: 'tbody-vagas',
+      colspanVazio: 4,
+      textoVazio:
           '<i class="fas fa-search me-1" aria-hidden="true"></i>Nenhuma vaga encontrada com os filtros aplicados.',
-        renderLinha: renderLinhaVaga
-      })
+      renderLinha: renderLinhaVaga
+    })
     : null
 
 function renderLinhaVaga (vaga, tbody) {
@@ -611,7 +597,10 @@ function renderLinhaVaga (vaga, tbody) {
     `
       <tr>
         <td class="fw-bold">${sanitizar(numero)}</td>
-        <td class="text-capitalize">${sanitizar(tipo)}</td>
+        <td class="text-capitalize">
+          ${sanitizar(tipo)}
+          ${vaga.acessivel ? '<i class="fas fa-wheelchair text-primary ms-1" aria-hidden="true" title="Vaga acessível (PCD)"></i><span class="visually-hidden"> — Acessível (PCD)</span>' : ''}
+        </td>
         <td>
           <span class="badge-status ${statusInfo.badgeClass}">
             <i class="fas ${statusInfo.icon}" aria-hidden="true"></i> ${statusInfo.texto}
@@ -654,12 +643,12 @@ function renderizarTabelaVagas (vagas) {
 const paginadorTarifas =
   typeof criarPaginador === 'function'
     ? criarPaginador({
-        idSufixo: 'tarifas',
-        tbodyId: 'tbody-tarifas',
-        colspanVazio: 3,
-        textoVazio: 'Nenhuma tarifa cadastrada.',
-        renderLinha: renderLinhaTarifa
-      })
+      idSufixo: 'tarifas',
+      tbodyId: 'tbody-tarifas',
+      colspanVazio: 3,
+      textoVazio: 'Nenhuma tarifa cadastrada.',
+      renderLinha: renderLinhaTarifa
+    })
     : null
 
 function renderLinhaTarifa (tarifa, tbody) {
@@ -780,6 +769,14 @@ async function editarVaga (vagaId) {
         </select>
         <div class="form-text">O status "Ocupada" é definido automaticamente pelo sistema.</div>
       </div>
+      <div class="text-start mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="swal-input-acessivel" ${
+          vaga.acessivel ? 'checked' : ''
+        }>
+        <label class="form-check-label" for="swal-input-acessivel">
+          <i class="fas fa-wheelchair me-1" aria-hidden="true"></i>Vaga acessível (PCD)
+        </label>
+      </div>
     `,
     focusConfirm: false,
     showCancelButton: true,
@@ -800,7 +797,8 @@ async function editarVaga (vagaId) {
       return {
         codigo,
         tipo: document.getElementById('swal-input-tipo').value,
-        status: document.getElementById('swal-input-status').value
+        status: document.getElementById('swal-input-status').value,
+        acessivel: document.getElementById('swal-input-acessivel').checked
       }
     }
   })
@@ -969,7 +967,6 @@ window.alternarManutencaoVaga = alternarManutencaoVaga
 window.excluirVaga = excluirVaga
 window.editarTarifa = editarTarifa
 window.excluirTarifa = excluirTarifa
-window.cadastrarNovaTarifa = cadastrarNovaTarifa
 window.abrirModalNovaTarifa = abrirModalNovaTarifa
 window.abrirModalNovaVaga = abrirModalNovaVaga
 window.aplicarFiltrosTabelaVagas = aplicarFiltrosTabelaVagas

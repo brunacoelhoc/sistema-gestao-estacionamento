@@ -10,16 +10,16 @@
 const ToastParkGestao =
   typeof Swal !== 'undefined'
     ? Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 2500,
-        timerProgressBar: true,
-        didOpen: toastEl => {
-          toastEl.addEventListener('mouseenter', Swal.stopTimer)
-          toastEl.addEventListener('mouseleave', Swal.resumeTimer)
-        }
-      })
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: toastEl => {
+        toastEl.addEventListener('mouseenter', Swal.stopTimer)
+        toastEl.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
     : null
 
 function toastParkGestao (icon, titulo) {

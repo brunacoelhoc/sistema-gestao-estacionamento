@@ -1,0 +1,60 @@
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs border-bottom border-white-10"
+        role="region" aria-label="Barra de Acessibilidade">
+
+        <!-- Controles de Tamanho de Fonte -->
+        <div class="accessibility-group d-flex align-items-center gap-2">
+            <span class="fw-bold text-white-80">
+                <i class="fas fa-universal-access text-warning me-1" aria-hidden="true"></i> Acessibilidade:
+            </span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Controles de tamanho de texto">
+                <button id="btn-font-increase" class="btn btn-outline-light py-0 px-2 rounded-start-pill text-xs"
+                    type="button" title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+                <button id="btn-font-decrease" class="btn btn-outline-light py-0 px-2 text-xs" type="button"
+                    title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+                <button id="btn-font-reset" class="btn btn-outline-light py-0 px-2 rounded-end-pill text-xs"
+                    type="button" title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+            </div>
+        </div>
+
+        <!-- Ferramentas Visuais & Filtros -->
+        <div class="accessibility-group d-flex align-items-center gap-2">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2 rounded-pill text-xs"
+                type="button" title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste"
+                aria-pressed="false">
+                <i class="fas fa-adjust me-1" aria-hidden="true"></i> Contraste
+            </button>
+
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill text-xs" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
+                <i class="fas fa-font me-1" aria-hidden="true"></i> Dislexia
+            </button>
+
+            <button id="btn-motion" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página"
+                aria-pressed="false">
+                <i class="fas fa-running me-1" aria-hidden="true"></i> Animação Off
+            </button>
+
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill text-xs text-white-80"
+                type="button" title="Alternar Modo Noturno" aria-label="Alternar modo noturno"
+                aria-pressed="false">
+                <i class="fas fa-moon me-1" aria-hidden="true"></i> Modo Noturno
+            </button>
+
+            <!-- Select Estilizado de Daltonismo -->
+            <div class="position-relative d-inline-flex align-items-center">
+                <i class="fas fa-eye position-absolute start-0 ms-2 text-warning pointer-events-none text-xs"
+                    aria-hidden="true"></i>
+                <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+                <select id="select-daltonism"
+                    class="form-select form-select-sm custom-select-dark ps-4 py-0 text-xs rounded-pill"
+                    aria-label="Selecionar filtro para daltonismo">
+                    <option value="normal">Daltonismo: Normal</option>
+                    <option value="protanopia">Protanopia</option>
+                    <option value="deuteranopia">Deuteranopia</option>
+                    <option value="tritanopia">Tritanopia</option>
+                </select>
+            </div>
+        </div>
+    </div>

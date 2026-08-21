@@ -181,6 +181,6 @@ function marcarLinkNavegacaoAtivo () {
  * do site e o arquivo index.html explícito.
  */
 function normalizarPath (pathname) {
-  let p = pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '')
+  const p = pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '')
   return p === '' ? '/' : p
 }

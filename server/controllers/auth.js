@@ -1,7 +1,22 @@
+const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
 const prisma = require('../config/prisma')
+const usuarioRepository = require('../repositories/usuarioRepository')
+const resetSenhaCodigoRepository = require('../repositories/resetSenhaCodigoRepository')
+const { enviarEmailResetSenha } = require('../services/email')
+
+const RESET_TTL_MINUTOS = 15
+
+function gerarCodigoReset () {
+  return String(crypto.randomInt(100000, 1000000))
+}
+
+// Nunca guardamos o código em texto puro — só o hash, igual senha.
+function hashCodigoReset (codigo) {
+  return crypto.createHash('sha256').update(codigo).digest('hex')
+}
 
 // GOOGLE_CLIENT_ID precisa ser o mesmo Client ID configurado no front-end
 // (ver GOOGLE_CLIENT_ID em assets/js/modules/auth.js) — Client ID não é
@@ -10,9 +25,15 @@ const prisma = require('../config/prisma')
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
 
+// cpfPendente vai no token para o middleware requireProfileComplete decidir
+// sem precisar consultar o banco a cada requisição. Contas criadas via
+// Google (ver função google, abaixo) nascem sem CPF — cpfPendente fica true
+// até o usuário completar o cadastro (POST/PATCH que grava o CPF precisa
+// gerar um token novo, senão o token antigo continuaria "preso" com o valor
+// de quando foi emitido).
 function gerarToken (usuario) {
   return jwt.sign(
-    { id: usuario.id, role: usuario.role, nome: usuario.nome },
+    { id: usuario.id, role: usuario.role, nome: usuario.nome, cpfPendente: !usuario.cpf },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   )
@@ -26,11 +47,8 @@ function semSenha (usuario) {
 // Login é por CPF, igual ao comportamento atual do front (AuthService.login).
 async function login (req, res) {
   const { cpf, senha } = req.body
-  if (!cpf || !senha) {
-    return res.status(400).json({ erro: 'Informe CPF e senha.' })
-  }
 
-  const usuario = await prisma.usuario.findUnique({ where: { cpf } })
+  const usuario = await usuarioRepository.buscarPorCpf(cpf)
   if (!usuario || !usuario.senha) {
     return res.status(401).json({ erro: 'CPF ou senha inválidos.' })
   }
@@ -51,33 +69,24 @@ async function login (req, res) {
 async function registrar (req, res) {
   const { nome, cpf, email, senha, telefone, aceitouTermos } = req.body
 
-  if (!nome || !cpf || !email || !telefone || !senha) {
-    return res.status(400).json({ erro: 'Todos os campos são obrigatórios para o cadastro.' })
-  }
-  if (!aceitouTermos) {
-    return res.status(400).json({ erro: 'É necessário aceitar os Termos de Uso para se cadastrar.' })
-  }
-
   const [cpfExistente, emailExistente] = await Promise.all([
-    prisma.usuario.findUnique({ where: { cpf } }),
-    prisma.usuario.findUnique({ where: { email } })
+    usuarioRepository.buscarPorCpf(cpf),
+    usuarioRepository.buscarPorEmail(email)
   ])
   if (cpfExistente) return res.status(409).json({ erro: 'Já existe uma conta cadastrada com este CPF.' })
   if (emailExistente) return res.status(409).json({ erro: 'Já existe uma conta cadastrada com este e-mail.' })
 
-  const usuario = await prisma.usuario.create({
-    data: {
-      nome,
-      cpf,
-      email,
-      senha: await bcrypt.hash(senha, 12),
-      telefone,
-      role: 'funcionario',
-      ativo: true,
-      aceitouTermos: true,
-      provedor: 'local',
-      senhaAlteradaEm: new Date()
-    }
+  const usuario = await usuarioRepository.criar({
+    nome,
+    cpf,
+    email,
+    senha: await bcrypt.hash(senha, 12),
+    telefone,
+    role: 'funcionario',
+    ativo: true,
+    aceitouTermos: Boolean(aceitouTermos),
+    provedor: 'local',
+    senhaAlteradaEm: new Date()
   })
 
   res.status(201).json({ token: gerarToken(usuario), usuario: semSenha(usuario) })
@@ -97,9 +106,6 @@ async function google (req, res) {
   }
 
   const { credential } = req.body
-  if (!credential) {
-    return res.status(400).json({ erro: 'Não foi possível ler os dados da conta Google.' })
-  }
 
   let payload
   try {
@@ -117,17 +123,15 @@ async function google (req, res) {
     return res.status(400).json({ erro: 'Não foi possível ler os dados da conta Google.' })
   }
 
-  let usuario = await prisma.usuario.findUnique({ where: { email } })
+  let usuario = await usuarioRepository.buscarPorEmail(email)
   if (!usuario) {
-    usuario = await prisma.usuario.create({
-      data: {
-        nome: nome || email,
-        email,
-        role: 'funcionario',
-        ativo: true,
-        aceitouTermos: true,
-        provedor: 'google'
-      }
+    usuario = await usuarioRepository.criar({
+      nome: nome || email,
+      email,
+      role: 'funcionario',
+      ativo: true,
+      aceitouTermos: true,
+      provedor: 'google'
     })
   }
 
@@ -140,15 +144,13 @@ async function google (req, res) {
   res.json({ token: gerarToken(usuario), usuario: semSenha(usuario) })
 }
 
-// Recuperação de senha (simulada — sem envio real de e-mail, o código é
-// gerado e mostrado no próprio front-end). Esta função só confirma que
-// existe uma conta local com esse e-mail, sem expor nenhum outro dado do
-// usuário.
+// Recuperação de senha: gera um código de 6 dígitos, guarda só o hash dele
+// (com expiração de RESET_TTL_MINUTOS) e envia o código por e-mail de
+// verdade via server/services/email.js.
 async function solicitarReset (req, res) {
   const { email } = req.body
-  if (!email) return res.status(400).json({ erro: 'Informe um e-mail.' })
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } })
+  const usuario = await usuarioRepository.buscarPorEmail(email)
   if (!usuario) {
     return res.status(404).json({ erro: 'Não encontramos uma conta com este e-mail.' })
   }
@@ -158,31 +160,54 @@ async function solicitarReset (req, res) {
     })
   }
 
+  const codigo = gerarCodigoReset()
+  const expiraEm = new Date(Date.now() + RESET_TTL_MINUTOS * 60 * 1000)
+
+  await prisma.$transaction(async tx => {
+    // Invalida códigos anteriores ainda não usados — só o mais recente vale.
+    await resetSenhaCodigoRepository.invalidarPendentes(usuario.id, tx)
+    await resetSenhaCodigoRepository.criar(
+      { usuarioId: usuario.id, codigoHash: hashCodigoReset(codigo), expiraEm }, tx
+    )
+  })
+
+  await enviarEmailResetSenha({ to: usuario.email, nome: usuario.nome, codigo })
+
   res.json({ ok: true })
 }
 
-// A validação do código de verificação continua no front-end (ver
-// solicitarResetSenha/confirmarResetSenha em auth.js); aqui só trocamos a
-// senha de fato, já com hash.
+// Confere o código de verificação (hash + expiração + uso único) antes de
+// trocar a senha. Igual ao login, a mensagem de erro não distingue "código
+// errado" de "código expirado" pra não dar pista a quem estiver tentando
+// adivinhar.
 async function confirmarReset (req, res) {
-  const { email, novaSenha } = req.body
-  if (!email || !novaSenha) {
-    return res.status(400).json({ erro: 'Informe o e-mail e a nova senha.' })
-  }
+  const { email, codigo, novaSenha } = req.body
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } })
+  const usuario = await usuarioRepository.buscarPorEmail(email)
   if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado.' })
 
-  await prisma.usuario.update({
-    where: { id: usuario.id },
-    data: {
-      senha: await bcrypt.hash(novaSenha, 12),
+  const registro = await resetSenhaCodigoRepository.buscarPendenteMaisRecente(usuario.id)
+
+  const codigoValido =
+    registro &&
+    registro.expiraEm > new Date() &&
+    registro.codigoHash === hashCodigoReset(codigo)
+
+  if (!codigoValido) {
+    return res.status(400).json({ erro: 'Código de verificação inválido ou expirado.' })
+  }
+
+  const senhaHash = await bcrypt.hash(novaSenha, 12)
+  await prisma.$transaction(async tx => {
+    await resetSenhaCodigoRepository.marcarComoUsado(registro.id, tx)
+    await usuarioRepository.atualizar(usuario.id, {
+      senha: senhaHash,
       senhaTemporaria: false,
       senhaAlteradaEm: new Date()
-    }
+    }, tx)
   })
 
   res.json({ ok: true })
 }
 
-module.exports = { login, registrar, google, solicitarReset, confirmarReset }
+module.exports = { login, registrar, google, solicitarReset, confirmarReset, gerarToken }

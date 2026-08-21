@@ -1,37 +1,27 @@
-const prisma = require('../config/prisma')
+const vagaRepository = require('../repositories/vagaRepository')
 
 async function listar (req, res) {
-  res.json(await prisma.vaga.findMany())
+  res.json(await vagaRepository.listarTodas())
 }
 
 async function criar (req, res) {
-  const { codigo, tipo, status } = req.body
-  if (!codigo) {
-    return res.status(400).json({ erro: 'Código da vaga é obrigatório.' })
-  }
+  const { codigo, tipo, status, acessivel } = req.body
 
-  const vaga = await prisma.vaga.create({
-    data: {
-      codigo: codigo.toUpperCase(),
-      tipo: (tipo || 'comum').toLowerCase(),
-      status: (status || 'livre').toLowerCase()
-    }
+  const vaga = await vagaRepository.criar({
+    codigo,
+    tipo: tipo || 'comum',
+    status: status || 'livre',
+    acessivel: acessivel || false
   })
   res.status(201).json(vaga)
 }
 
 async function atualizar (req, res) {
-  const dados = {}
-  const { codigo, tipo, status } = req.body
-  if (codigo !== undefined) dados.codigo = codigo.toUpperCase()
-  if (tipo !== undefined) dados.tipo = tipo.toLowerCase()
-  if (status !== undefined) dados.status = status.toLowerCase()
-
-  res.json(await prisma.vaga.update({ where: { id: req.params.id }, data: dados }))
+  res.json(await vagaRepository.atualizar(req.params.id, req.body))
 }
 
 async function remover (req, res) {
-  await prisma.vaga.delete({ where: { id: req.params.id } })
+  await vagaRepository.remover(req.params.id)
   res.status(204).end()
 }
 
