@@ -31,6 +31,12 @@ export class CriarMensalistaDto {
   valorMensalidade?: number
 
   @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty({ message: 'Categoria do plano não pode ficar vazia.' })
+  categoriaPlano?: string
+
+  @IsOptional()
   @Transform(({ value }) => value === undefined ? value : Boolean(value))
   @IsBoolean()
   ativo?: boolean

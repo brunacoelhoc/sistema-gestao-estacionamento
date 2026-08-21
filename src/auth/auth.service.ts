@@ -8,6 +8,7 @@ import {
   ServiceUnavailableException,
   UnauthorizedException
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 import { OAuth2Client } from 'google-auth-library'
@@ -21,12 +22,6 @@ import { RegistrarDto } from './dto/registrar.dto'
 import { SolicitarResetDto } from './dto/solicitar-reset.dto'
 
 const RESET_TTL_MINUTOS = 15
-
-// GOOGLE_CLIENT_ID precisa ser o mesmo Client ID configurado no front-end
-// (ver GOOGLE_CLIENT_ID em assets/js/modules/auth.js) — Client ID não é
-// segredo, é seguro deixá-lo público no navegador. Sem ele configurado no
-// .env, o login com Google fica desativado.
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null
 
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
@@ -44,13 +39,22 @@ function hashCodigoReset (codigo: string): string {
 
 @Injectable()
 export class AuthService {
-  private readonly googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
+  // GOOGLE_CLIENT_ID precisa ser o mesmo Client ID configurado no front-end
+  // (ver GOOGLE_CLIENT_ID em assets/js/modules/auth.js) — Client ID não é
+  // segredo, é seguro deixá-lo público no navegador. Sem ele configurado no
+  // .env, o login com Google fica desativado.
+  private readonly googleClientId: string | null
+  private readonly googleClient: OAuth2Client | null
 
   constructor (
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly emailService: EmailService
-  ) {}
+    private readonly emailService: EmailService,
+    configService: ConfigService
+  ) {
+    this.googleClientId = configService.get<string>('GOOGLE_CLIENT_ID') || null
+    this.googleClient = this.googleClientId ? new OAuth2Client(this.googleClientId) : null
+  }
 
   // cpfPendente vai no token para o ProfileCompleteGuard decidir sem
   // precisar consultar o banco a cada requisição. Contas criadas via Google
@@ -125,7 +129,7 @@ export class AuthService {
     try {
       const ticket = await this.googleClient.verifyIdToken({
         idToken: dto.credential,
-        audience: GOOGLE_CLIENT_ID as string
+        audience: this.googleClientId as string
       })
       payload = ticket.getPayload()
     } catch {

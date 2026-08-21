@@ -813,7 +813,8 @@ async function encerrarTicket (ticketId, botao) {
         horaSaida,
         tempoTexto,
         formaPagamento,
-        valor: valorCalculado
+        valor: valorCalculado,
+        cicloVigente: ciclo ? { dataInicio: ciclo.dataInicio, dataFim: ciclo.dataFim } : null
       })
     }
 

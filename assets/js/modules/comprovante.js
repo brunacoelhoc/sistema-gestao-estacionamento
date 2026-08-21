@@ -28,6 +28,12 @@ function formatarFormaPagamentoComprovante (forma) {
   return mapa[forma] || forma || '-'
 }
 
+function formatarDataComprovante (data) {
+  if (!data) return '-'
+  const d = data instanceof Date ? data : new Date(data)
+  return isNaN(d) ? '-' : d.toLocaleDateString('pt-BR')
+}
+
 /**
  * @param {Object} dados
  * @param {string|number} dados.ticketId
@@ -38,6 +44,13 @@ function formatarFormaPagamentoComprovante (forma) {
  * @param {string} dados.tempoTexto Permanência já formatada (ex.: "1h 20min")
  * @param {string} dados.formaPagamento
  * @param {number} dados.valor
+ * @param {Object} [dados.cicloVigente] Só para mensalista — a permanência
+ *   deste ticket (normalmente poucos minutos) não diz nada de útil pra quem
+ *   paga por um período de 30 dias, então o comprovante troca Entrada/Saída/
+ *   Permanência pelo início e validade do ciclo pago (ver mensalistaCiclo em
+ *   TicketsService.fechar).
+ * @param {Date|string} dados.cicloVigente.dataInicio
+ * @param {Date|string} dados.cicloVigente.dataFim
  */
 function gerarComprovanteTicketPDF (dados) {
   if (typeof window.jspdf === 'undefined') {
@@ -81,9 +94,18 @@ function gerarComprovanteTicketPDF (dados) {
   linha('Ticket:', `#${dados.ticketId}`)
   linha('Placa:', dados.placa)
   linha('Vaga:', dados.vagaCodigo)
-  linha('Entrada:', formatarDataHoraComprovante(dados.horaEntrada))
-  linha('Saída:', formatarDataHoraComprovante(dados.horaSaida))
-  linha('Permanência:', dados.tempoTexto)
+
+  if (dados.cicloVigente) {
+    // Mensalista: a permanência desta passagem pelo pátio não importa —
+    // o que importa é até quando o período de 30 dias já pago continua valendo.
+    linha('Início do Período:', formatarDataComprovante(dados.cicloVigente.dataInicio))
+    linha('Válido até:', formatarDataComprovante(dados.cicloVigente.dataFim))
+  } else {
+    linha('Entrada:', formatarDataHoraComprovante(dados.horaEntrada))
+    linha('Saída:', formatarDataHoraComprovante(dados.horaSaida))
+    linha('Permanência:', dados.tempoTexto)
+  }
+
   linha('Pagamento:', formatarFormaPagamentoComprovante(dados.formaPagamento))
 
   y += 2

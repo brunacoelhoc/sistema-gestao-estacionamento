@@ -192,24 +192,24 @@
         </div>
 
         <!-- CARDS KPI -->
-        <div class="row g-3 mb-4" aria-live="polite">
-            <div class="col-12 col-sm-6 col-md-4">
-                <div class="card-kpi kpi-warning h-100">
+        <div class="row g-3 mb-3" aria-live="polite">
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card-kpi kpi-info h-100">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="kpi-label">Total Pendente</span>
-                            <div id="kpi-total-pendente" class="kpi-value">
+                            <span class="kpi-label">Faturamento Previsto (MRR)</span>
+                            <div id="kpi-previsto-mrr" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-8"></span></span>
                             </div>
                         </div>
                         <div class="kpi-icon-bubble">
-                            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+                            <i class="fas fa-chart-line" aria-hidden="true"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-12 col-sm-6 col-md-4">
+            <div class="col-12 col-sm-6 col-md-3">
                 <div class="card-kpi kpi-success h-100">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
@@ -225,17 +225,68 @@
                 </div>
             </div>
 
-            <div class="col-12 col-sm-6 col-md-4">
+            <div class="col-12 col-sm-6 col-md-3">
+                <div class="card-kpi kpi-warning h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="kpi-label">Ticket Médio (mensalista ativo)</span>
+                            <div id="kpi-ticket-medio" class="kpi-value">
+                                <span class="placeholder-glow"><span class="placeholder col-8"></span></span>
+                            </div>
+                        </div>
+                        <div class="kpi-icon-bubble">
+                            <i class="fas fa-receipt" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-3">
                 <div class="card-kpi kpi-danger h-100">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="kpi-label">Mensalistas Inadimplentes</span>
-                            <div id="kpi-inadimplentes" class="kpi-value">
+                            <span class="kpi-label">Sem Ciclo Ativo</span>
+                            <div id="kpi-sem-ciclo" class="kpi-value">
                                 <span class="placeholder-glow"><span class="placeholder col-6"></span></span>
                             </div>
                         </div>
                         <div class="kpi-icon-bubble">
                             <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESUMO POR FORMA DE PAGAMENTO + IMPACTO DE CANCELAMENTOS (respeitam os filtros ativos da tabela abaixo) -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center flex-wrap gap-2">
+                        <span><i class="fas fa-chart-pie text-primary me-2" aria-hidden="true"></i>Recebido por Forma de Pagamento</span>
+                        <span class="text-muted fw-normal text-xs">(cobranças pagas, conforme filtros ativos)</span>
+                    </div>
+                    <div class="card-body py-3">
+                        <div id="resumo-formas-pagamento" class="d-flex flex-wrap gap-4">
+                            <span class="text-muted text-sm">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white py-2 fw-semibold">
+                        <i class="fas fa-user-slash text-danger me-2" aria-hidden="true"></i>Cancelamentos no Período (Churn)
+                    </div>
+                    <div class="card-body py-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted text-xs">Qtd. cancelada</div>
+                            <div id="churn-quantidade" class="h4 mb-0 fw-bold">0</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted text-xs">Valor perdido</div>
+                            <div id="churn-valor" class="h4 mb-0 fw-bold text-danger">R$ 0,00</div>
                         </div>
                     </div>
                 </div>
@@ -256,7 +307,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h2 class="h5 mb-0 fw-semibold">Cobranças de Mensalistas</h2>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
                     <label for="filtro-status-faturamento" class="visually-hidden">Filtrar por status</label>
                     <select id="filtro-status-faturamento" class="form-select form-select-sm w-auto"
                         aria-label="Filtrar cobranças por status">
@@ -270,11 +321,41 @@
                         aria-label="Filtrar cobranças por mês de referência">
                         <option value="TODOS">Todos os meses</option>
                     </select>
+                    <label for="filtro-periodo-de-faturamento" class="visually-hidden">Início do período do ciclo</label>
+                    <input type="date" id="filtro-periodo-de-faturamento" class="form-control form-control-sm w-auto"
+                        aria-label="Filtrar cobranças a partir desta data de início do ciclo" title="De">
+                    <span class="text-muted text-sm">até</span>
+                    <label for="filtro-periodo-ate-faturamento" class="visually-hidden">Fim do período do ciclo</label>
+                    <input type="date" id="filtro-periodo-ate-faturamento" class="form-control form-control-sm w-auto"
+                        aria-label="Filtrar cobranças até esta data de início do ciclo" title="Até">
                     <label for="input-busca-faturamento" class="visually-hidden">Buscar por mensalista ou
                         placa</label>
                     <input type="text" id="input-busca-faturamento" class="form-control form-control-sm"
                         placeholder="Buscar por nome ou placa..." aria-label="Buscar por mensalista ou placa"
                         autocomplete="off">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                            id="btn-exportar-faturamento" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-file-export me-1" aria-hidden="true"></i>Exportar
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="btn-exportar-faturamento">
+                            <li>
+                                <button class="dropdown-item" type="button" id="btn-exportar-faturamento-csv">
+                                    <i class="fas fa-file-csv me-2" aria-hidden="true"></i>Exportar CSV
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" type="button" id="btn-exportar-faturamento-excel">
+                                    <i class="fas fa-file-excel me-2" aria-hidden="true"></i>Exportar Excel
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" type="button" id="btn-exportar-faturamento-pdf">
+                                    <i class="fas fa-file-pdf me-2" aria-hidden="true"></i>Exportar PDF
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -425,6 +506,10 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 
     <!-- MÓDULOS INTERNOS (ordem importa) -->
     <script defer src="../assets/js/modules/accessibility.js"></script>
@@ -435,6 +520,7 @@
     <script defer src="../assets/js/modules/telemetria.js"></script>
     <script defer src="../assets/js/modules/toast.js"></script>
     <script defer src="../assets/js/modules/paginacao.js"></script>
+    <script defer src="../assets/js/modules/exportar-tabela.js"></script>
     <script defer src="../assets/js/modules/gsap-init.js"></script>
     <script defer src="../assets/js/main.js"></script>
     <script defer src="../assets/js/controllers/faturamento.js"></script>

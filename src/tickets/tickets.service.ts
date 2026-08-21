@@ -133,7 +133,7 @@ export class TicketsService {
 
       let valorTotal: number
       let formaPagamentoFinal = dto.formaPagamento || null
-      let mensalistaCiclo: { cobradoAgora: boolean, dataFim: Date } | null = null
+      let mensalistaCiclo: { cobradoAgora: boolean, dataInicio: Date, dataFim: Date } | null = null
 
       const mensalista = ticket.mensalistaId
         ? await tx.mensalista.findUnique({ where: { id: ticket.mensalistaId } })
@@ -145,14 +145,14 @@ export class TicketsService {
         if (cicloVigente) {
           valorTotal = 0
           formaPagamentoFinal = 'isento'
-          mensalistaCiclo = { cobradoAgora: false, dataFim: cicloVigente.dataFim }
+          mensalistaCiclo = { cobradoAgora: false, dataInicio: cicloVigente.dataInicio, dataFim: cicloVigente.dataFim }
         } else {
           const novoCiclo = await this.mensalidadeCicloService.abrirNovoCiclo(
             tx, mensalista, ticket.dataEntrada, dto.formaPagamento || 'dinheiro'
           )
           valorTotal = Number(mensalista.valorMensalidade || 0)
           formaPagamentoFinal = dto.formaPagamento || 'dinheiro'
-          mensalistaCiclo = { cobradoAgora: true, dataFim: novoCiclo.dataFim }
+          mensalistaCiclo = { cobradoAgora: true, dataInicio: novoCiclo.dataInicio, dataFim: novoCiclo.dataFim }
         }
       } else {
         const tarifa = ticket.tarifaId

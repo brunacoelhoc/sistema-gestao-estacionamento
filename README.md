@@ -133,18 +133,6 @@ npm run dev
 
 Com a API rodando (`http://localhost:3001` por padrão), abra `index.html` no navegador — o jeito mais simples é a extensão **Live Server** do VS Code, já que o front-end é estático e só precisa ser servido por HTTP (não pelo `file://`) para os módulos JS funcionarem direito.
 
-**Alternativa com Docker** (sem precisar instalar Postgres na máquina): o `docker-compose.yml` sobe a API + um Postgres já configurado.
-
-```bash
-cp .env.example .env      # se ainda não tiver feito
-docker compose up --build
-
-# Num outro terminal, popular com dados de exemplo (só na primeira vez)
-docker compose exec api npm run db:seed
-```
-
-A API sobe em `http://localhost:3001` (o `docker compose up` já aplica as migrations via `prisma migrate deploy` antes de iniciar). O front-end continua fora do compose — abra `index.html` pelo Live Server normalmente, apontando pra essa API. O `DATABASE_URL` do `.env` é ignorado pelo container da API, que usa o serviço `db` do compose; as demais variáveis (`JWT_SECRET`, `GOOGLE_CLIENT_ID` etc.) vêm do `.env` normalmente.
-
 **Produção:** `npm run build` compila o SCSS já minificado (sem watch) e `npm start` sobe a API em modo normal (sem o `sass:watch` do `npm run dev`). O front-end continua sendo arquivos estáticos — sirva `index.html`, `404.html`, `views/` e `assets/` por qualquer servidor HTTP/CDN, apontando para a URL da API publicada.
 
 **Variáveis de ambiente (`.env`):**

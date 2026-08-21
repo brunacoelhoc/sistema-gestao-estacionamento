@@ -5,28 +5,41 @@ import cors from 'cors'
 import pinoHttp from 'pino-http'
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { validationExceptionFactory } from './common/validation-exception-factory'
-import { logger } from './config/logger'
+import { createLogger } from './config/logger'
 
 async function bootstrap () {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true })
+  const configService = app.get(ConfigService)
+  const logger = createLogger(configService)
 
   // CORS_ORIGIN (opcional): lista de origens separadas por vírgula. Sem essa
   // variável a API aceita qualquer origem — cômodo em dev (o front roda via
-  // Live Server em porta variável), mas deve ser configurada em produção.
-  const origensPermitidas = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(origem => origem.trim())
+  // Live Server em porta variável). Em produção, sem CORS_ORIGIN configurado,
+  // a API passa a NEGAR requisições cross-origin em vez de aceitar qualquer
+  // uma — `cors()` sem opções reflete qualquer Origin (equivalente a
+  // `Access-Control-Allow-Origin: *`), o que é seguro demais pra abrir mão só
+  // porque ninguém configurou a variável.
+  const corsOrigin = configService.get<string>('CORS_ORIGIN')
+  const origensPermitidas = corsOrigin
+    ? corsOrigin.split(',').map(origem => origem.trim())
     : null
 
-  if (!origensPermitidas && process.env.NODE_ENV === 'production') {
-    logger.warn('[CORS] CORS_ORIGIN não configurado em produção — aceitando requisições de qualquer origem.')
+  const emProducao = configService.get<string>('NODE_ENV') === 'production'
+  if (!origensPermitidas && emProducao) {
+    logger.warn('[CORS] CORS_ORIGIN não configurado em produção — bloqueando requisições cross-origin até ser configurado.')
   }
 
   app.use(helmet())
-  app.use(cors(origensPermitidas ? { origin: origensPermitidas } : undefined))
+  app.use(cors(
+    origensPermitidas
+      ? { origin: origensPermitidas }
+      : (emProducao ? { origin: false } : undefined)
+  ))
   // serializers customizados: o padrão do pino-http despeja todos os headers
   // de request/response em toda linha, o que afoga o log útil (método, rota,
   // status, usuário, duração) em ruído.
@@ -45,10 +58,10 @@ async function bootstrap () {
     forbidNonWhitelisted: true,
     exceptionFactory: validationExceptionFactory
   }))
-  app.useGlobalFilters(new HttpExceptionFilter())
+  app.useGlobalFilters(new HttpExceptionFilter(logger))
   app.enableShutdownHooks()
 
-  const port = process.env.PORT || 3001
+  const port = configService.get<string>('PORT', '3001')
   await app.listen(port)
   logger.info(`[Boot] API rodando na porta ${port}`)
 }

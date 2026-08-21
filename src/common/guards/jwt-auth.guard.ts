@@ -22,7 +22,9 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      request.usuario = this.jwtService.verify<UsuarioAutenticado>(token, { secret: process.env.JWT_SECRET })
+      // Sem `secret` explícito: usa o mesmo segredo já configurado no
+      // JwtModule.registerAsync (app.module.ts), lido via ConfigService.
+      request.usuario = this.jwtService.verify<UsuarioAutenticado>(token)
       return true
     } catch {
       throw new UnauthorizedException('Token de autenticação inválido ou expirado.')

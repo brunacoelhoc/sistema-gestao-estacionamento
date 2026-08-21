@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { minutes, ThrottlerModule } from '@nestjs/throttler'
 import { AnalyticsModule } from './analytics/analytics.module'
@@ -17,10 +17,13 @@ import { VagasModule } from './vagas/vagas.module'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate }),
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as any }
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN', '8h') as any }
+      })
     }),
     // Sem guard global: assim como no Express original, a maioria das rotas
     // não tem limite nenhum — o ThrottlerGuard só é aplicado explicitamente

@@ -52,6 +52,7 @@ module.exports = [
         SENHA_VALIDADE_DIAS: 'readonly',
         abrirModalTrocaSenhaObrigatoria: 'readonly',
         animarContadorGsap: 'readonly',
+        avisarExportacaoVazia: 'readonly',
         avaliarForcaSenha: 'readonly',
         criarPaginador: 'readonly',
         exportarParaCSV: 'readonly',

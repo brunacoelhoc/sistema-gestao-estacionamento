@@ -5,6 +5,11 @@
  */
 
 let mensalidadesCache = []
+let mensalistasCache = []
+// Última lista filtrada renderizada na tabela — usada pelos cartões de
+// resumo (forma de pagamento / churn) e pela exportação, para que ambos
+// sempre reflitam exatamente o que está na tela.
+let mensalidadesFiltradasAtual = []
 
 document.addEventListener('DOMContentLoaded', async () => {
   await carregarFaturamento()
@@ -21,9 +26,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('filtro-referencia-faturamento')
     ?.addEventListener('change', aplicarFiltrosFaturamento)
 
+  document
+    .getElementById('filtro-periodo-de-faturamento')
+    ?.addEventListener('change', aplicarFiltrosFaturamento)
+
+  document
+    .getElementById('filtro-periodo-ate-faturamento')
+    ?.addEventListener('change', aplicarFiltrosFaturamento)
+
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
     carregarFaturamento()
   })
+
+  document
+    .getElementById('btn-exportar-faturamento-csv')
+    ?.addEventListener('click', () => exportarFaturamento('csv'))
+  document
+    .getElementById('btn-exportar-faturamento-excel')
+    ?.addEventListener('click', () => exportarFaturamento('excel'))
+  document
+    .getElementById('btn-exportar-faturamento-pdf')
+    ?.addEventListener('click', exportarFaturamentoPDF)
 })
 
 // Referência do mês atual no formato "YYYY-MM", usada pelos KPIs.
@@ -46,6 +69,16 @@ const CLASSE_STATUS_FATURAMENTO = {
   cancelada: 'status-cancelado'
 }
 
+// Sem emoji — usado nas exportações (CSV/Excel/PDF), onde o relatório vai
+// pra contabilidade e a fonte padrão do jsPDF não sabe desenhar emoji (sai
+// como caractere quebrado no PDF gerado).
+const ROTULO_FORMA_PAGAMENTO_TEXTO = {
+  pix: 'PIX',
+  cartao_credito: 'Cartão de Crédito',
+  cartao_debito: 'Cartão de Débito',
+  dinheiro: 'Dinheiro'
+}
+
 const ROTULO_FORMA_PAGAMENTO = {
   pix: '📱 PIX',
   cartao_credito: '💳 Cartão de Crédito',
@@ -63,7 +96,12 @@ async function carregarFaturamento () {
   tbody?.setAttribute('aria-busy', 'true')
 
   try {
-    mensalidadesCache = await ApiService.getMensalidades()
+    const [mensalidades, mensalistas] = await Promise.all([
+      ApiService.getMensalidades(),
+      ApiService.getMensalistas()
+    ])
+    mensalidadesCache = mensalidades || []
+    mensalistasCache = mensalistas || []
     popularFiltroReferencia()
     aplicarFiltrosFaturamento()
     atualizarKpisFaturamento()
@@ -111,7 +149,8 @@ function popularFiltroReferencia () {
   if (referencias.includes(valorAtual)) select.value = valorAtual
 }
 
-// Aplica busca por nome/placa + filtros de status e referência
+// Aplica busca por nome/placa + filtros de status, referência e período
+// customizado (De/Até, sobre a data de início do ciclo).
 function aplicarFiltrosFaturamento () {
   const termo = (document.getElementById('input-busca-faturamento')?.value || '')
     .toLowerCase()
@@ -120,6 +159,8 @@ function aplicarFiltrosFaturamento () {
     document.getElementById('filtro-status-faturamento')?.value || 'TODOS'
   const referenciaFiltro =
     document.getElementById('filtro-referencia-faturamento')?.value || 'TODOS'
+  const periodoDe = document.getElementById('filtro-periodo-de-faturamento')?.value || ''
+  const periodoAte = document.getElementById('filtro-periodo-ate-faturamento')?.value || ''
 
   let filtradas = mensalidadesCache
 
@@ -131,6 +172,18 @@ function aplicarFiltrosFaturamento () {
     filtradas = filtradas.filter(mv => mv.referencia === referenciaFiltro)
   }
 
+  if (periodoDe) {
+    const de = new Date(periodoDe)
+    filtradas = filtradas.filter(mv => mv.dataInicio && new Date(mv.dataInicio) >= de)
+  }
+
+  if (periodoAte) {
+    // Fim do dia selecionado, senão um ciclo iniciado nesse mesmo dia ficaria de fora.
+    const ate = new Date(periodoAte)
+    ate.setHours(23, 59, 59, 999)
+    filtradas = filtradas.filter(mv => mv.dataInicio && new Date(mv.dataInicio) <= ate)
+  }
+
   if (termo) {
     filtradas = filtradas.filter(
       mv =>
@@ -139,35 +192,104 @@ function aplicarFiltrosFaturamento () {
     )
   }
 
+  mensalidadesFiltradasAtual = filtradas
   renderizarTabelaFaturamento(filtradas)
+  atualizarResumoFormaPagamento(filtradas)
+  atualizarResumoChurn(filtradas)
 }
 
-// Cálculo dos 3 KPIs a partir da lista completa (não filtrada), para que os
-// cartões sempre reflitam o panorama geral, independente da busca ativa.
+// Resumo de valores recebidos (status "paga") agrupados por forma de
+// pagamento, sobre a lista já filtrada — reflete exatamente o que está
+// sendo mostrado na tabela abaixo.
+function atualizarResumoFormaPagamento (lista) {
+  const container = document.getElementById('resumo-formas-pagamento')
+  if (!container) return
+
+  const totais = {}
+  lista
+    .filter(mv => mv.status === 'paga')
+    .forEach(mv => {
+      const forma = mv.formaPagamento || 'outro'
+      totais[forma] = (totais[forma] || 0) + Number(mv.valor || 0)
+    })
+
+  const chaves = Object.keys(totais)
+  if (chaves.length === 0) {
+    container.innerHTML = '<span class="text-muted text-sm">Nenhuma cobrança paga no filtro atual.</span>'
+    return
+  }
+
+  container.innerHTML = chaves
+    .sort((a, b) => totais[b] - totais[a])
+    .map(forma => `
+      <div>
+        <div class="text-muted text-xs">${ROTULO_FORMA_PAGAMENTO[forma] || forma}</div>
+        <div class="h5 mb-0 fw-bold">R$ ${totais[forma].toFixed(2).replace('.', ',')}</div>
+      </div>
+    `)
+    .join('')
+}
+
+// Impacto financeiro dos cancelamentos (churn) na lista já filtrada.
+function atualizarResumoChurn (lista) {
+  const canceladas = lista.filter(mv => mv.status === 'cancelada')
+  const valorPerdido = canceladas.reduce((soma, mv) => soma + Number(mv.valor || 0), 0)
+
+  const elQtd = document.getElementById('churn-quantidade')
+  const elValor = document.getElementById('churn-valor')
+  if (elQtd) elQtd.textContent = String(canceladas.length)
+  if (elValor) elValor.textContent = `R$ ${valorPerdido.toFixed(2).replace('.', ',')}`
+}
+
+// Cálculo dos KPIs a partir da lista completa (não filtrada) + do cadastro
+// de mensalistas, para que os cartões sempre reflitam o panorama geral,
+// independente da busca/filtro ativos.
 function atualizarKpisFaturamento () {
   const ref = referenciaAtual()
+  const hoje = new Date()
 
-  const totalPendente = mensalidadesCache
-    .filter(mv => mv.status === 'pendente')
-    .reduce((soma, mv) => soma + Number(mv.valor || 0), 0)
+  const mensalistasAtivos = mensalistasCache.filter(m => m.ativo)
 
+  // Faturamento Previsto (MRR): soma do valor do plano de todo mensalista
+  // ativo — é o que se espera arrecadar por ciclo se todos passarem pela
+  // cancela dentro do período, não uma cobrança já lançada.
+  const mrr = mensalistasAtivos.reduce((soma, m) => soma + Number(m.valorMensalidade || 0), 0)
+
+  // Faturamento Realizado: ciclos efetivamente pagos cujo início caiu no
+  // mês corrente — comparar com o MRR acima mostra quanto do previsto já
+  // veio a caixa neste mês.
   const recebidoNoMes = mensalidadesCache
     .filter(mv => mv.status === 'paga' && mv.referencia === ref)
     .reduce((soma, mv) => soma + Number(mv.valor || 0), 0)
 
-  const inadimplentes = new Set(
-    mensalidadesCache
-      .filter(mv => mv.status === 'pendente' && mv.referencia < ref)
-      .map(mv => mv.mensalistaId)
-  ).size
+  const ticketMedio = mensalistasAtivos.length > 0 ? mrr / mensalistasAtivos.length : 0
 
-  const elPendente = document.getElementById('kpi-total-pendente')
+  // "Sem Ciclo Ativo": mensalista ativo cujo último ciclo pago (se algum)
+  // já venceu, ou que nunca chegou a pagar um primeiro ciclo — não é
+  // "inadimplência" no sentido de atraso (a cobrança só acontece quando ele
+  // aparece, ver server/services/mensalidade.js), mas sinaliza quem está
+  // sem cobertura vigente agora.
+  const semCicloAtivo = mensalistasAtivos.filter(m => {
+    const ciclosDoMensalista = mensalidadesCache.filter(
+      mv => mv.mensalistaId === m.id && mv.status === 'paga'
+    )
+    if (ciclosDoMensalista.length === 0) return true
+    return !ciclosDoMensalista.some(mv => mv.dataFim && new Date(mv.dataFim) >= hoje)
+  }).length
+
+  const elPrevisto = document.getElementById('kpi-previsto-mrr')
   const elRecebido = document.getElementById('kpi-recebido-mes')
-  const elInadimplentes = document.getElementById('kpi-inadimplentes')
+  const elTicketMedio = document.getElementById('kpi-ticket-medio')
+  const elSemCiclo = document.getElementById('kpi-sem-ciclo')
 
-  if (elPendente) elPendente.textContent = `R$ ${totalPendente.toFixed(2).replace('.', ',')}`
+  if (elPrevisto) elPrevisto.textContent = `R$ ${mrr.toFixed(2).replace('.', ',')}`
   if (elRecebido) elRecebido.textContent = `R$ ${recebidoNoMes.toFixed(2).replace('.', ',')}`
-  if (elInadimplentes) elInadimplentes.textContent = String(inadimplentes)
+  if (elTicketMedio) elTicketMedio.textContent = `R$ ${ticketMedio.toFixed(2).replace('.', ',')}`
+  if (elSemCiclo) {
+    elSemCiclo.textContent = mensalistasAtivos.length > 0
+      ? `${semCicloAtivo} (${((semCicloAtivo / mensalistasAtivos.length) * 100).toFixed(0)}%)`
+      : '0'
+  }
 }
 
 // Formata a referência do ciclo ("2026-08") como "08/2026"
@@ -246,6 +368,122 @@ function renderizarTabelaFaturamento (lista) {
   tbody.innerHTML = ''
   ;(lista || []).forEach(mv => renderLinhaFaturamento(mv, tbody))
   ligarBotoesLinhaFaturamento(tbody)
+}
+
+// Monta as linhas "achatadas" a partir da lista já filtrada (mesma exibida
+// na tabela), compartilhadas pelos três formatos de exportação.
+function montarLinhasExportacaoFaturamento () {
+  return mensalidadesFiltradasAtual.map(mv => ({
+    mensalista: mv.mensalista?.nome || '-',
+    placa: mv.mensalista?.placa || '-',
+    referencia: formatarReferenciaFaturamento(mv.referencia),
+    periodo: `${formatarDataFaturamento(mv.dataInicio)} a ${formatarDataFaturamento(mv.dataFim)}`,
+    valor: Number(mv.valor || 0).toFixed(2).replace('.', ','),
+    status: ROTULO_STATUS_FATURAMENTO[mv.status] || mv.status,
+    formaPagamento: ROTULO_FORMA_PAGAMENTO_TEXTO[mv.formaPagamento] || '-'
+  }))
+}
+
+const COLUNAS_EXPORTACAO_FATURAMENTO = [
+  { chave: 'mensalista', rotulo: 'Mensalista' },
+  { chave: 'placa', rotulo: 'Placa' },
+  { chave: 'referencia', rotulo: 'Referência' },
+  { chave: 'periodo', rotulo: 'Período' },
+  { chave: 'valor', rotulo: 'Valor (R$)' },
+  { chave: 'status', rotulo: 'Status' },
+  { chave: 'formaPagamento', rotulo: 'Forma de Pagamento' }
+]
+
+function exportarFaturamento (formato) {
+  const linhas = montarLinhasExportacaoFaturamento()
+
+  if (formato === 'excel') {
+    exportarParaExcel('faturamento-parkgestao.xlsx', 'Faturamento', COLUNAS_EXPORTACAO_FATURAMENTO, linhas)
+  } else {
+    exportarParaCSV('faturamento-parkgestao.csv', COLUNAS_EXPORTACAO_FATURAMENTO, linhas)
+  }
+}
+
+// Relatório em PDF (sem plugin de tabela — jsPDF puro, como o comprovante de
+// ticket) com o resumo dos KPIs no topo e a lista filtrada abaixo, paginando
+// automaticamente quando o conteúdo passa da margem inferior.
+function exportarFaturamentoPDF () {
+  if (typeof window.jspdf === 'undefined') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Exportação indisponível',
+      text: 'Não foi possível carregar a biblioteca de geração de PDF.'
+    })
+    return
+  }
+
+  const linhas = montarLinhasExportacaoFaturamento()
+  if (linhas.length === 0) {
+    if (typeof avisarExportacaoVazia === 'function') avisarExportacaoVazia()
+    return
+  }
+
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+  const margemEsquerda = 10
+  const larguraUtil = 277
+  let y = 15
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text('ParkGestão — Relatório de Faturamento', margemEsquerda, y)
+
+  y += 6
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} — ${linhas.length} cobrança(s)`, margemEsquerda, y)
+
+  y += 8
+  const colunas = [
+    { chave: 'mensalista', rotulo: 'Mensalista', largura: 55 },
+    { chave: 'placa', rotulo: 'Placa', largura: 25 },
+    { chave: 'referencia', rotulo: 'Ref.', largura: 20 },
+    { chave: 'periodo', rotulo: 'Período', largura: 55 },
+    { chave: 'valor', rotulo: 'Valor (R$)', largura: 30 },
+    { chave: 'status', rotulo: 'Status', largura: 30 },
+    { chave: 'formaPagamento', rotulo: 'Pagamento', largura: 40 }
+  ]
+
+  const desenharCabecalho = () => {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    let x = margemEsquerda
+    colunas.forEach(c => {
+      doc.text(c.rotulo, x, y)
+      x += c.largura
+    })
+    y += 2
+    doc.line(margemEsquerda, y, margemEsquerda + larguraUtil, y)
+    y += 5
+  }
+
+  desenharCabecalho()
+  doc.setFont('helvetica', 'normal')
+
+  linhas.forEach(linha => {
+    if (y > 195) {
+      doc.addPage()
+      y = 15
+      desenharCabecalho()
+      doc.setFont('helvetica', 'normal')
+    }
+
+    let x = margemEsquerda
+    colunas.forEach(c => {
+      const texto = String(linha[c.chave] ?? '-')
+      const truncado = texto.length > 32 ? texto.slice(0, 30) + '…' : texto
+      doc.text(truncado, x, y)
+      x += c.largura
+    })
+    y += 6
+  })
+
+  doc.save('faturamento-parkgestao.pdf')
 }
 
 // Pede a forma de pagamento e dá baixa na cobrança (status -> paga)

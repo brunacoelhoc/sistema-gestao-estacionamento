@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import { logger } from '../../config/logger'
+import type { Logger } from 'pino'
 
 /**
  * Reescreve toda resposta de erro para o formato { erro: string, ...extra }
@@ -10,6 +10,8 @@ import { logger } from '../../config/logger'
  */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  constructor (private readonly logger: Logger) {}
+
   catch (exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
@@ -50,7 +52,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Erro inesperado (ex.: exceção crua do Prisma/driver do Postgres) — não
     // devolvemos a mensagem original pro cliente (pode vazar detalhe interno
     // do servidor), só logamos com detalhe e respondemos algo genérico.
-    ;(request as any).log?.error({ err: exception }, 'Erro não tratado na API') ?? logger.error({ err: exception }, 'Erro não tratado na API')
+    ;(request as any).log?.error({ err: exception }, 'Erro não tratado na API') ?? this.logger.error({ err: exception }, 'Erro não tratado na API')
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ erro: 'Erro interno do servidor.' })
   }
 }

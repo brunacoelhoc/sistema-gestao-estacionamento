@@ -92,6 +92,10 @@ model Mensalista {
   placa            String   @unique
   telefone         String
   valorMensalidade Decimal  @default(0) @db.Decimal(10, 2)
+  // Perfil do plano (ex.: "Mensal Integral", "Noturno", "Corporativo") —
+  // texto livre como Tarifa.categoria, pra não exigir migration toda vez
+  // que surgir uma categoria nova.
+  categoriaPlano   String   @default("Mensal Integral")
   ativo            Boolean  @default(true)
   criadoEm         DateTime @default(now())
 
@@ -102,24 +106,27 @@ model Mensalista {
 }
 
 /**
- * Um registro por ciclo mensal de um mensalista (não por ticket): nasce
- * cheio quando o mensalista fica ativo (cadastro ou reativação) e, se ele
- * for inativado antes do fim do mês, é fechado na hora com valor
- * proporcional aos dias em que esteve ativo naquele mês.
+ * Um registro por ciclo de 30 dias corridos de um mensalista (não por
+ * ticket): nasce cobrado na primeira entrada em que não há ciclo vigente —
+ * ver MensalidadeCicloService — não no cadastro nem num dia fixo do mês.
  */
 model Mensalidade {
-  id             String            @id @default(cuid())
-  mensalista     Mensalista        @relation(fields: [mensalistaId], references: [id])
-  mensalistaId   String
-  referencia     String // ano-mês do ciclo, ex.: "2026-08"
-  dataInicio     DateTime
-  dataFim        DateTime
-  diasCobrados   Int
-  diasNoMes      Int
-  valor          Decimal           @db.Decimal(10, 2)
-  status         StatusMensalidade @default(pendente)
-  formaPagamento String?
-  criadoEm       DateTime          @default(now())
+  id                  String            @id @default(cuid())
+  mensalista          Mensalista        @relation(fields: [mensalistaId], references: [id])
+  mensalistaId        String
+  referencia          String // mês de início do ciclo, ex.: "2026-08"
+  dataInicio          DateTime
+  dataFim             DateTime
+  diasCobrados        Int
+  diasNoMes           Int
+  valor               Decimal           @db.Decimal(10, 2)
+  status              StatusMensalidade @default(pendente)
+  formaPagamento      String?
+  // Só preenchido quando status = cancelada — justificativa do cancelamento
+  // (ex.: "Cliente desistiu", "Cobrança em duplicidade"), usada nos
+  // relatórios de motivo de perda em Faturamento.
+  motivoCancelamento  String?
+  criadoEm            DateTime          @default(now())
 
   @@unique([mensalistaId, referencia])
   @@map("mensalidades")
