@@ -89,7 +89,8 @@
       "placa": "ABC1D23",
       "telefone": "(11) 98765-4321",
       "valorMensalidade": 180,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Corporativo"
     },
     {
       "id": "m2",
@@ -98,7 +99,8 @@
       "placa": "XYZ9876",
       "telefone": "(11) 91234-5678",
       "valorMensalidade": 180,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Mensal Integral"
     },
     {
       "id": "m3",
@@ -107,7 +109,8 @@
       "placa": "POI1J22",
       "telefone": "(12) 22324-4424",
       "valorMensalidade": 220,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Noturno"
     },
     {
       "id": "m4",
@@ -116,7 +119,8 @@
       "placa": "DEF4G56",
       "telefone": "(11) 99887-6655",
       "valorMensalidade": 180,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Mensal Integral"
     },
     {
       "id": "m5",
@@ -125,7 +129,8 @@
       "placa": "GHI7J89",
       "telefone": "(11) 97766-5544",
       "valorMensalidade": 250,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Corporativo"
     },
     {
       "id": "m6",
@@ -134,7 +139,8 @@
       "placa": "JKL0M12",
       "telefone": "(11) 96655-4433",
       "valorMensalidade": 180,
-      "ativo": false
+      "ativo": false,
+      "categoriaPlano": "Noturno"
     },
     {
       "id": "m7",
@@ -143,7 +149,8 @@
       "placa": "MNO3P45",
       "telefone": "(11) 95544-3322",
       "valorMensalidade": 180,
-      "ativo": true
+      "ativo": true,
+      "categoriaPlano": "Mensal Integral"
     },
     {
       "id": "m8",
@@ -152,7 +159,8 @@
       "placa": "PQR6S78",
       "telefone": "(11) 94433-2211",
       "valorMensalidade": 180,
-      "ativo": false
+      "ativo": false,
+      "categoriaPlano": "Corporativo"
     }
   ],
   "vagas": [

@@ -122,7 +122,8 @@ class ApiService {
       placa: this.sanitizeText(data.placa).toUpperCase().trim(),
       ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
       telefone: this.sanitizeText(data.telefone || ''),
-      valorMensalidade: Number(data.valorMensalidade || data.valor) || 0
+      valorMensalidade: Number(data.valorMensalidade || data.valor) || 0,
+      categoriaPlano: this.sanitizeText(data.categoriaPlano || 'Mensal Integral')
     }
 
     return await this.request('mensalistas', {
@@ -141,6 +142,7 @@ class ApiService {
     if (data.valorMensalidade !== undefined || data.valor !== undefined) {
       payload.valorMensalidade = Number(data.valorMensalidade || data.valor) || 0
     }
+    if (data.categoriaPlano !== undefined) payload.categoriaPlano = this.sanitizeText(data.categoriaPlano)
 
     return await this.request(`mensalistas/${id}`, {
       method: 'PATCH',

@@ -32,6 +32,7 @@ export class MensalistasService {
         placa: dto.placa,
         telefone: dto.telefone,
         valorMensalidade: dto.valorMensalidade || 0,
+        categoriaPlano: dto.categoriaPlano || 'Mensal Integral',
         ativo: dto.ativo !== undefined ? dto.ativo : true
       }
     })
@@ -49,6 +50,7 @@ export class MensalistasService {
     if (dto.placa !== undefined) data.placa = dto.placa
     if (dto.telefone !== undefined) data.telefone = dto.telefone
     if (dto.valorMensalidade !== undefined) data.valorMensalidade = dto.valorMensalidade
+    if (dto.categoriaPlano !== undefined) data.categoriaPlano = dto.categoriaPlano
     if (dto.ativo !== undefined) data.ativo = dto.ativo
 
     return this.prisma.mensalista.update({ where: { id }, data })

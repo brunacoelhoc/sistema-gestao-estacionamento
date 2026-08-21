@@ -65,6 +65,7 @@ async function main () {
         placa: m.placa,
         telefone: m.telefone || null,
         valorMensalidade: m.valorMensalidade || 0,
+        categoriaPlano: m.categoriaPlano || 'Mensal Integral',
         ativo: m.ativo !== undefined ? Boolean(m.ativo) : true
       }
     })

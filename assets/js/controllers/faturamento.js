@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     .getElementById('filtro-periodo-ate-faturamento')
     ?.addEventListener('change', aplicarFiltrosFaturamento)
 
+  document
+    .getElementById('filtro-categoria-faturamento')
+    ?.addEventListener('change', aplicarFiltrosFaturamento)
+
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
     carregarFaturamento()
   })
@@ -103,6 +107,7 @@ async function carregarFaturamento () {
     mensalidadesCache = mensalidades || []
     mensalistasCache = mensalistas || []
     popularFiltroReferencia()
+    popularFiltroCategoria()
     aplicarFiltrosFaturamento()
     atualizarKpisFaturamento()
   } catch (error) {
@@ -149,8 +154,27 @@ function popularFiltroReferencia () {
   if (referencias.includes(valorAtual)) select.value = valorAtual
 }
 
-// Aplica busca por nome/placa + filtros de status, referência e período
-// customizado (De/Até, sobre a data de início do ciclo).
+// Preenche o select de categoria de plano com as categorias presentes na
+// lista carregada (via mv.mensalista.categoriaPlano), em ordem alfabética.
+function popularFiltroCategoria () {
+  const select = document.getElementById('filtro-categoria-faturamento')
+  if (!select) return
+
+  const valorAtual = select.value
+  const categorias = [...new Set(
+    mensalidadesCache.map(mv => mv.mensalista?.categoriaPlano).filter(Boolean)
+  )].sort()
+
+  select.innerHTML = '<option value="TODOS">Todas as categorias</option>' +
+    categorias
+      .map(cat => `<option value="${ApiService.sanitizeText(cat)}">${ApiService.sanitizeText(cat)}</option>`)
+      .join('')
+
+  if (categorias.includes(valorAtual)) select.value = valorAtual
+}
+
+// Aplica busca por nome/placa + filtros de status, referência, categoria de
+// plano e período customizado (De/Até, sobre a data de início do ciclo).
 function aplicarFiltrosFaturamento () {
   const termo = (document.getElementById('input-busca-faturamento')?.value || '')
     .toLowerCase()
@@ -159,6 +183,8 @@ function aplicarFiltrosFaturamento () {
     document.getElementById('filtro-status-faturamento')?.value || 'TODOS'
   const referenciaFiltro =
     document.getElementById('filtro-referencia-faturamento')?.value || 'TODOS'
+  const categoriaFiltro =
+    document.getElementById('filtro-categoria-faturamento')?.value || 'TODOS'
   const periodoDe = document.getElementById('filtro-periodo-de-faturamento')?.value || ''
   const periodoAte = document.getElementById('filtro-periodo-ate-faturamento')?.value || ''
 
@@ -170,6 +196,10 @@ function aplicarFiltrosFaturamento () {
 
   if (referenciaFiltro !== 'TODOS') {
     filtradas = filtradas.filter(mv => mv.referencia === referenciaFiltro)
+  }
+
+  if (categoriaFiltro !== 'TODOS') {
+    filtradas = filtradas.filter(mv => mv.mensalista?.categoriaPlano === categoriaFiltro)
   }
 
   if (periodoDe) {
@@ -320,7 +350,21 @@ const paginadorFaturamento =
 function renderLinhaFaturamento (mv, tbody) {
   const tr = document.createElement('tr')
 
-  const statusBadge = `<span class="badge-status ${CLASSE_STATUS_FATURAMENTO[mv.status] || ''}">${ROTULO_STATUS_FATURAMENTO[mv.status] || mv.status}</span>`
+  const motivoTooltip = mv.status === 'cancelada' && mv.motivoCancelamento
+    ? ` title="Motivo: ${ApiService.sanitizeText(mv.motivoCancelamento)}"`
+    : ''
+  const statusBadge = `<span class="badge-status ${CLASSE_STATUS_FATURAMENTO[mv.status] || ''}"${motivoTooltip}>${ROTULO_STATUS_FATURAMENTO[mv.status] || mv.status}${
+    mv.status === 'cancelada' && mv.motivoCancelamento ? ' <i class="fas fa-circle-info" aria-hidden="true"></i>' : ''
+  }</span>`
+
+  // Auditoria: só existe quando um operador mexeu no status pela tela de
+  // Faturamento (marcar como paga / cancelar) — nula na cobrança automática
+  // gerada no fechamento de ticket, então não aparece nada nesse caso.
+  const auditoria = mv.alteradoPor?.nome && mv.alteradoEm
+    ? `<div class="text-muted text-xs mt-1">${
+        mv.status === 'cancelada' ? 'Cancelado' : 'Baixado'
+      } por ${ApiService.sanitizeText(mv.alteradoPor.nome)} em ${formatarDataFaturamento(mv.alteradoEm)}</div>`
+    : ''
 
   const acoes = mv.status === 'pendente'
     ? `<button type="button" class="btn btn-sm btn-outline-success me-1 btn-marcar-paga-faturamento" data-id="${mv.id}" aria-label="Marcar cobrança como paga">
@@ -332,12 +376,15 @@ function renderLinhaFaturamento (mv, tbody) {
     : '-'
 
   tr.innerHTML = `
-    <td class="fw-bold">${ApiService.sanitizeText(mv.mensalista?.nome || '-')}</td>
+    <td>
+      <div class="fw-bold">${ApiService.sanitizeText(mv.mensalista?.nome || '-')}</div>
+      <div class="text-muted text-xs">${ApiService.sanitizeText(mv.mensalista?.categoriaPlano || '-')}</div>
+    </td>
     <td><span class="badge bg-dark text-white">${ApiService.sanitizeText(mv.mensalista?.placa || '-')}</span></td>
     <td>${formatarReferenciaFaturamento(mv.referencia)}</td>
     <td>${formatarDataFaturamento(mv.dataInicio)} a ${formatarDataFaturamento(mv.dataFim)}</td>
     <td>R$ ${Number(mv.valor || 0).toFixed(2).replace('.', ',')}</td>
-    <td>${statusBadge}</td>
+    <td>${statusBadge}${auditoria}</td>
     <td>${ROTULO_FORMA_PAGAMENTO[mv.formaPagamento] || '-'}</td>
     <td>${acoes}</td>
   `
@@ -376,22 +423,31 @@ function montarLinhasExportacaoFaturamento () {
   return mensalidadesFiltradasAtual.map(mv => ({
     mensalista: mv.mensalista?.nome || '-',
     placa: mv.mensalista?.placa || '-',
+    categoriaPlano: mv.mensalista?.categoriaPlano || '-',
     referencia: formatarReferenciaFaturamento(mv.referencia),
     periodo: `${formatarDataFaturamento(mv.dataInicio)} a ${formatarDataFaturamento(mv.dataFim)}`,
     valor: Number(mv.valor || 0).toFixed(2).replace('.', ','),
     status: ROTULO_STATUS_FATURAMENTO[mv.status] || mv.status,
-    formaPagamento: ROTULO_FORMA_PAGAMENTO_TEXTO[mv.formaPagamento] || '-'
+    formaPagamento: ROTULO_FORMA_PAGAMENTO_TEXTO[mv.formaPagamento] || '-',
+    motivoCancelamento: mv.status === 'cancelada' ? (mv.motivoCancelamento || '-') : '',
+    operador: mv.alteradoPor?.nome || '-',
+    auditoria: mv.alteradoPor?.nome && mv.alteradoEm
+      ? `${mv.status === 'cancelada' ? 'Cancelado' : 'Baixado'} por ${mv.alteradoPor.nome} em ${formatarDataFaturamento(mv.alteradoEm)}`
+      : '-'
   }))
 }
 
 const COLUNAS_EXPORTACAO_FATURAMENTO = [
   { chave: 'mensalista', rotulo: 'Mensalista' },
   { chave: 'placa', rotulo: 'Placa' },
+  { chave: 'categoriaPlano', rotulo: 'Categoria do Plano' },
   { chave: 'referencia', rotulo: 'Referência' },
   { chave: 'periodo', rotulo: 'Período' },
   { chave: 'valor', rotulo: 'Valor (R$)' },
   { chave: 'status', rotulo: 'Status' },
-  { chave: 'formaPagamento', rotulo: 'Forma de Pagamento' }
+  { chave: 'formaPagamento', rotulo: 'Forma de Pagamento' },
+  { chave: 'motivoCancelamento', rotulo: 'Motivo do Cancelamento' },
+  { chave: 'auditoria', rotulo: 'Auditoria (baixa/cancelamento manual)' }
 ]
 
 function exportarFaturamento (formato) {
@@ -440,13 +496,16 @@ function exportarFaturamentoPDF () {
 
   y += 8
   const colunas = [
-    { chave: 'mensalista', rotulo: 'Mensalista', largura: 55 },
-    { chave: 'placa', rotulo: 'Placa', largura: 25 },
-    { chave: 'referencia', rotulo: 'Ref.', largura: 20 },
-    { chave: 'periodo', rotulo: 'Período', largura: 55 },
-    { chave: 'valor', rotulo: 'Valor (R$)', largura: 30 },
-    { chave: 'status', rotulo: 'Status', largura: 30 },
-    { chave: 'formaPagamento', rotulo: 'Pagamento', largura: 40 }
+    { chave: 'mensalista', rotulo: 'Mensalista', largura: 36 },
+    { chave: 'placa', rotulo: 'Placa', largura: 20 },
+    { chave: 'categoriaPlano', rotulo: 'Categoria', largura: 24 },
+    { chave: 'referencia', rotulo: 'Ref.', largura: 15 },
+    { chave: 'periodo', rotulo: 'Período', largura: 36 },
+    { chave: 'valor', rotulo: 'Valor (R$)', largura: 22 },
+    { chave: 'status', rotulo: 'Status', largura: 22 },
+    { chave: 'formaPagamento', rotulo: 'Pagamento', largura: 28 },
+    { chave: 'operador', rotulo: 'Operador', largura: 25 },
+    { chave: 'motivoCancelamento', rotulo: 'Motivo Cancel.', largura: 46 }
   ]
 
   const desenharCabecalho = () => {
@@ -526,21 +585,36 @@ async function marcarCobrancaPaga (id) {
 
 // Cancela uma cobrança pendente (ex.: lançamento indevido)
 async function cancelarCobranca (id) {
-  const result = await Swal.fire({
+  const { isConfirmed, value: motivoCancelamento } = await Swal.fire({
     title: 'Cancelar cobrança?',
-    text: 'A cobrança será marcada como cancelada e deixará de contar como pendente.',
+    html: `
+      <p class="text-muted">A cobrança será marcada como cancelada e deixará de contar como pendente.</p>
+      <div class="text-start mb-2">
+        <label for="swal-motivo-cancelamento" class="form-label fw-semibold">Motivo do Cancelamento <span class="text-danger">*</span></label>
+        <textarea id="swal-motivo-cancelamento" class="form-control" rows="3"
+          placeholder="Ex.: Cliente desistiu, cobrança em duplicidade, estorno..."></textarea>
+      </div>
+    `,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#3d0c13',
     cancelButtonColor: '#6c757d',
     confirmButtonText: 'Sim, cancelar',
-    cancelButtonText: 'Voltar'
+    cancelButtonText: 'Voltar',
+    preConfirm: () => {
+      const motivo = document.getElementById('swal-motivo-cancelamento').value.trim()
+      if (!motivo) {
+        Swal.showValidationMessage('Informe o motivo do cancelamento.')
+        return false
+      }
+      return motivo
+    }
   })
 
-  if (!result.isConfirmed) return
+  if (!isConfirmed) return
 
   try {
-    await ApiService.updateMensalidade(id, { status: 'cancelada' })
+    await ApiService.updateMensalidade(id, { status: 'cancelada', motivoCancelamento })
     toastSucesso('Cobrança cancelada.')
     await carregarFaturamento()
   } catch (error) {

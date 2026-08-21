@@ -3,8 +3,8 @@ import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'clas
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
 
-// Presente e vazio = erro (telefone não pode ser removido); ausente = não
-// mexe no campo — ver server/schemas/mensalistaSchemas.js.
+// Presente e vazio = erro (telefone e categoriaPlano não podem ser
+// removidos); ausente = não mexe no campo.
 export class AtualizarMensalistaDto {
   @IsOptional()
   @Transform(trim)
@@ -35,6 +35,12 @@ export class AtualizarMensalistaDto {
   @IsNumber()
   @Min(0)
   valorMensalidade?: number
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString({ message: 'Categoria do plano não pode ficar vazia.' })
+  @IsNotEmpty({ message: 'Categoria do plano não pode ficar vazia.' })
+  categoriaPlano?: string
 
   @IsOptional()
   @Transform(({ value }) => value === undefined ? value : Boolean(value))

@@ -55,6 +55,7 @@ function exportarMensalistas (formato) {
     { chave: 'telefone', rotulo: 'Telefone' },
     { chave: 'placa', rotulo: 'Placa' },
     { chave: 'mensalidade', rotulo: 'Mensalidade (R$)' },
+    { chave: 'categoriaPlano', rotulo: 'Categoria do Plano' },
     { chave: 'status', rotulo: 'Status' }
   ]
 
@@ -68,6 +69,7 @@ function exportarMensalistas (formato) {
     telefone: m.telefone || '-',
     placa: m.placa,
     mensalidade: Number(m.valorMensalidade || 0).toFixed(2).replace('.', ','),
+    categoriaPlano: m.categoriaPlano || 'Mensal Integral',
     status: m.ativo === true ? 'Ativo' : 'Inativo'
   }))
 
@@ -210,7 +212,7 @@ const paginadorMensalistas =
     ? criarPaginador({
       idSufixo: 'mensalistas',
       tbodyId: 'tbody-mensalistas',
-      colspanVazio: 7,
+      colspanVazio: 8,
       textoVazio:
           '<i class="fas fa-search me-2" aria-hidden="true"></i>Nenhum mensalista encontrado.',
       renderLinha: renderLinhaMensalista,
@@ -244,6 +246,7 @@ function renderLinhaMensalista (m, tbody) {
         m.placa
       )}</span></td>
       <td>R$ ${Number(m.valorMensalidade || 0).toFixed(2).replace('.', ',')}</td>
+      <td><span class="badge bg-light text-dark border">${ApiService.sanitizeText(m.categoriaPlano || 'Mensal Integral')}</span></td>
       <td>${statusBadge}</td>
       <td>
         <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-editar-mensalista"
@@ -335,6 +338,9 @@ async function salvarMensalista (e) {
   const valorMensalidade = Number(
     document.getElementById('mensalista-valor-mensalidade').value
   )
+  const categoriaPlano = document
+    .getElementById('mensalista-categoria-plano')
+    .value.trim()
 
   // 1. Validação do Nome Completo (NOVA VALIDAÇÃO)
   if (!nome) {
@@ -392,6 +398,16 @@ async function salvarMensalista (e) {
     return
   }
 
+  // 5b. Validação da Categoria do Plano
+  if (!categoriaPlano) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Categoria Obrigatória',
+      text: 'Informe a categoria do plano (ex.: Mensal Integral, Noturno, Corporativo).'
+    })
+    return
+  }
+
   // 6. Validação de Duplicidade
   const erroDuplicidade = verificarDuplicidade(cpf, placa, id)
   if (erroDuplicidade) {
@@ -413,7 +429,8 @@ async function salvarMensalista (e) {
         cpf,
         telefone,
         placa,
-        valorMensalidade
+        valorMensalidade,
+        categoriaPlano
       })
       toastSucesso('Mensalista atualizado com sucesso.')
     } else {
@@ -423,6 +440,7 @@ async function salvarMensalista (e) {
         telefone,
         placa,
         valorMensalidade,
+        categoriaPlano,
         ativo: true
       })
       toastSucesso('Novo mensalista adicionado com sucesso.')
@@ -454,6 +472,8 @@ function editarMensalista (id) {
   document.getElementById('mensalista-placa').value = m.placa
   document.getElementById('mensalista-valor-mensalidade').value =
     m.valorMensalidade || ''
+  document.getElementById('mensalista-categoria-plano').value =
+    m.categoriaPlano || 'Mensal Integral'
 
   document.getElementById('modalMensalistaLabel').innerHTML =
     '<i class="fas fa-user-edit text-primary me-2" aria-hidden="true"></i>Editar Mensalista'

@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
+import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { ProfileCompleteGuard } from '../common/guards/profile-complete.guard'
 import { AtualizarMensalidadeDto } from './dto/atualizar-mensalidade.dto'
 import { MensalidadesService } from './mensalidades.service'
@@ -15,7 +17,11 @@ export class MensalidadesController {
   }
 
   @Patch(':id')
-  atualizar (@Param('id') id: string, @Body() dto: AtualizarMensalidadeDto) {
-    return this.mensalidadesService.atualizar(id, dto)
+  atualizar (
+    @Param('id') id: string,
+    @Body() dto: AtualizarMensalidadeDto,
+    @CurrentUser() usuario: UsuarioAutenticado
+  ) {
+    return this.mensalidadesService.atualizar(id, dto, usuario.id)
   }
 }

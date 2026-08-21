@@ -62,7 +62,8 @@ model Usuario {
   senhaAlteradaEm DateTime?
   criadoEm        DateTime  @default(now())
 
-  resetSenhaCodigos ResetSenhaCodigo[]
+  resetSenhaCodigos     ResetSenhaCodigo[]
+  mensalidadesAlteradas Mensalidade[]
 
   @@map("usuarios")
 }
@@ -127,6 +128,14 @@ model Mensalidade {
   // relatórios de motivo de perda em Faturamento.
   motivoCancelamento  String?
   criadoEm            DateTime          @default(now())
+
+  // Auditoria da última alteração manual de status feita em Faturamento
+  // (marcar como paga / cancelar) — nula quando o ciclo nasce cobrado
+  // automaticamente no fechamento de um ticket (ver MensalidadeCicloService),
+  // já que aí não existe um operador "dando baixa" na tela de Faturamento.
+  alteradoPor   Usuario?  @relation(fields: [alteradoPorId], references: [id], onDelete: SetNull)
+  alteradoPorId String?
+  alteradoEm    DateTime?
 
   @@unique([mensalistaId, referencia])
   @@map("mensalidades")

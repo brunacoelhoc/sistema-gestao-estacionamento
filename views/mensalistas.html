@@ -248,8 +248,9 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0" role="table" aria-label="Tabela de mensalistas">
                         <caption class="visually-hidden">
-                            Lista de mensalistas com nome, CPF (mascarado), telefone, placa do veículo e situação.
-                            Mensalistas não podem ser excluídos, apenas inativados ou reativados.
+                            Lista de mensalistas com nome, CPF (mascarado), telefone, placa do veículo, mensalidade,
+                            categoria do plano e situação. Mensalistas não podem ser excluídos, apenas inativados ou
+                            reativados.
                         </caption>
                         <thead class="table-light">
                             <tr>
@@ -258,13 +259,14 @@
                                 <th scope="col">Telefone</th>
                                 <th scope="col">Placa do Veículo</th>
                                 <th scope="col">Mensalidade</th>
+                                <th scope="col">Categoria</th>
                                 <th scope="col">Situação</th>
                                 <th scope="col">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-mensalistas" aria-live="polite" aria-busy="true">
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
+                                <td colspan="8" class="text-center py-4 text-muted">
                                     <span class="spinner-border spinner-border-sm me-2" role="status"
                                         aria-hidden="true"></span>
                                     Carregando mensalistas...
@@ -387,6 +389,25 @@
                             </div>
                             <div id="mensalista-valor-mensalidade-feedback" class="invalid-feedback">
                                 Informe um valor de mensalidade maior que zero.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="mensalista-categoria-plano" class="form-label fw-semibold">Categoria do Plano
+                                <span class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="text" class="form-control" id="mensalista-categoria-plano"
+                                name="categoriaPlano" list="lista-categorias-plano" placeholder="Ex: Mensal Integral"
+                                required aria-describedby="mensalista-categoria-plano-help mensalista-categoria-plano-feedback">
+                            <datalist id="lista-categorias-plano">
+                                <option value="Mensal Integral">
+                                <option value="Noturno">
+                                <option value="Corporativo">
+                            </datalist>
+                            <div id="mensalista-categoria-plano-help" class="form-text">
+                                Perfil do cliente, usado para segmentar receita nos relatórios de Faturamento.
+                            </div>
+                            <div id="mensalista-categoria-plano-feedback" class="invalid-feedback">
+                                Informe a categoria do plano.
                             </div>
                         </div>
 
