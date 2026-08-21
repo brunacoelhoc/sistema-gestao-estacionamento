@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white" alt="Node.js >= 18" />
-  <img src="https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white" alt="Express 5" />
+  <img src="https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white" alt="NestJS 11" />
   <img src="https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white" alt="Prisma 7" />
   <img src="https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/WCAG-2.1%20AAA-7C3AED" alt="WCAG 2.1 AAA" />
@@ -50,7 +50,7 @@ O **ParkGestão** cobre o dia a dia de um estacionamento: abrir e fechar tickets
 | Camada | Tecnologias |
 |---|---|
 | **Front-end** | HTML5 semântico + SCSS + JavaScript ES6+ nativo (sem framework), Bootstrap 5.3 |
-| **Back-end** | Node.js + Express 5, arquitetura MVC (rotas → controllers → services) |
+| **Back-end** | Node.js + NestJS 11 + TypeScript, arquitetura modular (um Module por domínio: controller → service → DTOs) |
 | **Banco de dados** | PostgreSQL via Prisma ORM 7 |
 | **Autenticação** | JWT assinado pelo servidor + senha com hash bcrypt + Google Identity Services (opcional) |
 | **UI / Feedback** | SweetAlert2 (modais), FontAwesome 6 (ícones), GSAP (animações de entrada) |
@@ -93,15 +93,18 @@ projeto/
 │   ├── migrations/
 │   ├── db.json                    # Dados de exemplo usados por prisma/seed.js
 │   └── seed.js                    # Popula o banco a partir de db.json
-├── server/                        # 🧠 Back-end Express, em MVC
-│   ├── index.js / app.js
-│   ├── config/prisma.js           # Conexão com o banco (Prisma + driver adapter)
-│   ├── routes/                    # Rotas HTTP — só wiring + validação, sem lógica
-│   ├── controllers/                # Lógica de cada rota
-│   ├── repositories/              # Acesso ao banco (isola o Prisma dos controllers)
-│   ├── schemas/                   # Validação de entrada (Zod)
-│   ├── services/mensalidade.js    # Regra do ciclo mensal do mensalista
-│   └── middleware/auth.js         # JWT (requireAuth / requireAdmin)
+├── src/                            # 🧠 Back-end NestJS
+│   ├── main.ts                    # Bootstrap: helmet, cors, ValidationPipe, filtro de erro
+│   ├── app.module.ts
+│   ├── prisma/prisma.service.ts   # Conexão com o banco (Prisma + driver adapter)
+│   ├── common/                    # Guards (JWT/admin/perfil completo), filtro global de
+│   │                               # exceção, decorators
+│   ├── <domínio>/                 # Um module por domínio (auth, usuarios, mensalistas,
+│   │                               # mensalidades, vagas, tarifas, tickets, analytics):
+│   │                               # controller (rota) → service (lógica + Prisma) → dto/
+│   │                               # (validação com class-validator)
+│   ├── cobranca/                  # Cálculo da tarifa avulsa (lógica pura, testada)
+│   └── mensalidade-ciclo/         # Regra do ciclo de cobrança do mensalista
 └── generated/prisma/               # Cliente Prisma gerado (não versionado)
 ```
 
@@ -169,7 +172,7 @@ O login é feito por **CPF**, não por e-mail — o e-mail só serve como via de
 
 ## 💳 Cobrança de mensalistas
 
-Mensalista **não paga por ticket** — ele paga um **ciclo mensal** (`server/services/mensalidade.js`), que fica registrado no banco (`Mensalidade`) com histórico completo:
+Mensalista **não paga por ticket** — ele paga um **ciclo mensal** (`src/mensalidade-ciclo/mensalidade-ciclo.service.ts`), que fica registrado no banco (`Mensalidade`) com histórico completo:
 
 - ✅ **Ao cadastrar (ou reativar)** um mensalista, abre-se um ciclo do dia atual até o fim do mês corrente, no valor **cheio** da mensalidade.
 - ⏳ **Se ele completar o mês** (continua ativo), o próximo ciclo nasce automaticamente cheio, e assim por diante.
@@ -235,7 +238,7 @@ Client ID não é segredo — o fluxo de ID token do Google Identity Services n�
 
 ## 📧 Recuperação de senha por e-mail
 
-O fluxo "Esqueci minha senha" (tela de login) gera um código de 6 dígitos, guarda só o **hash** dele no banco (com expiração de 15 minutos e uso único) e envia por e-mail de verdade via **SMTP** (`server/services/email.js`). Sem essas variáveis configuradas, a API recusa o pedido com um erro claro (503) em vez de falhar silenciosamente.
+O fluxo "Esqueci minha senha" (tela de login) gera um código de 6 dígitos, guarda só o **hash** dele no banco (com expiração de 15 minutos e uso único) e envia por e-mail de verdade via **SMTP** (`src/email/email.service.ts`). Sem essas variáveis configuradas, a API recusa o pedido com um erro claro (503) em vez de falhar silenciosamente.
 
 Configure no `.env`:
 

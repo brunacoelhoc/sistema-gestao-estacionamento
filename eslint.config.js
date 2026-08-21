@@ -12,7 +12,7 @@ module.exports = [
     ]
   }),
   {
-    files: ['server/**/*.js', 'prisma/**/*.js', 'eslint.config.js'],
+    files: ['prisma/**/*.js', 'scripts/**/*.js', 'eslint.config.js'],
     languageOptions: {
       globals: globals.node
     }
