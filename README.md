@@ -23,6 +23,7 @@
 - [📂 Estrutura do projeto (MVC)](#-estrutura-do-projeto-mvc)
 - [🚀 Como rodar](#-como-rodar)
 - [💳 Cobrança de mensalistas](#-cobrança-de-mensalistas)
+- [💰 Faturamento e Métricas](#-faturamento-e-métricas)
 - [🎟️ Regras de tickets avulsos](#️-regras-de-tickets-avulsos)
 - [🔐 Autenticação e área administrativa](#-autenticação-e-área-administrativa)
 - [♿ Acessibilidade (WCAG 2.1 AAA)](#-acessibilidade-wcag-21-aaa)
@@ -71,10 +72,13 @@ projeto/
 │   ├── tickets.html
 │   ├── mensalistas.html
 │   ├── vagas-tarifas.html
-│   ├── metricas.html
+│   ├── faturamento.html
+│   ├── metricas.html              # Só aparece no menu para contas "admin"
 │   ├── funcionarios.html         # Área administrativa (só para "admin")
 │   ├── login.html
-│   └── sobre.html
+│   ├── completar-cadastro.html   # Primeiro login via Google (sem CPF ainda)
+│   ├── sobre.html
+│   └── partials/                  # Trechos HTML reaproveitados entre telas
 ├── assets/
 │   ├── scss/ + css/style.css     # Estilos (SCSS compilado)
 │   ├── img/
@@ -84,10 +88,12 @@ projeto/
 │       │   └── api.js             #   único ponto de comunicação com a API REST
 │       ├── controllers/          # 🎮 Controller de cada tela
 │       │   ├── dashboard.js, tickets.js, mensalistas.js, vagas.js
-│       │   └── metricas.js, funcionarios.js, login.js
+│       │   ├── faturamento.js, metricas.js, funcionarios.js
+│       │   └── login.js, completar-cadastro.js
 │       └── modules/               # utilitários/serviços transversais (fora do
 │                                   # tripé MVC): acessibilidade, sessão/login,
-│                                   # LGPD, toast, paginação, exportação, PDF…
+│                                   # LGPD, toast, paginação, exportação, PDF,
+│                                   # telemetria de eventos (consentida)…
 ├── prisma/
 │   ├── schema.prisma              # Modelo de dados (Model do back-end)
 │   ├── migrations/
@@ -99,6 +105,8 @@ projeto/
 │   ├── prisma/prisma.service.ts   # Conexão com o banco (Prisma + driver adapter)
 │   ├── common/                    # Guards (JWT/admin/perfil completo), filtro global de
 │   │                               # exceção, decorators
+│   ├── config/                    # Validação de variáveis de ambiente e logger (Pino)
+│   ├── email/                     # Envio de e-mail via SMTP (recuperação de senha)
 │   ├── <domínio>/                 # Um module por domínio (auth, usuarios, mensalistas,
 │   │                               # mensalidades, vagas, tarifas, tickets, analytics):
 │   │                               # controller (rota) → service (lógica + Prisma) → dto/
@@ -166,8 +174,17 @@ Mensalista **não paga por ticket** — ele paga um **ciclo mensal** (`src/mensa
 - ⏳ **Se ele completar o mês** (continua ativo), o próximo ciclo nasce automaticamente cheio, e assim por diante.
 - ✂️ **Se for inativado antes do fim do mês**, o ciclo em aberto é fechado na hora com valor **proporcional aos dias em que esteve ativo** naquele mês (`valor da mensalidade × dias ativos ÷ dias do mês`).
 - 🎫 Tickets abertos por um mensalista ativo fecham sempre com `valorTotal = 0` — ele já pagou pelo ciclo, então cada entrada/saída não gera cobrança extra (o rótulo "Isento" no comprovante passa a ser literal, não um bug).
+- 🏷️ Cada mensalista tem uma **categoria de plano** (ex.: Mensal Integral, Noturno, Corporativo), usada para segmentar a receita nos relatórios de Faturamento.
+- ❌ Cancelar uma cobrança exige informar o **motivo do cancelamento** — texto livre que alimenta o relatório de churn/perda de receita.
 
-Na tela de **Mensalistas**, o botão <kbd>💵 Ver cobranças</kbd> em cada linha abre o histórico de ciclos daquele cliente (período, dias cobrados, valor, status) com opção de marcar um ciclo como pago. A página de **Métricas** soma a receita dos ciclos de mensalidade junto com a dos tickets avulsos, para o faturamento total refletir a realidade.
+Na tela de **Mensalistas**, o botão <kbd>💵 Ver cobranças</kbd> em cada linha abre o histórico de ciclos daquele cliente (período, dias cobrados, valor, status) com opção de marcar um ciclo como pago.
+
+---
+
+## 💰 Faturamento e Métricas
+
+- **`views/faturamento.html`** — visível a qualquer usuário logado. Mostra KPIs de faturamento previsto (MRR), valor recebido no mês, ticket médio por mensalista ativo e quantos mensalistas estão sem ciclo vigente; um resumo de recebido por forma de pagamento; e o impacto de cancelamentos no período (quantidade e valor perdido, com base no `motivoCancelamento`). A tabela de cobranças é filtrável por status, mês de referência, período do ciclo e busca por nome/placa, com paginação e exportação em CSV, Excel e PDF.
+- **`views/metricas.html`** — só aparece no menu para contas **admin**. Painel operacional mais amplo (ocupação de vagas, fluxo de tickets, receita agregada), filtrável por período (mês atual, 7/30 dias, todo o histórico) e também exportável (XML, PDF, Excel).
 
 ---
 
