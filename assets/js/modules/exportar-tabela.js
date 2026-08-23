@@ -25,6 +25,17 @@ function avisarExportacaoVazia () {
   })
 }
 
+// Neutraliza CSV/Formula Injection: se o valor (incluindo campos de texto
+// livre digitados por operadores, ex.: motivoCancelamento) começa com um
+// caractere que Excel/Sheets interpretam como início de fórmula, prefixa
+// com uma aspas simples pra forçar o programa a tratar a célula como texto
+// em vez de executar o conteúdo.
+const REGEX_INICIO_FORMULA = /^[=+\-@\t\r]/
+function neutralizarFormula (valor) {
+  const texto = String(valor ?? '')
+  return REGEX_INICIO_FORMULA.test(texto) ? `'${texto}` : texto
+}
+
 /**
  * @param {string} nomeArquivo ex.: "tickets-parkgestao.csv"
  * @param {{chave: string, rotulo: string}[]} colunas
@@ -37,7 +48,7 @@ function exportarParaCSV (nomeArquivo, colunas, linhas) {
   }
 
   const escapar = valor => {
-    const texto = String(valor ?? '')
+    const texto = neutralizarFormula(valor)
     return /["\n;]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto
   }
 
@@ -80,7 +91,7 @@ function exportarParaExcel (nomeArquivo, nomeAba, colunas, linhas) {
   const dadosPlanilha = linhas.map(linha => {
     const objeto = {}
     colunas.forEach(c => {
-      objeto[c.rotulo] = linha[c.chave]
+      objeto[c.rotulo] = neutralizarFormula(linha[c.chave])
     })
     return objeto
   })

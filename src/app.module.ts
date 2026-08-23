@@ -6,6 +6,7 @@ import { AnalyticsModule } from './analytics/analytics.module'
 import { AppController } from './app.controller'
 import { AuthModule } from './auth/auth.module'
 import { validate } from './config/env.validation'
+import { DashboardModule } from './dashboard/dashboard.module'
 import { MensalidadesModule } from './mensalidades/mensalidades.module'
 import { MensalistasModule } from './mensalistas/mensalistas.module'
 import { MetricasModule } from './metricas/metricas.module'
@@ -39,6 +40,7 @@ import { VagasModule } from './vagas/vagas.module'
     MensalidadesModule,
     TicketsModule,
     MetricasModule,
+    DashboardModule,
     AnalyticsModule
   ],
   controllers: [AppController]

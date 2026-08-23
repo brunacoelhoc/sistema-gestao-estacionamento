@@ -1,13 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '../../generated/prisma'
 import { mascararCpf } from '../common/utils/mascarar-cpf.util'
+import { ehConflitoUnico } from '../common/utils/prisma-erro.util'
 import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarMensalistaDto } from './dto/atualizar-mensalista.dto'
 import { CriarMensalistaDto } from './dto/criar-mensalista.dto'
-
-function ehConflitoUnico (erro: unknown): erro is Prisma.PrismaClientKnownRequestError {
-  return erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002'
-}
 
 @Injectable()
 export class MensalistasService {

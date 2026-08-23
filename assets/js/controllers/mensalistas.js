@@ -81,21 +81,15 @@ function exportarMensalistas (formato) {
   }
 }
 
-// Aplica máscaras e tratamento de input em tempo real
+// Aplica máscaras e tratamento de input em tempo real. CPF e placa usam as
+// máscaras compartilhadas (ligarMascaraCpf em assets/js/modules/auth.js,
+// ligarMascaraPlaca em assets/js/modules/validacao.js) — só o telefone é
+// específico desta tela.
 function initInputMasks () {
-  const cpfInput = document.getElementById('mensalista-cpf')
-  const placaInput = document.getElementById('mensalista-placa')
+  ligarMascaraCpf('mensalista-cpf')
+  ligarMascaraPlaca('mensalista-placa')
+
   const telInput = document.getElementById('mensalista-telefone')
-
-  cpfInput?.addEventListener('input', e => {
-    let value = e.target.value.replace(/\D/g, '')
-    if (value.length > 11) value = value.slice(0, 11)
-    value = value.replace(/(\d{3})(\d)/, '$1.$2')
-    value = value.replace(/(\d{3})(\d)/, '$1.$2')
-    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-    e.target.value = value
-  })
-
   telInput?.addEventListener('input', e => {
     let value = e.target.value.replace(/\D/g, '')
     if (value.length > 11) value = value.slice(0, 11)
@@ -103,27 +97,6 @@ function initInputMasks () {
     value = value.replace(/(\d)(\d{4})$/, '$1-$2')
     e.target.value = value
   })
-
-  placaInput?.addEventListener('input', e => {
-    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    if (value.length > 7) value = value.slice(0, 7)
-    e.target.value = value
-  })
-}
-
-// Validação de CPF: apenas estrutura (11 dígitos numéricos preenchidos via
-// máscara), sem cálculo de dígito verificador — conforme especificação.
-function validarCPF (cpf) {
-  const cleanCPF = (cpf || '').replace(/\D/g, '')
-  return cleanCPF.length === 11
-}
-
-// Algoritmo de Validação de Placa (Mercosul ou Padrão Antigo)
-function validarPlaca (placa) {
-  const cleanPlaca = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const regexAntigo = /^[A-Z]{3}[0-9]{4}$/
-  const regexMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/
-  return regexAntigo.test(cleanPlaca) || regexMercosul.test(cleanPlaca)
 }
 
 // Busca a lista de mensalistas da API
@@ -342,7 +315,7 @@ async function salvarMensalista (e) {
   }
 
   // 2. Validação de CPF
-  if (!validarCPF(cpf)) {
+  if (!validarEstruturaCpf(cpf)) {
     Swal.fire({
       icon: 'warning',
       title: 'CPF Inválido',

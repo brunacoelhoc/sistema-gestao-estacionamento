@@ -2,8 +2,9 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable 
 import * as bcrypt from 'bcryptjs'
 import { Prisma, type Usuario } from '../../generated/prisma'
 import { AuthService } from '../auth/auth.service'
-import { mascararCpf } from '../common/utils/mascarar-cpf.util'
 import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
+import { mascararCpf } from '../common/utils/mascarar-cpf.util'
+import { ehConflitoUnico } from '../common/utils/prisma-erro.util'
 import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto'
 import { CriarUsuarioDto } from './dto/criar-usuario.dto'
@@ -11,10 +12,6 @@ import { CriarUsuarioDto } from './dto/criar-usuario.dto'
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
   return resto
-}
-
-function ehConflitoUnico (erro: unknown): erro is Prisma.PrismaClientKnownRequestError {
-  return erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002'
 }
 
 @Injectable()

@@ -10,7 +10,7 @@
  * assets/js/controllers/dashboard.js — ambos têm sua própria tela de
  * "Fechar Ticket" com a mesma prévia de valor.
  */
-function preverCicloMensalista (mensalidades, dataEntradaTicket, valorMensalidade) {
+function preverCicloMensalista (mensalidades, dataEntradaTicket, valorMensalidade, duracaoCicloDias = 30) {
   const dataEntrada = new Date(dataEntradaTicket)
 
   const cicloVigente = (mensalidades || [])
@@ -22,7 +22,7 @@ function preverCicloMensalista (mensalidades, dataEntradaTicket, valorMensalidad
   }
 
   const dataFimNovoCiclo = new Date(dataEntrada)
-  dataFimNovoCiclo.setDate(dataFimNovoCiclo.getDate() + 30)
+  dataFimNovoCiclo.setDate(dataFimNovoCiclo.getDate() + duracaoCicloDias)
   return { cobraAgora: true, valor: Number(valorMensalidade || 0), dataFim: dataFimNovoCiclo }
 }
 

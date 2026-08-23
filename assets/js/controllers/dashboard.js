@@ -4,23 +4,24 @@
  * busca rápida por placa, tabela de tickets recentes e ações da página.
  */
 
-// Armazenamento em memória dos dados para permitir filtragem local ágil
-let globalVagas = []
+// globalTickets guarda só os tickets ABERTOS (única fatia que o Dashboard
+// precisa baixar crua — pra tabela de tickets ativos, a busca rápida por
+// placa e o encerramento de ticket). vaga/mensalista já vêm embutidos em
+// cada ticket (ver include em TicketsService.listar), então não é preciso
+// baixar as listas completas de vagas/mensalistas só pra fazer esse join.
 let globalTickets = []
-let globalMensalistas = []
 let globalTarifas = []
-const TEMPO_TOLERANCIA_MINUTOS = 15 // Deve refletir a mesma tolerância usada em ApiService.fecharTicket
 
-// Últimos conjuntos de vagas/tickets usados para calcular os KPIs (já
-// considerando o filtro por tipo de vaga ativo), usados pelo modal de
-// detalhes dos cards.
-let kpiVagasAtual = []
-let kpiTicketsAtual = []
+// Regras de cobrança usadas só pra prévia de valor mostrada antes de
+// confirmar o fechamento — buscadas uma vez de GET /config (fonte única:
+// AppController.config no backend). Os valores abaixo são só o fallback
+// usado até a resposta chegar (ou se a busca falhar).
+let configRegrasCobranca = { toleranciaMinutos: 15, duracaoCicloMensalistaDias: 30 }
 
-// Vagas/mensalistas usados para montar cada linha da tabela de tickets
-// ativos (renderLinhaTicketRecente só recebe o ticket + o tbody).
-let vagasParaTicketsRecentes = []
-let mensalistasParaTicketsRecentes = []
+// Último resultado de GET /dashboard/kpis, consumido pelo modal de
+// detalhes dos cards (abrirDetalhesKpi) — garante que o texto do modal
+// sempre bata com o valor exibido no cartão.
+let kpiDashboardAtual = null
 
 /**
  * Cria um paginador genérico para uma tabela: guarda a lista completa de
@@ -174,23 +175,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /**
  * Abre um modal com o detalhamento dos dados por trás de um card de KPI,
- * usando o mesmo conjunto de vagas/tickets já filtrado que gerou o número
- * exibido no card (respeita o filtro por tipo de vaga ativo).
+ * usando o último resultado de GET /dashboard/kpis (kpiDashboardAtual) —
+ * já calculado no servidor considerando o filtro de tipo de vaga ativo.
  */
 function abrirDetalhesKpi (chave) {
-  if (typeof Swal === 'undefined') return
+  if (typeof Swal === 'undefined' || !kpiDashboardAtual) return
 
-  const vagas = kpiVagasAtual
-  const tickets = kpiTicketsAtual
+  const k = kpiDashboardAtual
 
-  const listaPorTipo = filtro => {
-    const contagem = vagas.filter(filtro).reduce((acc, v) => {
-      const tipo = (v.tipo || 'comum').toLowerCase()
-      acc[tipo] = (acc[tipo] || 0) + 1
-      return acc
-    }, {})
-
-    const itens = Object.entries(contagem)
+  const listaPorTipo = contagem => {
+    const itens = Object.entries(contagem || {})
       .map(
         ([tipo, qtd]) =>
           `<li>${tipo.charAt(0).toUpperCase() + tipo.slice(1)}: <strong>${qtd}</strong></li>`
@@ -200,14 +194,6 @@ function abrirDetalhesKpi (chave) {
     return itens || '<li class="text-muted">Nenhuma vaga nesta condição.</li>'
   }
 
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-  const faturamentoTotal = ticketsFechados.reduce(
-    (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
-    0
-  )
-
   let title = ''
   let html = ''
 
@@ -215,66 +201,51 @@ function abrirDetalhesKpi (chave) {
     case 'vagas-livres':
       title = 'Vagas Livres'
       html = `<p class="text-muted mb-2">Vagas com status "livre", disponíveis para novos veículos, por tipo:</p>
-        <ul class="text-start">${listaPorTipo(v => (v.status || '').toLowerCase() === 'livre')}</ul>`
+        <ul class="text-start">${listaPorTipo(k.porTipoLivres)}</ul>`
       break
     case 'vagas-ocupadas':
       title = 'Vagas Ocupadas'
       html = `<p class="text-muted mb-2">Vagas com um ticket aberto no momento, por tipo:</p>
-        <ul class="text-start">${listaPorTipo(v => (v.status || '').toLowerCase() === 'ocupada')}</ul>`
+        <ul class="text-start">${listaPorTipo(k.porTipoOcupadas)}</ul>`
       break
     case 'vagas-manutencao':
       title = 'Vagas em Manutenção'
       html = `<p class="text-muted mb-2">Vagas bloqueadas manualmente e indisponíveis para uso, por tipo:</p>
-        <ul class="text-start">${listaPorTipo(v => (v.status || '').toLowerCase() === 'manutencao')}</ul>`
+        <ul class="text-start">${listaPorTipo(k.porTipoManutencao)}</ul>`
       break
     case 'taxa-ocupacao': {
-      const ocupadas = vagas.filter(
-        v => (v.status || '').toLowerCase() === 'ocupada'
-      ).length
-      const total = vagas.length
-      const taxa = total > 0 ? ((ocupadas / total) * 100).toFixed(1) : '0.0'
+      const taxa = k.taxaOcupacao.toFixed(1)
       title = 'Taxa de Ocupação'
       html = `<p class="text-muted mb-2">Percentual de vagas ocupadas em relação ao total cadastrado (considerando o filtro de tipo ativo).</p>
-        <p class="fs-5 mb-0"><strong>${ocupadas}</strong> ocupadas de <strong>${total}</strong> vagas = <strong>${taxa}%</strong></p>`
+        <p class="fs-5 mb-0"><strong>${k.vagasOcupadas}</strong> ocupadas de <strong>${k.totalVagasFiltradas}</strong> vagas = <strong>${taxa}%</strong></p>`
       break
     }
-    case 'tickets-abertos': {
-      const abertos = tickets.filter(
-        t => (t.status || '').toLowerCase() === 'aberto'
-      )
+    case 'tickets-abertos':
       title = 'Tickets Abertos'
       html = `<p class="text-muted mb-2">Veículos atualmente estacionados, ainda sem saída registrada.</p>
-        <p class="fs-5 mb-0"><strong>${abertos.length}</strong> ticket(s) em aberto no momento.</p>`
+        <p class="fs-5 mb-0"><strong>${k.ticketsAbertosQtd}</strong> ticket(s) em aberto no momento.</p>`
       break
-    }
     case 'faturamento':
       title = 'Faturamento Total'
       html = `<p class="text-muted mb-2">Soma do valor cobrado de todos os tickets já fechados. Tickets abertos não entram no cálculo, pois ainda não têm valor final.</p>
-        <p class="fs-5 mb-0"><strong>${ticketsFechados.length}</strong> ticket(s) fechado(s) somam <strong>R$ ${faturamentoTotal
+        <p class="fs-5 mb-0"><strong>${k.ticketsFechadosQtd}</strong> ticket(s) fechado(s) somam <strong>R$ ${k.faturamentoTotal
         .toFixed(2)
         .replace('.', ',')}</strong>.</p>`
       break
-    case 'ticket-medio': {
-      const medio =
-        ticketsFechados.length > 0 ? faturamentoTotal / ticketsFechados.length : 0
+    case 'ticket-medio':
       title = 'Ticket Médio'
       html = `<p class="text-muted mb-2">Faturamento total dividido pela quantidade de tickets fechados.</p>
-        <p class="fs-5 mb-0">R$ ${faturamentoTotal
+        <p class="fs-5 mb-0">R$ ${k.faturamentoTotal
           .toFixed(2)
-          .replace('.', ',')} ÷ ${ticketsFechados.length} ticket(s) = <strong>R$ ${medio
+          .replace('.', ',')} ÷ ${k.ticketsFechadosQtd} ticket(s) = <strong>R$ ${k.ticketMedio
         .toFixed(2)
         .replace('.', ',')}</strong></p>`
       break
-    }
-    case 'tempo-medio': {
-      const comTempo = ticketsFechados.filter(
-        t => (t.horaEntrada || t.dataEntrada) && (t.horaSaida || t.dataSaida)
-      )
+    case 'tempo-medio':
       title = 'Tempo Médio de Permanência'
       html = `<p class="text-muted mb-2">Média do tempo entre entrada e saída de todos os tickets fechados com esses dois horários registrados.</p>
-        <p class="fs-5 mb-0">Calculado sobre <strong>${comTempo.length}</strong> ticket(s) fechado(s).</p>`
+        <p class="fs-5 mb-0">Calculado sobre <strong>${k.tempoMedioAmostraQtd}</strong> ticket(s) fechado(s).</p>`
       break
-    }
     default:
       return
   }
@@ -334,23 +305,20 @@ function initBuscaRapidaPlaca () {
 }
 
 /**
- * Filtra dinamicamente a tabela de tickets abertos pela busca de placa
+ * Filtra dinamicamente a tabela de tickets abertos pela busca de placa.
+ * globalTickets já vem só com tickets abertos (ver loadDashboardData).
  */
 function filtrarTicketsPorPlaca (placaTermo) {
-  const ticketsAbertos = globalTickets.filter(
-    t => (t.status || '').toLowerCase() === 'aberto'
-  )
-
   if (!placaTermo) {
-    renderTicketsRecentes(ticketsAbertos, globalVagas, globalMensalistas)
+    renderTicketsRecentes(globalTickets)
     return
   }
 
-  const filtrados = ticketsAbertos.filter(t =>
+  const filtrados = globalTickets.filter(t =>
     (t.placa || '').toUpperCase().includes(placaTermo)
   )
 
-  renderTicketsRecentes(filtrados, globalVagas, globalMensalistas)
+  renderTicketsRecentes(filtrados)
 }
 
 // Carregamento dos Dados do Dashboard
@@ -363,43 +331,28 @@ async function loadDashboardData () {
   tbody?.setAttribute('aria-busy', 'true')
 
   try {
-    const [vagas, tickets, mensalistas, tarifas] = await Promise.all([
-      ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
-      ApiService.getTickets ? ApiService.getTickets() : Promise.resolve([]),
-      ApiService.getMensalistas
-        ? ApiService.getMensalistas()
-        : Promise.resolve([]),
-      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([])
-    ])
-
-    // Armazena no escopo global para filtragem
-    globalVagas = vagas || []
-    globalTickets = tickets || []
-    globalMensalistas = mensalistas || []
-    globalTarifas = tarifas || []
-
     const selectTipo = document.getElementById('filtro-tipo-vaga')
     const tipoAtual = selectTipo ? selectTipo.value : 'todos'
 
-    // Atualiza KPIs com base no filtro
-    aplicarFiltroTipoVaga(tipoAtual)
+    // Só a fatia de tickets ABERTOS é baixada crua (pra tabela e busca
+    // rápida) — os KPIs (que antes exigiam o histórico inteiro) e o
+    // ranking de vagas agora vêm já agregados do backend.
+    const [tickets, tarifas, config] = await Promise.all([
+      ApiService.getTickets ? ApiService.getTickets({ status: 'aberto' }) : Promise.resolve([]),
+      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([]),
+      ApiService.getConfig().catch(() => null),
+      aplicarFiltroTipoVaga(tipoAtual),
+      renderRankingVagas()
+    ])
+
+    globalTickets = tickets || []
+    globalTarifas = tarifas || []
+    if (config) configRegrasCobranca = config
 
     // Aplica filtro de busca rápida se houver texto
     const inputBusca = document.getElementById('input-busca-placa-rapida')
     const termoPlaca = inputBusca ? inputBusca.value.trim().toUpperCase() : ''
     filtrarTicketsPorPlaca(termoPlaca)
-
-    // Renderiza o Ranking de Vagas
-    renderRankingVagas(globalVagas, globalTickets)
-
-    // Atualiza o contador de capacidade do hero (antes fixo em "240 Vagas Monitoradas")
-    const elTotalVagasHero = document.getElementById('hero-total-vagas')
-    if (elTotalVagasHero) {
-      const totalVagas = globalVagas.length
-      elTotalVagasHero.textContent = `${totalVagas} ${
-        totalVagas === 1 ? 'Vaga Monitorada' : 'Vagas Monitoradas'
-      }`
-    }
   } catch (error) {
     console.error('Erro ao carregar dados do dashboard:', error)
 
@@ -429,63 +382,22 @@ async function loadDashboardData () {
   }
 }
 
-// Aplica o filtro por Tipo de Vaga e recarrega os KPIs afetados
-function aplicarFiltroTipoVaga (tipo) {
-  let vagasFiltradas = globalVagas
-
-  if (tipo && tipo.toLowerCase() !== 'todos') {
-    vagasFiltradas = globalVagas.filter(
-      v => (v.tipo || '').toLowerCase() === tipo.toLowerCase()
-    )
+// Busca os KPIs já filtrados/calculados no servidor (GET /dashboard/kpis)
+// e atualiza os cartões do topo — mesmo padrão de atualizarKpisFaturamento.
+async function aplicarFiltroTipoVaga (tipo) {
+  let kpis
+  try {
+    kpis = await ApiService.getDashboardKpis(tipo)
+  } catch (error) {
+    console.error('Erro ao carregar KPIs do dashboard:', error)
+    return
   }
-
-  const idsVagasFiltradas = new Set(vagasFiltradas.map(v => String(v.id)))
-
-  const ticketsFiltrados = globalTickets.filter(t =>
-    idsVagasFiltradas.has(String(t.vagaId))
-  )
-
-  atualizarKPIs(vagasFiltradas, ticketsFiltrados)
+  atualizarKPIs(kpis)
 }
 
-// Calcula e atualiza todos os KPIs do topo do dashboard
-function atualizarKPIs (vagas, tickets) {
-  kpiVagasAtual = vagas
-  kpiTicketsAtual = tickets
-
-  const vagasLivres = vagas.filter(
-    v => (v.status || '').toLowerCase() === 'livre'
-  ).length
-  const vagasOcupadas = vagas.filter(
-    v => (v.status || '').toLowerCase() === 'ocupada'
-  ).length
-  const vagasManutencao = vagas.filter(
-    v => (v.status || '').toLowerCase() === 'manutencao'
-  ).length
-  const totalVagas = vagas.length
-
-  const ticketsAbertos = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'aberto'
-  )
-  const ticketsFechados = tickets.filter(
-    t => (t.status || '').toLowerCase() === 'fechado'
-  )
-
-  const taxaOcupacao = totalVagas > 0 ? (vagasOcupadas / totalVagas) * 100 : 0
-
-  const faturamentoTotal = ticketsFechados.reduce(
-    (acc, t) => acc + (Number(t.valorTotal ?? t.valorCobrado) || 0),
-    0
-  )
-
-  const ticketMedioTexto =
-    ticketsFechados.length > 0
-      ? `R$ ${(faturamentoTotal / ticketsFechados.length)
-          .toFixed(2)
-          .replace('.', ',')}`
-      : 'Nenhum dado disponível'
-
-  const tempoMedioTexto = calcularTempoMedio(ticketsFechados)
+// Pinta o resultado de GET /dashboard/kpis nos cartões do topo
+function atualizarKPIs (kpis) {
+  kpiDashboardAtual = kpis
 
   const animar =
     typeof animarContadorGsap === 'function'
@@ -494,77 +406,60 @@ function atualizarKPIs (vagas, tickets) {
           if (el) el.textContent = opcoes?.formatar ? opcoes.formatar(valor) : valor
         }
 
-  animar(document.getElementById('kpi-vagas-livres'), vagasLivres)
-  animar(document.getElementById('kpi-vagas-ocupadas'), vagasOcupadas)
-  animar(document.getElementById('kpi-vagas-manutencao'), vagasManutencao)
-  animar(document.getElementById('kpi-taxa-ocupacao'), taxaOcupacao, {
+  animar(document.getElementById('kpi-vagas-livres'), kpis.vagasLivres)
+  animar(document.getElementById('kpi-vagas-ocupadas'), kpis.vagasOcupadas)
+  animar(document.getElementById('kpi-vagas-manutencao'), kpis.vagasManutencao)
+  animar(document.getElementById('kpi-taxa-ocupacao'), kpis.taxaOcupacao, {
     formatar: v => `${v.toFixed(1)}%`
   })
-  animar(document.getElementById('kpi-tickets-abertos'), ticketsAbertos.length)
-  animar(document.getElementById('kpi-faturamento'), faturamentoTotal, {
+  animar(document.getElementById('kpi-tickets-abertos'), kpis.ticketsAbertosQtd)
+  animar(document.getElementById('kpi-faturamento'), kpis.faturamentoTotal, {
     formatar: v => `R$ ${v.toFixed(2).replace('.', ',')}`
   })
 
   const elTicketMedio = document.getElementById('kpi-ticket-medio')
   if (elTicketMedio) {
-    if (ticketsFechados.length > 0) {
-      animar(elTicketMedio, faturamentoTotal / ticketsFechados.length, {
+    if (kpis.ticketsFechadosQtd > 0) {
+      animar(elTicketMedio, kpis.ticketMedio, {
         formatar: v => `R$ ${v.toFixed(2).replace('.', ',')}`
       })
     } else {
-      elTicketMedio.textContent = ticketMedioTexto
+      elTicketMedio.textContent = 'Nenhum dado disponível'
     }
   }
-  if (document.getElementById('kpi-tempo-medio')) { document.getElementById('kpi-tempo-medio').textContent = tempoMedioTexto }
-}
 
-// Calcula tempo médio de permanência
-function calcularTempoMedio (ticketsFechados) {
-  const validos = ticketsFechados.filter(
-    t => (t.horaEntrada || t.dataEntrada) && (t.horaSaida || t.dataSaida)
-  )
-  if (validos.length === 0) return 'Nenhum dado disponível'
+  const elTempoMedio = document.getElementById('kpi-tempo-medio')
+  if (elTempoMedio) elTempoMedio.textContent = formatarTempoMedio(kpis.tempoMedioMinutos)
 
-  const totalMs = validos.reduce((acc, t) => {
-    const entrada = new Date(t.horaEntrada || t.dataEntrada)
-    const saida = new Date(t.horaSaida || t.dataSaida)
-    return acc + Math.max(0, saida - entrada)
-  }, 0)
-
-  const mediaMinutos = Math.round(totalMs / validos.length / 60000)
-  const horas = Math.floor(mediaMinutos / 60)
-  const minutos = mediaMinutos % 60
-
-  if (horas === 0 && minutos === 0) return 'Menos de 1m'
-  return `${horas}h ${minutos}m`
-}
-
-// Renderização do Ranking das Vagas Mais Utilizadas
-function renderRankingVagas (vagas, tickets) {
-  if (!vagas || vagas.length === 0) {
-    paginadorRanking.definirItens([])
-    return
+  // Contador de capacidade do hero — reflete o total geral de vagas
+  // (não é afetado pelo filtro de tipo ativo, mesma regra de antes).
+  const elTotalVagasHero = document.getElementById('hero-total-vagas')
+  if (elTotalVagasHero) {
+    elTotalVagasHero.textContent = `${kpis.totalVagas} ${
+      kpis.totalVagas === 1 ? 'Vaga Monitorada' : 'Vagas Monitoradas'
+    }`
   }
+}
 
-  const contagemUso = {}
-  tickets.forEach(ticket => {
-    if (ticket.vagaId) {
-      const vId = String(ticket.vagaId)
-      contagemUso[vId] = (contagemUso[vId] || 0) + 1
-    }
-  })
+// Formata o tempo médio de permanência (minutos vindos do backend) como texto
+function formatarTempoMedio (minutos) {
+  if (minutos === null || minutos === undefined) return 'Nenhum dado disponível'
+  if (minutos === 0) return 'Menos de 1m'
 
-  // A posição (1º, 2º, 3º...) precisa ser calculada sobre o ranking
-  // completo, antes de paginar — senão cada página reiniciaria em "1º".
-  const ranking = vagas
-    .map(vaga => ({
-      ...vaga,
-      totalUso: contagemUso[String(vaga.id)] || 0
-    }))
-    .sort((a, b) => b.totalUso - a.totalUso)
-    .map((item, index) => ({ ...item, posicao: index + 1 }))
+  const horas = Math.floor(minutos / 60)
+  const restante = minutos % 60
+  return `${horas}h ${restante}m`
+}
 
-  paginadorRanking.definirItens(ranking)
+// Busca o ranking de vagas já calculado no servidor (GET /dashboard/ranking-vagas)
+async function renderRankingVagas () {
+  let ranking = []
+  try {
+    ranking = await ApiService.getRankingVagas()
+  } catch (error) {
+    console.error('Erro ao carregar ranking de vagas:', error)
+  }
+  paginadorRanking.definirItens(ranking || [])
 }
 
 function renderLinhaRanking (item, tbody) {
@@ -593,18 +488,13 @@ function renderLinhaRanking (item, tbody) {
 }
 
 // Renderização dos Tickets na Tabela Ativa
-function renderTicketsRecentes (ticketsAbertos, vagas, mensalistas) {
-  vagasParaTicketsRecentes = vagas
-  mensalistasParaTicketsRecentes = mensalistas
+function renderTicketsRecentes (ticketsAbertos) {
   paginadorTicketsRecentes.definirItens(ticketsAbertos)
 }
 
 function renderLinhaTicketRecente (ticket, tbody) {
-  const vaga = vagasParaTicketsRecentes.find(
-    v => String(v.id) === String(ticket.vagaId)
-  )
-  const identificadorVaga = vaga
-    ? `${vaga.codigo || vaga.numero || vaga.id} (${vaga.tipo || 'comum'})`
+  const identificadorVaga = ticket.vaga
+    ? `${ticket.vaga.codigo} (${ticket.vaga.tipo || 'comum'})`
     : ticket.vagaId
 
   const dataEntradaVal = ticket.horaEntrada || ticket.dataEntrada
@@ -615,14 +505,9 @@ function renderLinhaTicketRecente (ticket, tbody) {
     })
     : '-'
 
-  const mensalista = ticket.mensalistaId
-    ? mensalistasParaTicketsRecentes.find(
-      m => String(m.id) === String(ticket.mensalistaId)
-    )
-    : null
-  const clienteHtml = mensalista
+  const clienteHtml = ticket.mensalista
     ? `<span class="badge-status status-mensalista"><i class="fas fa-id-card me-1" aria-hidden="true"></i>${ApiService.sanitizeText(
-        mensalista.nome || mensalista.nomeCliente
+        ticket.mensalista.nome
       )}</span>`
     : '<span class="badge bg-secondary">Avulso</span>'
 
@@ -687,17 +572,17 @@ async function encerrarTicket (ticketId, botao) {
   let previsaoCiclo = null
 
   if (ehMensalista) {
-    const mensalista = globalMensalistas.find(m => String(m.id) === String(ticket.mensalistaId))
-    // Prévia client-side do ciclo de 30 dias — espelha a regra real do
-    // backend (ver assets/js/modules/mensalista-ciclo.js).
+    // Prévia client-side do ciclo — espelha a regra real do backend (ver
+    // assets/js/modules/mensalista-ciclo.js).
     const mensalidadesDoMensalista = await ApiService.getMensalidades(ticket.mensalistaId)
     previsaoCiclo = preverCicloMensalista(
       mensalidadesDoMensalista,
       ticket.dataEntrada || ticket.horaEntrada,
-      mensalista?.valorMensalidade
+      ticket.mensalista?.valorMensalidade,
+      configRegrasCobranca.duracaoCicloMensalistaDias
     )
     valorCalculado = previsaoCiclo.valor
-  } else if (diffMinutos <= TEMPO_TOLERANCIA_MINUTOS) {
+  } else if (diffMinutos <= configRegrasCobranca.toleranciaMinutos) {
     valorCalculado = 0
   } else {
     const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
@@ -780,10 +665,6 @@ async function encerrarTicket (ticketId, botao) {
     // cobrado, garantindo que ele nunca divirja do valor mostrado acima.
     const resultado = await ApiService.fecharTicket(ticketId, { formaPagamento })
 
-    const vaga = globalVagas.find(
-      v => String(v.id) === String(ticket.vagaId)
-    )
-
     const ciclo = resultado?.mensalistaCiclo
     const htmlMensalista = ciclo
       ? `<p class="mt-2 mb-0 text-muted">${
@@ -808,7 +689,7 @@ async function encerrarTicket (ticketId, botao) {
       gerarComprovanteTicketPDF({
         ticketId: ticket.id,
         placa: ticket.placa,
-        vagaCodigo: vaga?.codigo || vaga?.numero || ticket.vagaId,
+        vagaCodigo: ticket.vaga?.codigo || ticket.vagaId,
         horaEntrada,
         horaSaida,
         tempoTexto,

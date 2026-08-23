@@ -1,5 +1,7 @@
 import { Transform, Type } from 'class-transformer'
 import { IsBoolean, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator'
+import { IsCpfValido } from '../../common/cpf-valido.decorator'
+import { IsPlacaValida } from '../../common/placa-valida.decorator'
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
 
@@ -16,12 +18,14 @@ export class AtualizarMensalistaDto {
   @Transform(trim)
   @IsString({ message: 'CPF é obrigatório.' })
   @IsNotEmpty({ message: 'CPF é obrigatório.' })
+  @IsCpfValido()
   cpf?: string
 
   @IsOptional()
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsString({ message: 'Placa é obrigatória.' })
   @IsNotEmpty({ message: 'Placa é obrigatória.' })
+  @IsPlacaValida()
   placa?: string
 
   @IsOptional()

@@ -5,7 +5,6 @@
  */
 
 let mensalidadesCache = []
-let mensalistasCache = []
 // Última lista filtrada renderizada na tabela — usada pelos cartões de
 // resumo (forma de pagamento / churn) e pela exportação, para que ambos
 // sempre reflitam exatamente o que está na tela.
@@ -64,12 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   })
 })
 
-// Referência do mês atual no formato "YYYY-MM", usada pelos KPIs.
-function referenciaAtual () {
-  const hoje = new Date()
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
-}
-
 const ROTULO_STATUS_FATURAMENTO = {
   pendente: 'Pendente',
   paga: 'Paga',
@@ -111,16 +104,14 @@ async function carregarFaturamento () {
   tbody?.setAttribute('aria-busy', 'true')
 
   try {
-    const [mensalidades, mensalistas] = await Promise.all([
+    const [mensalidades] = await Promise.all([
       ApiService.getMensalidades(),
-      ApiService.getMensalistas()
+      atualizarKpisFaturamento()
     ])
     mensalidadesCache = mensalidades || []
-    mensalistasCache = mensalistas || []
     popularFiltroReferencia()
     popularFiltroCategoria()
     aplicarFiltrosFaturamento()
-    atualizarKpisFaturamento()
   } catch (error) {
     console.error('Erro ao carregar faturamento:', error)
 
@@ -332,69 +323,33 @@ let kpiFaturamentoDetalhes = {
   referencia: ''
 }
 
-// Cálculo dos KPIs a partir da lista completa (não filtrada) + do cadastro
-// de mensalistas, para que os cartões sempre reflitam o panorama geral,
-// independente da busca/filtro ativos.
-function atualizarKpisFaturamento () {
-  const ref = referenciaAtual()
-  const hoje = new Date()
-
-  const mensalistasAtivos = mensalistasCache.filter(m => m.ativo)
-
-  // Faturamento Previsto (MRR): soma do valor do plano de todo mensalista
-  // ativo — é o que se espera arrecadar por ciclo se todos passarem pela
-  // cancela dentro do período, não uma cobrança já lançada.
-  const mrr = mensalistasAtivos.reduce((soma, m) => soma + Number(m.valorMensalidade || 0), 0)
-
-  // Faturamento Realizado: ciclos efetivamente pagos cujo início caiu no
-  // mês corrente — comparar com o MRR acima mostra quanto do previsto já
-  // veio a caixa neste mês.
-  const recebidoNoMes = mensalidadesCache
-    .filter(mv => mv.status === 'paga' && mv.referencia === ref)
-    .reduce((soma, mv) => soma + Number(mv.valor || 0), 0)
-
-  const ticketMedio = mensalistasAtivos.length > 0 ? mrr / mensalistasAtivos.length : 0
-
-  // "Sem Ciclo Ativo": mensalista ativo cujo último ciclo pago (se algum)
-  // já venceu, ou que nunca chegou a pagar um primeiro ciclo — não é
-  // "inadimplência" no sentido de atraso (a cobrança só acontece quando ele
-  // aparece, ver src/mensalidade-ciclo/mensalidade-ciclo.service.ts), mas
-  // sinaliza quem está sem cobertura vigente agora.
-  const semCicloLista = mensalistasAtivos.filter(m => {
-    const ciclosDoMensalista = mensalidadesCache.filter(
-      mv => mv.mensalistaId === m.id && mv.status === 'paga'
-    )
-    if (ciclosDoMensalista.length === 0) return true
-    return !ciclosDoMensalista.some(mv => mv.dataFim && new Date(mv.dataFim) >= hoje)
-  })
-  const semCicloAtivo = semCicloLista.length
-
-  const mensalidadesPagasNoMes = mensalidadesCache.filter(
-    mv => mv.status === 'paga' && mv.referencia === ref
-  )
-
-  kpiFaturamentoDetalhes = {
-    mrr,
-    recebidoNoMes,
-    recebidoNoMesQtd: mensalidadesPagasNoMes.length,
-    ticketMedio,
-    mensalistasAtivosQtd: mensalistasAtivos.length,
-    semCicloAtivo,
-    semCicloLista,
-    referencia: ref
-  }
-
+// Busca os KPIs já calculados no servidor (MensalidadesService.calcularKpis)
+// — os cartões sempre refletem o panorama geral (todo o cadastro), não a
+// busca/filtro ativos na tabela abaixo.
+async function atualizarKpisFaturamento () {
   const elPrevisto = document.getElementById('kpi-previsto-mrr')
   const elRecebido = document.getElementById('kpi-recebido-mes')
   const elTicketMedio = document.getElementById('kpi-ticket-medio')
   const elSemCiclo = document.getElementById('kpi-sem-ciclo')
 
+  let kpis
+  try {
+    kpis = await ApiService.getMensalidadesKpis()
+  } catch (error) {
+    console.error('Erro ao carregar KPIs de faturamento:', error)
+    return
+  }
+
+  kpiFaturamentoDetalhes = kpis
+
+  const { mrr, recebidoNoMes, ticketMedio, semCicloAtivo, mensalistasAtivosQtd } = kpis
+
   if (elPrevisto) elPrevisto.textContent = `R$ ${mrr.toFixed(2).replace('.', ',')}`
   if (elRecebido) elRecebido.textContent = `R$ ${recebidoNoMes.toFixed(2).replace('.', ',')}`
   if (elTicketMedio) elTicketMedio.textContent = `R$ ${ticketMedio.toFixed(2).replace('.', ',')}`
   if (elSemCiclo) {
-    elSemCiclo.textContent = mensalistasAtivos.length > 0
-      ? `${semCicloAtivo} (${((semCicloAtivo / mensalistasAtivos.length) * 100).toFixed(0)}%)`
+    elSemCiclo.textContent = mensalistasAtivosQtd > 0
+      ? `${semCicloAtivo} (${((semCicloAtivo / mensalistasAtivosQtd) * 100).toFixed(0)}%)`
       : '0'
   }
 }

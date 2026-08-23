@@ -151,6 +151,12 @@ model Mensalidade {
   comprovanteNomeArquivo String?
 
   @@unique([mensalistaId, referencia])
+  // Cobre buscarCicloVigente (WHERE mensalistaId = ? AND dataFim >= ?) e o
+  // filtro por mensalistaId isolado de MensalidadesService.listar.
+  @@index([mensalistaId, dataFim])
+  // Cobre o cálculo de "recebido no mês" (WHERE status = 'paga' AND
+  // referencia = ?) em MensalidadesService.calcularKpis.
+  @@index([status, referencia])
   @@map("mensalidades")
 }
 
@@ -194,6 +200,16 @@ model Ticket {
   mensalista   Mensalista? @relation(fields: [mensalistaId], references: [id])
   mensalistaId String?
 
+  // Cobre a listagem/filtro por status (Dashboard, tela de Tickets) já
+  // ordenada por dataEntrada — o padrão de consulta mais comum da tabela.
+  @@index([status, dataEntrada])
+  // Cobre o findFirst de "placa já tem ticket aberto" em TicketsService.abrir,
+  // chamado em toda abertura de ticket.
+  @@index([placa, status])
+  // FKs sem índice próprio (Prisma não cria automaticamente) — usadas no
+  // groupBy do ranking de vagas e no filtro por tipo de vaga do Dashboard.
+  @@index([vagaId])
+  @@index([mensalistaId])
   @@map("tickets")
 }
 

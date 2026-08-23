@@ -64,13 +64,15 @@ module.exports = [
         inicializarMenuUsuario: 'readonly',
         ligarIndicadorForcaSenha: 'readonly',
         ligarMascaraCpf: 'readonly',
+        ligarMascaraPlaca: 'readonly',
         ligarMascaraTelefone: 'readonly',
         marcarParaMostrarFraseNoProximoCarregamento: 'readonly',
         mostrarFraseMotivacionalSeAplicavel: 'readonly',
         preverCicloMensalista: 'readonly',
         formatarDataCicloMensalista: 'readonly',
         toastSucesso: 'readonly',
-        validarEstruturaCpf: 'readonly'
+        validarEstruturaCpf: 'readonly',
+        validarPlaca: 'readonly'
       }
     },
     rules: {

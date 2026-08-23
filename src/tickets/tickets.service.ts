@@ -40,20 +40,32 @@ export class TicketsService {
   }
 
   /**
-   * Sem `page`, mantém o contrato antigo (array completo) — usado pelo
-   * Dashboard e por Métricas, que precisam do histórico inteiro para
-   * calcular KPIs. Com `page`, aplica os mesmos filtros (status, termo) e
-   * devolve só a fatia pedida.
+   * Sem `page`, mantém o contrato antigo (array completo, com status=aberto
+   * é o que a tela de Dashboard usa pra tabela de tickets ativos — o
+   * histórico completo pra KPIs agora vem de DashboardService/MetricasService,
+   * calculado no servidor). Com `page`, aplica os mesmos filtros (status,
+   * termo) e devolve só a fatia pedida.
+   *
+   * Inclui vaga/mensalista (só os campos usados pra exibição) pra quem
+   * precisa montar uma linha de tabela sem baixar as listas completas de
+   * vagas/mensalistas só pra fazer esse join no cliente.
    */
   async listar (filtros: FiltrosListarTickets, paginacao?: PaginacaoTickets) {
     const where = this.montarWhere(filtros)
+    const include = {
+      vaga: { select: { codigo: true, tipo: true } },
+      // valorMensalidade é usado pela prévia de cobrança do ciclo mostrada
+      // antes de fechar o ticket de um mensalista (ver preverCicloMensalista
+      // no front) — o valor cobrado de fato é sempre recalculado no backend.
+      mensalista: { select: { nome: true, valorMensalidade: true } }
+    }
 
     if (!paginacao) {
-      return this.prisma.ticket.findMany({ where, orderBy: { dataEntrada: 'desc' } })
+      return this.prisma.ticket.findMany({ where, orderBy: { dataEntrada: 'desc' }, include })
     }
 
     const [dados, total] = await Promise.all([
-      this.prisma.ticket.findMany({ where, orderBy: { dataEntrada: 'desc' }, skip: paginacao.skip, take: paginacao.take }),
+      this.prisma.ticket.findMany({ where, orderBy: { dataEntrada: 'desc' }, skip: paginacao.skip, take: paginacao.take, include }),
       this.prisma.ticket.count({ where })
     ])
 

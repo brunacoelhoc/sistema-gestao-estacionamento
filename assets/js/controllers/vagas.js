@@ -5,6 +5,9 @@
  */
 
 let todasVagas = []
+// Só a fatia de tickets ABERTOS é baixada — é tudo que possuiTicketAberto/
+// excluirTarifa precisam pra bloquear a exclusão de uma vaga/tarifa em uso,
+// sem baixar o histórico inteiro (que cresce indefinidamente) só pra isso.
 let todosTickets = []
 let todasTarifas = []
 let vagasFiltradasAtual = []
@@ -98,7 +101,7 @@ async function carregarTodosOsDados () {
         ? ApiService.getVagas()
         : Promise.resolve([]),
       typeof ApiService !== 'undefined' && ApiService.getTickets
-        ? ApiService.getTickets()
+        ? ApiService.getTickets({ status: 'aberto' })
         : Promise.resolve([]),
       typeof ApiService !== 'undefined' && ApiService.getTarifas
         ? ApiService.getTarifas()
@@ -692,12 +695,10 @@ function renderizarTabelaTarifas (tarifas) {
    6. REGRAS DE NEGÓCIO E AÇÕES DE EDIÇÃO E EXCLUSÃO
    ========================================================================== */
 
+// todosTickets já vem filtrado por status=aberto da API (ver
+// carregarTodosOsDados), então só precisa comparar a vaga.
 function possuiTicketAberto (vagaId) {
-  return todosTickets.some(
-    ticket =>
-      String(ticket.vagaId) === String(vagaId) &&
-      (ticket.status || '').toLowerCase() === 'aberto'
-  )
+  return todosTickets.some(ticket => String(ticket.vagaId) === String(vagaId))
 }
 
 // Verifica se já existe outra vaga cadastrada com o mesmo código/número
@@ -918,11 +919,9 @@ async function excluirVaga (vagaId) {
 }
 
 async function excluirTarifa (tarifaId) {
-  const temTicketAberto = todosTickets.some(
-    t =>
-      String(t.tarifaId) === String(tarifaId) &&
-      (t.status || '').toLowerCase() === 'aberto'
-  )
+  // todosTickets já vem filtrado por status=aberto da API (ver
+  // carregarTodosOsDados), então só precisa comparar a tarifa.
+  const temTicketAberto = todosTickets.some(t => String(t.tarifaId) === String(tarifaId))
 
   if (temTicketAberto) {
     if (typeof Swal !== 'undefined') {

@@ -17,7 +17,12 @@ let totalTicketsFiltrados = 0
 let paginaAtual = 1
 let TICKETS_POR_PAGINA = 10
 let debounceBuscaTicket = null
-const TEMPO_TOLERANCIA_MINUTOS = 15 // Tolerância de cortesia padrão
+
+// Regras de cobrança usadas só pra prévia de valor mostrada antes de
+// confirmar o fechamento — buscadas uma vez de GET /config (fonte única:
+// AppController.config no backend). Os valores abaixo são só o fallback
+// usado até a resposta chegar (ou se a busca falhar).
+let configRegrasCobranca = { toleranciaMinutos: 15, duracaoCicloMensalistaDias: 30 }
 
 // O id do ticket é um cuid longo (ex.: "cm3k9x0p10000abcd1234efgh") — bom
 // para o banco, ilegível na tabela. Exibe só os 8 primeiros caracteres; o
@@ -106,22 +111,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
 })
 
-// Formatador e máscara simples do input da placa
+// Máscara do input da placa — compartilhada com Mensalistas, ver
+// assets/js/modules/validacao.js.
 function initInputMasks () {
-  const placaInput = document.getElementById('ticket-placa')
-  placaInput?.addEventListener('input', e => {
-    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    if (value.length > 7) value = value.slice(0, 7)
-    e.target.value = value
-  })
-}
-
-// Algoritmo de Validação de Placa (Mercosul ou Padrão Antigo)
-function validarPlaca (placa) {
-  const cleanPlaca = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  const regexAntigo = /^[A-Z]{3}[0-9]{4}$/
-  const regexMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/
-  return regexAntigo.test(cleanPlaca) || regexMercosul.test(cleanPlaca)
+  ligarMascaraPlaca('ticket-placa')
 }
 
 // Carrega os dados de apoio do formulário (vagas, tarifas, mensalistas) e,
@@ -133,17 +126,19 @@ async function carregarDados () {
   pageError?.classList.add('d-none')
 
   try {
-    const [vagas, mensalistas, tarifas] = await Promise.all([
+    const [vagas, mensalistas, tarifas, config] = await Promise.all([
       ApiService.getVagas ? ApiService.getVagas() : Promise.resolve([]),
       ApiService.getMensalistas
         ? ApiService.getMensalistas()
         : Promise.resolve([]),
-      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([])
+      ApiService.getTarifas ? ApiService.getTarifas() : Promise.resolve([]),
+      ApiService.getConfig().catch(() => null)
     ])
 
     allVagas = vagas || []
     allMensalistas = mensalistas || []
     allTarifas = tarifas || []
+    if (config) configRegrasCobranca = config
 
     preencherSelectVagas()
     preencherSelectTarifas()
@@ -715,21 +710,22 @@ async function finalizarTicket (ticketId) {
   let previsaoCiclo = null
 
   if (ehMensalista) {
-    // Prévia client-side do ciclo de 30 dias — espelha a regra real do
-    // backend (ver assets/js/modules/mensalista-ciclo.js) pra este valor
-    // nunca divergir do que vai ser efetivamente cobrado ao confirmar.
+    // Prévia client-side do ciclo — espelha a regra real do backend (ver
+    // assets/js/modules/mensalista-ciclo.js) pra este valor nunca divergir
+    // do que vai ser efetivamente cobrado ao confirmar.
     const mensalidadesDoMensalista = await ApiService.getMensalidades(ticket.mensalistaId)
     previsaoCiclo = preverCicloMensalista(
       mensalidadesDoMensalista,
       ticket.dataEntrada || ticket.horaEntrada,
-      mensalista?.valorMensalidade
+      mensalista?.valorMensalidade,
+      configRegrasCobranca.duracaoCicloMensalistaDias
     )
     valorCalculado = previsaoCiclo.valor
   } else {
     const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
 
     // Regra: Isenção por Tolerância (ex: até 15 minutos não paga)
-    if (diffMinutos <= TEMPO_TOLERANCIA_MINUTOS) {
+    if (diffMinutos <= configRegrasCobranca.toleranciaMinutos) {
       valorCalculado = 0
     } else {
       const diffHoras = diffMs / (1000 * 60 * 60)

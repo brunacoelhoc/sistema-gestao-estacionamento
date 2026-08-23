@@ -32,6 +32,17 @@ class ApiService {
     }
   }
 
+  // Constantes de regra de cobrança (tolerância de cortesia, duração do
+  // ciclo de mensalista) usadas só pra prévia de valor mostrada antes de
+  // confirmar o fechamento de um ticket — ver AppController.config no
+  // backend, fonte única dessas regras. Endpoint público (não exige
+  // sessão), mesmo padrão de checkHealth.
+  static async getConfig () {
+    const response = await fetch(`${API_BASE_URL}/config`)
+    if (!response.ok) throw new Error('Não foi possível carregar as configurações do servidor.')
+    return await response.json()
+  }
+
   // Token da sessão atual (ver AuthService.salvarSessao) — anexado em toda
   // requisição autenticada via header Authorization.
   static getToken () {
@@ -182,6 +193,12 @@ class ApiService {
     return await this.request(`mensalidades${query}`)
   }
 
+  // KPIs agregados de faturamento (MRR, recebido no mês, ticket médio, sem
+  // ciclo ativo) já calculados no servidor — ver MensalidadesService.calcularKpis.
+  static async getMensalidadesKpis () {
+    return await this.request('mensalidades/kpis')
+  }
+
   // Aceita tanto uma string de status (compatibilidade com chamadas antigas)
   // quanto um objeto { status, formaPagamento, motivoCancelamento,
   // comprovanteAnexo, comprovanteNomeArquivo }.
@@ -292,15 +309,14 @@ class ApiService {
 
   // --- REQUISICÕES TICKETS & REGRAS DE NEGÓCIO ---
   /**
-   * Sem `params`, devolve a lista completa (usado pelo Dashboard e por
-   * Métricas). Com `{ page, pageSize, status, termo }`, pede uma página
-   * filtrada ao backend — usado pela tabela da tela de Tickets, que não
-   * baixa mais o histórico inteiro a cada visita (ver
-   * TicketsController.listar em src/tickets/tickets.controller.ts).
-   * `{ status, termo }` sem `page`
-   * também é aceito: devolve a lista completa já filtrada, usado pela
-   * exportação (CSV/Excel), que precisa de todo o resultado, não só de uma
-   * página.
+   * Sem `params`, devolve a lista completa (histórico inteiro — usado só
+   * pela tela de Vagas hoje). Com `{ page, pageSize, status, termo }`, pede
+   * uma página filtrada ao backend — usado pela tabela da tela de Tickets.
+   * `{ status, termo }` sem `page` também é aceito: devolve a lista
+   * completa já filtrada — o Dashboard usa `{ status: 'aberto' }` pra
+   * tabela de tickets ativos (os KPIs agregados vêm de getDashboardKpis),
+   * e a exportação (CSV/Excel) usa pra pegar todo o resultado, não só uma
+   * página (ver TicketsController.listar em src/tickets/tickets.controller.ts).
    */
   static async getTickets (params) {
     if (!params) return await this.request('tickets')
@@ -313,6 +329,19 @@ class ApiService {
 
     const qs = query.toString()
     return await this.request(`tickets${qs ? `?${qs}` : ''}`)
+  }
+
+  // KPIs do painel principal (vagas por status, faturamento, ticket médio,
+  // tempo médio) já calculados no servidor — ver DashboardService.calcularKpis.
+  static async getDashboardKpis (tipo) {
+    const query = tipo && tipo !== 'todos' ? `?tipo=${encodeURIComponent(tipo)}` : ''
+    return await this.request(`dashboard/kpis${query}`)
+  }
+
+  // Ranking de vagas por quantidade de tickets já registrados — ver
+  // DashboardService.calcularRankingVagas.
+  static async getRankingVagas () {
+    return await this.request('dashboard/ranking-vagas')
   }
 
   /**

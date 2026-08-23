@@ -23,6 +23,14 @@ import { SolicitarResetDto } from './dto/solicitar-reset.dto'
 
 const RESET_TTL_MINUTOS = 15
 
+// Hash "fantasma" (senha aleatória descartada na hora, nunca associada a
+// nenhuma conta) comparado no login quando o CPF não existe ou a conta não
+// tem senha local — só pra manter o tempo de resposta igual ao caso "CPF
+// existe, senha errada". Sem isso, bcrypt.compare só rodava nesse segundo
+// caso, e dava pra descobrir se um CPF está cadastrado apenas medindo
+// quanto tempo o login demora pra responder.
+const HASH_FANTASMA = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 12)
+
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
   return resto
@@ -73,12 +81,12 @@ export class AuthService {
   // Login é por CPF, igual ao comportamento atual do front (AuthService.login).
   async login (dto: LoginDto) {
     const usuario = await this.prisma.usuario.findUnique({ where: { cpf: dto.cpf } })
-    if (!usuario || !usuario.senha) {
-      throw new UnauthorizedException('CPF ou senha inválidos.')
-    }
 
-    const senhaConfere = await bcrypt.compare(dto.senha, usuario.senha)
-    if (!senhaConfere) {
+    // bcrypt.compare roda sempre, mesmo sem usuário/senha — contra o hash
+    // fantasma nesse caso — pra não vazar por timing se o CPF existe (ver
+    // HASH_FANTASMA acima).
+    const senhaConfere = await bcrypt.compare(dto.senha, usuario?.senha || HASH_FANTASMA)
+    if (!usuario || !usuario.senha || !senhaConfere) {
       throw new UnauthorizedException('CPF ou senha inválidos.')
     }
     if (!usuario.ativo) {

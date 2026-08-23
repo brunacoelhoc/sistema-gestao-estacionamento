@@ -595,6 +595,18 @@ function inicializarMenuUsuario () {
     navItemMetricas.classList.toggle('d-none', sessao.role !== 'admin')
   }
 
+  // Faturamento (com dados financeiros de mensalidades) só é visível para admin.
+  const navItemFaturamento = document.getElementById('nav-item-faturamento')
+  if (navItemFaturamento) {
+    navItemFaturamento.classList.toggle('d-none', sessao.role !== 'admin')
+  }
+
+  // KPI "Faturamento Total" do Dashboard expõe receita agregada — some para não-admin.
+  const kpiCardFaturamento = document.getElementById('kpi-card-faturamento')
+  if (kpiCardFaturamento) {
+    kpiCardFaturamento.classList.toggle('d-none', sessao.role !== 'admin')
+  }
+
   // index.html mora na raiz do projeto, as demais páginas ficam em /views/
   // — o caminho para o login muda dependendo de onde a página está.
   const caminhoLogin = window.location.pathname.includes('/views/')

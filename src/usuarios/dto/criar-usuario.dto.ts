@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
 import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { IsCpfValido } from '../../common/cpf-valido.decorator'
 import { IsSenhaForte } from '../../common/senha-forte.decorator'
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
@@ -23,6 +24,7 @@ export class CriarUsuarioDto {
   @IsOptional()
   @Transform(trim)
   @IsString()
+  @IsCpfValido()
   cpf?: string | null
 
   @IsOptional()

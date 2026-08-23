@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
 import { Equals, IsEmail, IsNotEmpty, IsString } from 'class-validator'
+import { IsCpfValido } from '../../common/cpf-valido.decorator'
 import { IsSenhaForte } from '../../common/senha-forte.decorator'
 
 export class RegistrarDto {
@@ -11,6 +12,7 @@ export class RegistrarDto {
   @IsString({ message: 'CPF é obrigatório.' })
   @IsNotEmpty({ message: 'CPF é obrigatório.' })
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsCpfValido()
   cpf!: string
 
   @IsEmail({}, { message: 'Informe um e-mail válido.' })

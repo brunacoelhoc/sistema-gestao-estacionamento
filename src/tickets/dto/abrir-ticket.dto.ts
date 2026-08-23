@@ -1,12 +1,14 @@
 import { Transform } from 'class-transformer'
 import { IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsPlacaValida } from '../../common/placa-valida.decorator'
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
 
 export class AbrirTicketDto {
   @IsString({ message: 'Placa é obrigatória.' })
   @IsNotEmpty({ message: 'Placa é obrigatória.' })
-  @Transform(trim)
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsPlacaValida()
   placa!: string
 
   @IsString({ message: 'Vaga é obrigatória.' })

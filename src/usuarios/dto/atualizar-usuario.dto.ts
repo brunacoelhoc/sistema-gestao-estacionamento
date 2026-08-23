@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer'
 import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
+import { IsCpfValido } from '../../common/cpf-valido.decorator'
 import { IsSenhaForte } from '../../common/senha-forte.decorator'
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
@@ -18,6 +19,7 @@ export class AtualizarUsuarioDto {
   @IsOptional()
   @Transform(trim)
   @IsString({ message: 'CPF é obrigatório.' })
+  @IsCpfValido()
   cpf?: string | null
 
   @IsOptional()
