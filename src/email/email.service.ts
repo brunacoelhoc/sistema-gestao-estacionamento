@@ -27,6 +27,13 @@ interface ParametrosEmailLembreteCobranca {
   dataFim: string
 }
 
+interface ParametrosEmailComprovanteTicket {
+  to: string
+  nome: string
+  ticketId: string
+  anexoPdf: Buffer
+}
+
 @Injectable()
 export class EmailService {
   private readonly transporter: nodemailer.Transporter | null
@@ -109,6 +116,39 @@ export class EmailService {
           <p>Qualquer dúvida, fale com a nossa equipe.</p>
         </div>
       `
+    })
+  }
+
+  async enviarComprovanteTicket ({ to, nome, ticketId, anexoPdf }: ParametrosEmailComprovanteTicket) {
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        'Envio de e-mail não está configurado neste servidor (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes no .env).'
+      )
+    }
+
+    await this.transporter.sendMail({
+      from: `"ParkGestão" <${this.smtpFrom}>`,
+      to,
+      subject: `Comprovante de Saída — Ticket #${ticketId} — ParkGestão`,
+      text:
+        `Olá, ${nome}!\n\n` +
+        `Segue em anexo o comprovante de saída do seu veículo (ticket #${ticketId}).\n\n` +
+        'Qualquer dúvida, fale com a nossa equipe.',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
+          <h2 style="color: #0d6efd; margin-bottom: 8px;">ParkGestão</h2>
+          <p>Olá, ${escapeHtml(nome)}!</p>
+          <p>Segue em anexo o comprovante de saída do seu veículo.</p>
+          <p>Qualquer dúvida, fale com a nossa equipe.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `comprovante-ticket-${ticketId}.pdf`,
+          content: anexoPdf,
+          contentType: 'application/pdf'
+        }
+      ]
     })
   }
 }

@@ -37,6 +37,10 @@ export class UsuariosController {
     return this.usuariosService.criarFuncionario(dto)
   }
 
+  // Sem AdminGuard de propósito: é a rota também usada pelo modal "Meu
+  // Perfil", onde qualquer funcionário edita a própria conta. Quem decide se
+  // o solicitante pode editar o alvo (ele mesmo, ou é admin) é o service —
+  // ver a checagem em UsuariosService.atualizarPerfil.
   @Patch(':id')
   atualizar (
     @Param('id') id: string,

@@ -33,7 +33,9 @@ const HASH_FANTASMA = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 12
 
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
-  return resto
+  // temSenha permite ao front saber se a conta já tem senha local
+  // cadastrada (mesmo vinda do Google) sem nunca expor o hash em si.
+  return { ...resto, temSenha: Boolean(senha) }
 }
 
 function gerarCodigoReset (): string {

@@ -27,4 +27,19 @@ describe('CobrancaService', () => {
     const valor = service.calcularTarifaAvulsa(90, undefined)
     expect(valor).toBe(2 * VALOR_HORA_PADRAO)
   })
+
+  it('vaga coberta cobra R$3,00 a mais por hora sobre o valor/hora', () => {
+    const valor = service.calcularTarifaAvulsa(61, 7, true)
+    expect(valor).toBe(20) // 2h x (R$7 + R$3)
+  })
+
+  it('vaga comum (padrão) não recebe o acréscimo', () => {
+    const valor = service.calcularTarifaAvulsa(61, 10, false)
+    expect(valor).toBe(20)
+  })
+
+  it('dentro da tolerância, vaga coberta continua não cobrando nada', () => {
+    const valor = service.calcularTarifaAvulsa(TEMPO_TOLERANCIA_MINUTOS, 10, true)
+    expect(valor).toBe(0)
+  })
 })

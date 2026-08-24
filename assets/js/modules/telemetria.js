@@ -39,17 +39,17 @@ function enviarFilaTelemetria (final = false) {
   const lote = filaTelemetria.splice(0, filaTelemetria.length)
   const corpo = JSON.stringify({ eventos: lote })
 
-  // Ao esconder/fechar a aba, sendBeacon garante o envio mesmo depois que a
-  // página descarrega — um fetch normal pode ser cancelado nesse momento.
-  if (final && navigator.sendBeacon) {
-    navigator.sendBeacon(TELEMETRIA_ENDPOINT, new Blob([corpo], { type: 'application/json' }))
-    return
-  }
-
+  // `keepalive: true` garante o envio mesmo com a página descarregando —
+  // mesma garantia do sendBeacon, sem o problema dele: sendBeacon sempre
+  // manda a requisição com credenciais quando o destino é de outra origem,
+  // e o navegador recusa isso quando o servidor responde CORS com
+  // Access-Control-Allow-Origin: '*' (caso do backend em dev, sem
+  // CORS_ORIGIN configurado) — daí o erro de CORS ao trocar de aba/fechar.
   fetch(TELEMETRIA_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: corpo
+    body: corpo,
+    keepalive: final
   }).catch(() => {
     // Falha de rede: o lote se perde. Aceitável para telemetria de uso —
     // diferente de dados de negócio, não há retentativa.

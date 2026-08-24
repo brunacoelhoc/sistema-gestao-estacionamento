@@ -183,6 +183,20 @@ function abrirDetalhesKpi (chave) {
 
   const k = kpiDashboardAtual
 
+  const agora = new Date(k.geradoEm || Date.now())
+  const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const dataAgora = agora.toLocaleDateString('pt-BR')
+
+  // Cartões "em tempo real" (contagem de vagas) refletem só o instante da
+  // consulta; os acumulados (faturamento/ticket médio/tempo médio) somam o
+  // histórico inteiro de tickets fechados — cada um ganha uma linha de
+  // período condizente, calculada a partir do que o backend mandou em
+  // GET /dashboard/kpis (ver DashboardService.calcularKpis).
+  const periodoRealtimeHtml = `<p class="text-muted small mb-3"><i class="fas fa-satellite-dish me-1" aria-hidden="true"></i>Instantâneo do estado atual, consultado às ${horaAgora} de ${dataAgora}.</p>`
+  const periodoHistoricoHtml = k.dataInicioHistorico
+    ? `<p class="text-muted small mb-3"><i class="fas fa-calendar-day me-1" aria-hidden="true"></i>Acumulado de ${new Date(k.dataInicioHistorico).toLocaleDateString('pt-BR')} até hoje (${dataAgora}).</p>`
+    : `<p class="text-muted small mb-3"><i class="fas fa-calendar-day me-1" aria-hidden="true"></i>Nenhum ticket fechado ainda para calcular esse período.</p>`
+
   const listaPorTipo = contagem => {
     const itens = Object.entries(contagem || {})
       .map(
@@ -200,41 +214,41 @@ function abrirDetalhesKpi (chave) {
   switch (chave) {
     case 'vagas-livres':
       title = 'Vagas Livres'
-      html = `<p class="text-muted mb-2">Vagas com status "livre", disponíveis para novos veículos, por tipo:</p>
+      html = `${periodoRealtimeHtml}<p class="text-muted mb-2">Vagas com status "livre", disponíveis para novos veículos, por tipo:</p>
         <ul class="text-start">${listaPorTipo(k.porTipoLivres)}</ul>`
       break
     case 'vagas-ocupadas':
       title = 'Vagas Ocupadas'
-      html = `<p class="text-muted mb-2">Vagas com um ticket aberto no momento, por tipo:</p>
+      html = `${periodoRealtimeHtml}<p class="text-muted mb-2">Vagas com um ticket aberto no momento, por tipo:</p>
         <ul class="text-start">${listaPorTipo(k.porTipoOcupadas)}</ul>`
       break
     case 'vagas-manutencao':
       title = 'Vagas em Manutenção'
-      html = `<p class="text-muted mb-2">Vagas bloqueadas manualmente e indisponíveis para uso, por tipo:</p>
+      html = `${periodoRealtimeHtml}<p class="text-muted mb-2">Vagas bloqueadas manualmente e indisponíveis para uso, por tipo:</p>
         <ul class="text-start">${listaPorTipo(k.porTipoManutencao)}</ul>`
       break
     case 'taxa-ocupacao': {
       const taxa = k.taxaOcupacao.toFixed(1)
       title = 'Taxa de Ocupação'
-      html = `<p class="text-muted mb-2">Percentual de vagas ocupadas em relação ao total cadastrado (considerando o filtro de tipo ativo).</p>
+      html = `${periodoRealtimeHtml}<p class="text-muted mb-2">Percentual de vagas ocupadas em relação ao total cadastrado (considerando o filtro de tipo ativo).</p>
         <p class="fs-5 mb-0"><strong>${k.vagasOcupadas}</strong> ocupadas de <strong>${k.totalVagasFiltradas}</strong> vagas = <strong>${taxa}%</strong></p>`
       break
     }
     case 'tickets-abertos':
       title = 'Tickets Abertos'
-      html = `<p class="text-muted mb-2">Veículos atualmente estacionados, ainda sem saída registrada.</p>
+      html = `${periodoRealtimeHtml}<p class="text-muted mb-2">Veículos atualmente estacionados, ainda sem saída registrada.</p>
         <p class="fs-5 mb-0"><strong>${k.ticketsAbertosQtd}</strong> ticket(s) em aberto no momento.</p>`
       break
     case 'faturamento':
       title = 'Faturamento Total'
-      html = `<p class="text-muted mb-2">Soma do valor cobrado de todos os tickets já fechados. Tickets abertos não entram no cálculo, pois ainda não têm valor final.</p>
+      html = `${periodoHistoricoHtml}<p class="text-muted mb-2">Soma do valor cobrado de todos os tickets já fechados. Tickets abertos não entram no cálculo, pois ainda não têm valor final.</p>
         <p class="fs-5 mb-0"><strong>${k.ticketsFechadosQtd}</strong> ticket(s) fechado(s) somam <strong>R$ ${k.faturamentoTotal
         .toFixed(2)
         .replace('.', ',')}</strong>.</p>`
       break
     case 'ticket-medio':
       title = 'Ticket Médio'
-      html = `<p class="text-muted mb-2">Faturamento total dividido pela quantidade de tickets fechados.</p>
+      html = `${periodoHistoricoHtml}<p class="text-muted mb-2">Faturamento total dividido pela quantidade de tickets fechados.</p>
         <p class="fs-5 mb-0">R$ ${k.faturamentoTotal
           .toFixed(2)
           .replace('.', ',')} ÷ ${k.ticketsFechadosQtd} ticket(s) = <strong>R$ ${k.ticketMedio
@@ -243,7 +257,7 @@ function abrirDetalhesKpi (chave) {
       break
     case 'tempo-medio':
       title = 'Tempo Médio de Permanência'
-      html = `<p class="text-muted mb-2">Média do tempo entre entrada e saída de todos os tickets fechados com esses dois horários registrados.</p>
+      html = `${periodoHistoricoHtml}<p class="text-muted mb-2">Média do tempo entre entrada e saída de todos os tickets fechados com esses dois horários registrados.</p>
         <p class="fs-5 mb-0">Calculado sobre <strong>${k.tempoMedioAmostraQtd}</strong> ticket(s) fechado(s).</p>`
       break
     default:
@@ -431,6 +445,8 @@ function atualizarKPIs (kpis) {
   const elTempoMedio = document.getElementById('kpi-tempo-medio')
   if (elTempoMedio) elTempoMedio.textContent = formatarTempoMedio(kpis.tempoMedioMinutos)
 
+  atualizarSubtextosPeriodoKPIs(kpis)
+
   // Contador de capacidade do hero — reflete o total geral de vagas
   // (não é afetado pelo filtro de tipo ativo, mesma regra de antes).
   const elTotalVagasHero = document.getElementById('hero-total-vagas')
@@ -439,6 +455,42 @@ function atualizarKPIs (kpis) {
       kpis.totalVagas === 1 ? 'Vaga Monitorada' : 'Vagas Monitoradas'
     }`
   }
+}
+
+// IDs dos cards "em tempo real" (contagem de vagas/tickets abertos, reflete
+// só o instante da consulta) vs. "acumulados" (somam o histórico inteiro de
+// tickets fechados) — cada grupo ganha um texto de período diferente logo
+// abaixo do valor do card.
+const KPI_SUBTEXT_REALTIME_IDS = [
+  'kpi-subtext-vagas-livres',
+  'kpi-subtext-vagas-ocupadas',
+  'kpi-subtext-vagas-manutencao',
+  'kpi-subtext-taxa-ocupacao',
+  'kpi-subtext-tickets-abertos'
+]
+const KPI_SUBTEXT_HISTORICO_IDS = [
+  'kpi-subtext-faturamento',
+  'kpi-subtext-ticket-medio',
+  'kpi-subtext-tempo-medio'
+]
+
+function atualizarSubtextosPeriodoKPIs (kpis) {
+  const agora = new Date(kpis.geradoEm || Date.now())
+  const horaAgora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+  const textoRealtime = `<i class="fas fa-satellite-dish" aria-hidden="true"></i>Agora · ${horaAgora}`
+  const textoHistorico = kpis.dataInicioHistorico
+    ? `<i class="fas fa-calendar-day" aria-hidden="true"></i>${new Date(kpis.dataInicioHistorico).toLocaleDateString('pt-BR')} – hoje`
+    : `<i class="fas fa-calendar-day" aria-hidden="true"></i>Sem dados ainda`
+
+  KPI_SUBTEXT_REALTIME_IDS.forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.innerHTML = textoRealtime
+  })
+  KPI_SUBTEXT_HISTORICO_IDS.forEach(id => {
+    const el = document.getElementById(id)
+    if (el) el.innerHTML = textoHistorico
+  })
 }
 
 // Formata o tempo médio de permanência (minutos vindos do backend) como texto
@@ -674,7 +726,10 @@ async function encerrarTicket (ticketId, botao) {
         }</p>`
       : ''
 
-    const { isDenied } = await Swal.fire({
+    // Sem a lista completa de mensalistas carregada aqui (diferente da tela
+    // de Tickets), o botão é oferecido pra qualquer ticket de mensalista —
+    // o backend recusa com mensagem clara se não houver e-mail cadastrado.
+    const { isDenied, dismiss } = await Swal.fire({
       icon: 'success',
       title: 'Saída Registrada!',
       html: `<p class="mb-0">Veículo ${ApiService.sanitizeText(ticket.placa)} liberado com sucesso.</p>${htmlMensalista}`,
@@ -682,7 +737,10 @@ async function encerrarTicket (ticketId, botao) {
       confirmButtonText: 'OK',
       showDenyButton: true,
       denyButtonText: '<i class="fas fa-file-pdf me-1"></i>Comprovante',
-      denyButtonColor: '#0d6efd'
+      denyButtonColor: '#0d6efd',
+      showCancelButton: ehMensalista,
+      cancelButtonText: '<i class="fas fa-envelope me-1"></i>Enviar por E-mail',
+      cancelButtonColor: '#6c757d'
     })
 
     if (isDenied && typeof gerarComprovanteTicketPDF === 'function') {
@@ -697,6 +755,20 @@ async function encerrarTicket (ticketId, botao) {
         valor: valorCalculado,
         cicloVigente: ciclo ? { dataInicio: ciclo.dataInicio, dataFim: ciclo.dataFim } : null
       })
+    }
+
+    if (ehMensalista && dismiss === Swal.DismissReason.cancel) {
+      Swal.fire({ title: 'Enviando comprovante...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+      try {
+        await ApiService.enviarComprovanteTicketEmail(ticket.id)
+        Swal.fire({ icon: 'success', title: 'Comprovante enviado!', text: 'E-mail enviado com sucesso.' })
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao enviar comprovante',
+          text: error.message || 'Falha ao enviar o comprovante por e-mail.'
+        })
+      }
     }
 
     await loadDashboardData()

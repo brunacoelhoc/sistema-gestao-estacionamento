@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common'
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import { CobrancaService } from '../cobranca/cobranca.service'
 import { MensalidadeCicloService } from '../mensalidade-ciclo/mensalidade-ciclo.service'
 import { TicketsService } from './tickets.service'
@@ -38,7 +38,17 @@ function criarPrismaFake (seed: {
     },
     ticket: {
       async findFirst ({ where }: any) { return tickets.find(t => bateFiltro(t, where)) ?? null },
-      async findUnique ({ where: { id } }: any) { return tickets.find(t => t.id === id) ?? null },
+      async findUnique ({ where: { id }, include }: any) {
+        const ticket = tickets.find(t => t.id === id) ?? null
+        if (!ticket || !include) return ticket
+        return {
+          ...ticket,
+          ...(include.vaga ? { vaga: vagas.find(v => v.id === ticket.vagaId) ?? null } : {}),
+          ...(include.mensalista
+            ? { mensalista: ticket.mensalistaId ? (mensalistas.find(m => m.id === ticket.mensalistaId) ?? null) : null }
+            : {})
+        }
+      },
       async create ({ data }: any) {
         const ticket = {
           id: String(proximoTicketId++),
@@ -98,8 +108,14 @@ function criarPrismaFake (seed: {
 
 function criarService (seed?: Parameters<typeof criarPrismaFake>[0]) {
   const prismaFake = criarPrismaFake(seed)
-  const service = new TicketsService(prismaFake as any, new CobrancaService(), new MensalidadeCicloService())
-  return { service, prismaFake }
+  const emailServiceFake = { enviarComprovanteTicket: jest.fn() }
+  const service = new TicketsService(
+    prismaFake as any,
+    new CobrancaService(),
+    new MensalidadeCicloService(),
+    emailServiceFake as any
+  )
+  return { service, prismaFake, emailServiceFake }
 }
 
 describe('TicketsService', () => {
@@ -231,6 +247,19 @@ describe('TicketsService', () => {
       expect(resultado.mensalistaCiclo.cobradoAgora).toBe(false)
     })
 
+    it('ticket avulso em vaga coberta cobra a tarifa com o acréscimo de R$3,00/hora', async () => {
+      const dataEntrada = new Date(Date.now() - 90 * 60 * 1000) // 90 minutos atrás
+      const { service } = criarService({
+        vagas: [{ id: 'v1', status: 'ocupada', tipo: 'coberta' }],
+        tickets: [{ id: 't1', status: 'aberto', vagaId: 'v1', dataEntrada, mensalistaId: null, tarifaId: 'tar1' }],
+        tarifas: [{ id: 'tar1', valorHora: 7 }]
+      })
+
+      const resultado: any = await service.fechar('t1', { formaPagamento: 'dinheiro' })
+
+      expect(resultado.valorTotal).toBe(20) // 2 horas x (R$7 + R$3)
+    })
+
     it('mensalista inativo é cobrado como avulso, não como mensalista', async () => {
       const dataEntrada = new Date(Date.now() - 90 * 60 * 1000)
       const { service } = criarService({
@@ -244,6 +273,69 @@ describe('TicketsService', () => {
 
       expect(resultado.valorTotal).toBe(20)
       expect(resultado.mensalistaCiclo).toBeNull()
+    })
+  })
+
+  describe('enviarComprovanteEmail', () => {
+    it('recusa ticket inexistente', async () => {
+      const { service } = criarService()
+      await expect(service.enviarComprovanteEmail('inexistente')).rejects.toBeInstanceOf(NotFoundException)
+    })
+
+    it('recusa ticket ainda aberto', async () => {
+      const { service } = criarService({
+        vagas: [{ id: 'v1', codigo: 'A1' }],
+        tickets: [{ id: 't1', status: 'aberto', vagaId: 'v1', dataEntrada: new Date(), dataSaida: null, mensalistaId: 'm1' }],
+        mensalistas: [{ id: 'm1', nome: 'Fulano', email: 'fulano@example.com' }]
+      })
+      await expect(service.enviarComprovanteEmail('t1')).rejects.toBeInstanceOf(BadRequestException)
+    })
+
+    it('recusa ticket avulso (sem mensalista vinculado)', async () => {
+      const { service } = criarService({
+        vagas: [{ id: 'v1', codigo: 'A1' }],
+        tickets: [{
+          id: 't1', status: 'fechado', vagaId: 'v1', dataEntrada: new Date(), dataSaida: new Date(), mensalistaId: null
+        }]
+      })
+      await expect(service.enviarComprovanteEmail('t1')).rejects.toBeInstanceOf(BadRequestException)
+    })
+
+    it('recusa mensalista sem e-mail cadastrado', async () => {
+      const { service } = criarService({
+        vagas: [{ id: 'v1', codigo: 'A1' }],
+        tickets: [{
+          id: 't1', status: 'fechado', vagaId: 'v1', dataEntrada: new Date(), dataSaida: new Date(), mensalistaId: 'm1'
+        }],
+        mensalistas: [{ id: 'm1', nome: 'Fulano', email: null }]
+      })
+      await expect(service.enviarComprovanteEmail('t1')).rejects.toBeInstanceOf(BadRequestException)
+    })
+
+    it('envia o comprovante para o e-mail do mensalista vinculado', async () => {
+      const { service, emailServiceFake } = criarService({
+        vagas: [{ id: 'v1', codigo: 'A1' }],
+        tickets: [{
+          id: 't1',
+          status: 'fechado',
+          vagaId: 'v1',
+          dataEntrada: new Date(Date.now() - 60 * 60 * 1000),
+          dataSaida: new Date(),
+          valorTotal: 300,
+          formaPagamento: 'isento',
+          mensalistaId: 'm1'
+        }],
+        mensalistas: [{ id: 'm1', nome: 'Fulano', email: 'fulano@example.com' }]
+      })
+
+      const resultado = await service.enviarComprovanteEmail('t1')
+
+      expect(resultado).toEqual({ enviado: true })
+      expect(emailServiceFake.enviarComprovanteTicket).toHaveBeenCalledTimes(1)
+      const chamada = emailServiceFake.enviarComprovanteTicket.mock.calls[0][0]
+      expect(chamada.to).toBe('fulano@example.com')
+      expect(chamada.ticketId).toBe('t1')
+      expect(Buffer.isBuffer(chamada.anexoPdf)).toBe(true)
     })
   })
 

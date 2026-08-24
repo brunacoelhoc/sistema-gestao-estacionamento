@@ -11,7 +11,9 @@ import { CriarUsuarioDto } from './dto/criar-usuario.dto'
 
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
-  return resto
+  // temSenha permite ao front saber se a conta já tem senha local
+  // cadastrada (mesmo vinda do Google) sem nunca expor o hash em si.
+  return { ...resto, temSenha: Boolean(senha) }
 }
 
 @Injectable()
@@ -25,9 +27,17 @@ export class UsuariosService {
   // hash de senha) para qualquer funcionário logado. A checagem de admin é
   // feita pelo AdminGuard na rota. O CPF sai mascarado da listagem — o valor
   // completo só é devolvido por buscarPorId, ao abrir um registro específico.
+  //
+  // Ordenação por nome feita aqui em JS (localeCompare com locale pt-BR),
+  // não com orderBy do Postgres — mesmo motivo do VagasService.listarTodas:
+  // a collation padrão do banco não trata acentuação/maiúsculas do jeito
+  // que uma pessoa brasileira esperaria (ex.: "Ana" viria depois de
+  // "Álvaro" só por causa do acento).
   async listar () {
     const usuarios = await this.prisma.usuario.findMany()
-    return usuarios.map(u => ({ ...semSenha(u), cpf: mascararCpf(u.cpf) }))
+    return usuarios
+      .map(u => ({ ...semSenha(u), cpf: mascararCpf(u.cpf) }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
   }
 
   async buscarPorId (id: string) {

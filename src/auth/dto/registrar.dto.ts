@@ -9,10 +9,13 @@ export class RegistrarDto {
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   nome!: string
 
+  // IsCpfValido antes de IsString/IsNotEmpty no empilhamento — ver o
+  // comentário em criar-mensalista.dto.ts (senão CPF vazio mostra o erro de
+  // formato em vez de "obrigatório").
+  @IsCpfValido()
   @IsString({ message: 'CPF é obrigatório.' })
   @IsNotEmpty({ message: 'CPF é obrigatório.' })
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
-  @IsCpfValido()
   cpf!: string
 
   @IsEmail({}, { message: 'Informe um e-mail válido.' })

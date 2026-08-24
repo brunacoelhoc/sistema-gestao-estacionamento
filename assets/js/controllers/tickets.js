@@ -22,7 +22,7 @@ let debounceBuscaTicket = null
 // confirmar o fechamento — buscadas uma vez de GET /config (fonte única:
 // AppController.config no backend). Os valores abaixo são só o fallback
 // usado até a resposta chegar (ou se a busca falhar).
-let configRegrasCobranca = { toleranciaMinutos: 15, duracaoCicloMensalistaDias: 30 }
+let configRegrasCobranca = { toleranciaMinutos: 15, duracaoCicloMensalistaDias: 30, adicionalVagaCobertaValor: 3 }
 
 // O id do ticket é um cuid longo (ex.: "cm3k9x0p10000abcd1234efgh") — bom
 // para o banco, ilegível na tabela. Exibe só os 8 primeiros caracteres; o
@@ -60,6 +60,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   inputPlaca?.addEventListener('input', e => {
     verificarMensalistaNaDigitacao(e.target.value)
   })
+
+  // Caminho inverso: escolher um mensalista no combo já preenche a placa
+  // (só um atalho — o campo continua editável, pro caso do mensalista
+  // aparecer com um veículo diferente do cadastrado).
+  document
+    .getElementById('ticket-mensalista')
+    ?.addEventListener('change', e => {
+      const mensalistaId = e.target.value
+      if (!mensalistaId || !inputPlaca) return
+
+      const mensalista = allMensalistas.find(
+        m => String(m.id) === String(mensalistaId)
+      )
+      const placaMensalista = mensalista?.placa || mensalista?.placaVeiculo || ''
+      if (placaMensalista) {
+        inputPlaca.value = placaMensalista
+        verificarMensalistaNaDigitacao(placaMensalista)
+      }
+    })
 
   document
     .getElementById('form-novo-ticket')
@@ -722,7 +741,15 @@ async function finalizarTicket (ticketId) {
     )
     valorCalculado = previsaoCiclo.valor
   } else {
-    const valorHora = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
+    const valorHoraBase = tarifa ? Number(tarifa.valorHora || tarifa.valor || 0) : 0
+
+    // Vaga coberta custa mais que uma comum — mesmo acréscimo aplicado de
+    // fato no fechamento (ver CobrancaService.calcularTarifaAvulsa), só pra
+    // essa prévia nunca divergir do valor cobrado ao confirmar.
+    const vaga = allVagas.find(v => String(v.id) === String(ticket.vagaId))
+    const valorHora = vaga?.tipo === 'coberta'
+      ? valorHoraBase + configRegrasCobranca.adicionalVagaCobertaValor
+      : valorHoraBase
 
     // Regra: Isenção por Tolerância (ex: até 15 minutos não paga)
     if (diffMinutos <= configRegrasCobranca.toleranciaMinutos) {
@@ -823,7 +850,12 @@ async function finalizarTicket (ticketId) {
         }</p>`
       : ''
 
-    const { isDenied } = await Swal.fire({
+    // Enviar por e-mail só faz sentido para mensalista com e-mail cadastrado
+    // (vinculado à placa) — avulso não tem onde receber, recebe só o PDF
+    // impresso/baixado na hora.
+    const podeEnviarPorEmail = ehMensalista && Boolean(mensalista?.email)
+
+    const { isDenied, dismiss } = await Swal.fire({
       icon: 'success',
       title: 'Ticket Encerrado!',
       html: `<p class="mb-0">Saída do veículo ${ApiService.sanitizeText(ticket.placa)} registrada com sucesso.</p>${htmlMensalista}`,
@@ -831,7 +863,10 @@ async function finalizarTicket (ticketId) {
       confirmButtonText: 'OK',
       showDenyButton: true,
       denyButtonText: '<i class="fas fa-file-pdf me-1"></i>Comprovante',
-      denyButtonColor: '#0d6efd'
+      denyButtonColor: '#0d6efd',
+      showCancelButton: podeEnviarPorEmail,
+      cancelButtonText: '<i class="fas fa-envelope me-1"></i>Enviar por E-mail',
+      cancelButtonColor: '#6c757d'
     })
 
     if (isDenied && typeof gerarComprovanteTicketPDF === 'function') {
@@ -846,6 +881,24 @@ async function finalizarTicket (ticketId) {
         valor: valorCalculado,
         cicloVigente: ciclo ? { dataInicio: ciclo.dataInicio, dataFim: ciclo.dataFim } : null
       })
+    }
+
+    if (podeEnviarPorEmail && dismiss === Swal.DismissReason.cancel) {
+      Swal.fire({ title: 'Enviando comprovante...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+      try {
+        await ApiService.enviarComprovanteTicketEmail(ticket.id)
+        Swal.fire({
+          icon: 'success',
+          title: 'Comprovante enviado!',
+          text: `Enviado para ${mensalista.email}.`
+        })
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao enviar comprovante',
+          text: error.message || 'Falha ao enviar o comprovante por e-mail.'
+        })
+      }
     }
 
     await carregarDados()

@@ -5,6 +5,9 @@ import { AtualizarVagaDto } from './dto/atualizar-vaga.dto'
 import { CriarVagaDto } from './dto/criar-vaga.dto'
 import { VagasService } from './vagas.service'
 
+// Sem AdminGuard, mesmo padrão de Tarifas: gestão de vaga é operacional
+// (abrir/fechar ticket depende de vaga livre), não uma configuração restrita
+// a admin.
 @UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('vagas')
 export class VagasController {

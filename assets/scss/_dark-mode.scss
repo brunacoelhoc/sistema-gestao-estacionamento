@@ -65,6 +65,14 @@ body.dark-mode {
     color: #e0e0e0 !important;
   }
 
+  // Valor numérico dos cards de KPI: no claro fica no cinza-escuro neutro
+  // (.kpi-value em _components.scss); no escuro esse mesmo cinza perde
+  // contraste sobre o navy do card, então troca para o azul claro de
+  // destaque já usado no tema ($color-focus-outline-dark).
+  .kpi-value {
+    color: $color-focus-outline-dark !important;
+  }
+
   .text-dark {
     color: $color-text-dark !important;
   }

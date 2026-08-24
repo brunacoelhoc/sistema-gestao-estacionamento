@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Sobre o ParkGestão - Sistema de Gestão de Estacionamento Acessível e em conformidade com a LGPD">
@@ -170,7 +170,7 @@
                                     aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
                         <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i class="fas fa-id-card me-1"
                                     aria-hidden="true"></i> Mensalistas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="faturamento.html"><i class="fas fa-file-invoice-dollar me-1"
+                        <li class="nav-item d-none" id="nav-item-faturamento"><a class="nav-link" href="faturamento.html"><i class="fas fa-file-invoice-dollar me-1"
                                     aria-hidden="true"></i> Faturamento</a></li>
                         <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
@@ -203,6 +203,7 @@
                 <li class="nav-item"><a class="nav-link border" href="#contas">Contas e Acessos</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#acessibilidade">Acessibilidade</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#regras-negocio">Regras de Negócio</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#tecnologia">Tecnologia</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#privacidade">Privacidade (LGPD)</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#contato">Contato</a></li>
             </ul>
@@ -279,18 +280,102 @@
                         <h2 class="h4 fw-bold text-primary mb-3">
                             <i class="fas fa-scale-balanced me-2" aria-hidden="true"></i>Regras de Negócio
                         </h2>
+                        <p class="text-muted">Estas são as regras combinadas com o dono do estacionamento e
+                            aplicadas de ponta a ponta pelo sistema — nenhuma delas depende do que a pessoa que
+                            está usando a tela faz ou deixa de fazer.</p>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Estacionamento e tickets</h3>
                         <ul class="mb-0">
                             <li class="mb-2">O status de uma vaga ("livre", "ocupada" ou "manutenção") é controlado
                                 pelo sistema — ela vira "ocupada" automaticamente ao abrir um ticket e volta para
-                                "livre" ao fechá-lo.</li>
-                            <li class="mb-2">Mensalista com cadastro ativo não paga ao fechar o ticket: o valor
-                                cobrado é sempre <strong>R$ 0,00</strong>.</li>
-                            <li class="mb-2">Para veículos avulsos, o valor é calculado pela tarifa escolhida
-                                (valor por hora) multiplicada pelo tempo de permanência.</li>
-                            <li class="mb-2">Mensalistas e funcionários não são excluídos do sistema — apenas
-                                inativados — para preservar o histórico.</li>
-                            <li>Vagas e tarifas com tickets em aberto vinculados não podem ser excluídas até que
-                                esses tickets sejam fechados.</li>
+                                "livre" ao fechá-lo. Ninguém precisa atualizar isso na mão.</li>
+                            <li class="mb-2">A mesma placa não pode ter dois tickets abertos ao mesmo tempo.</li>
+                            <li class="mb-2">Veículo avulso tem <strong>15 minutos de tolerância</strong> sem
+                                cobrança; passado esse tempo, paga por hora cheia (fração de hora sempre arredonda
+                                para cima) pela tarifa escolhida na entrada.</li>
+                            <li class="mb-2">Mensalista com cadastro ativo não paga por ticket: ele paga um
+                                <strong>ciclo de 30 dias corridos</strong>, cobrado de uma vez só na primeira
+                                entrada sem ciclo vigente. Enquanto o ciclo estiver dentro do prazo, toda entrada
+                                seguinte sai isenta (<strong>R$ 0,00</strong>).</li>
+                            <li class="mb-2">O sistema reconhece um mensalista pela placa automaticamente, mesmo
+                                sem selecionar o nome dele na hora de abrir o ticket.</li>
+                            <li>O valor cobrado é sempre calculado e gravado pelo servidor no momento do
+                                fechamento — o aplicativo nunca manda um valor pronto pra ser aceito.</li>
+                        </ul>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Cadastros (mensalistas, vagas e tarifas)</h3>
+                        <ul class="mb-0">
+                            <li class="mb-2">CPF e placa só são aceitos no formato correto (CPF:
+                                <code>000.000.000-00</code>; placa: padrão antigo <code>ABC1234</code> ou Mercosul
+                                <code>ABC1D23</code>) e não podem se repetir entre dois cadastros.</li>
+                            <li class="mb-2">Mensalistas e funcionários nunca são apagados do sistema — apenas
+                                inativados — para preservar o histórico de cobranças e de uso.</li>
+                            <li class="mb-2">Uma vaga com qualquer ticket vinculado, mesmo já fechado, não pode ser
+                                excluída (só marcada como "Manutenção") — é o que mantém o ranking de uso e os
+                                relatórios corretos.</li>
+                            <li>Uma tarifa vinculada a um ticket <strong>ainda em aberto</strong> não pode ser
+                                excluída, para nenhum veículo perder a tarifa que lhe foi mostrada na entrada.</li>
+                        </ul>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Faturamento</h3>
+                        <ul class="mb-0">
+                            <li class="mb-2">A baixa de uma cobrança (marcar como paga) ou o cancelamento (que
+                                exige motivo) ficam registrados com quem fez a alteração e quando.</li>
+                            <li class="mb-2">Indicadores financeiros e a lista completa de cobranças de todos os
+                                mensalistas são exclusivos para administradores; um funcionário só vê a cobrança de
+                                um mensalista específico.</li>
+                            <li>Um lembrete de cobrança pode ser enviado por e-mail, se o mensalista tiver e-mail
+                                cadastrado.</li>
+                        </ul>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Contas e acesso</h3>
+                        <ul class="mb-0">
+                            <li class="mb-2">Senha exige 8 ou mais caracteres, com maiúscula, minúscula, número e
+                                símbolo.</li>
+                            <li class="mb-2">Login também pode ser feito com uma conta Google; quem entra assim
+                                precisa completar o CPF antes de usar o resto do sistema.</li>
+                            <li class="mb-2">Recuperação de senha usa um código de 6 dígitos por e-mail, válido por
+                                15 minutos e que só funciona uma vez.</li>
+                            <li>Excesso de tentativas de login, cadastro ou redefinição de senha é bloqueado
+                                temporariamente.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="tecnologia" class="card shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h4 fw-bold text-secondary mb-3">
+                            <i class="fas fa-layer-group me-2" aria-hidden="true"></i>Tecnologia por trás do sistema
+                        </h2>
+                        <p>O ParkGestão foi construído com tecnologia madura e amplamente usada no mercado —
+                            escolhida por segurança e confiabilidade, não por modismo.</p>
+                        <ul class="list-group list-group-flush mb-0">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-server text-secondary me-2" aria-hidden="true"></i>
+                                <strong>Backend:</strong> NestJS (Node.js + TypeScript), organizado em módulos por
+                                domínio de negócio (tickets, mensalistas, faturamento, dashboard...).
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-database text-secondary me-2" aria-hidden="true"></i>
+                                <strong>Banco de dados:</strong> PostgreSQL, acessado através do Prisma ORM, com
+                                histórico versionado de cada mudança de estrutura (migrations).
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-key text-secondary me-2" aria-hidden="true"></i>
+                                <strong>Autenticação:</strong> JWT com senha em hash (bcrypt) e verificação oficial
+                                do Google para o login social.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-window-maximize text-secondary me-2" aria-hidden="true"></i>
+                                <strong>Frontend:</strong> HTML, CSS e JavaScript acessíveis (WCAG 2.1 AAA), sem
+                                depender de um único fornecedor de nuvem.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-vial text-secondary me-2" aria-hidden="true"></i>
+                                <strong>Qualidade:</strong> suíte de testes automatizados cobrindo as regras mais
+                                sensíveis (cálculo de cobrança, ciclo de mensalista, autenticação), rodada a cada
+                                mudança no código.
+                            </li>
                         </ul>
                     </div>
                 </section>
@@ -410,6 +495,8 @@
     <!-- DEPENDÊNCIAS (carregadas uma única vez, com defer) -->
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
         referrerpolicy="no-referrer"></script>
     <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
@@ -418,6 +505,7 @@
     <script defer src="../assets/js/modules/accessibility.js"></script>
     <script defer src="../assets/js/modules/lgpd.js"></script>
     <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/endereco.js"></script>
     <script defer src="../assets/js/modules/auth.js"></script>
     <script defer src="../assets/js/modules/telemetria.js"></script>
     <script defer src="../assets/js/modules/toast.js"></script>

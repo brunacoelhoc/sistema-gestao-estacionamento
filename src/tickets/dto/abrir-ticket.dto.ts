@@ -5,10 +5,13 @@ import { IsPlacaValida } from '../../common/placa-valida.decorator'
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value
 
 export class AbrirTicketDto {
+  // IsPlacaValida antes de IsString/IsNotEmpty no empilhamento — ver o
+  // comentário em criar-mensalista.dto.ts (senão placa vazia mostra o erro
+  // de formato em vez de "obrigatória").
+  @IsPlacaValida()
   @IsString({ message: 'Placa é obrigatória.' })
   @IsNotEmpty({ message: 'Placa é obrigatória.' })
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsPlacaValida()
   placa!: string
 
   @IsString({ message: 'Vaga é obrigatória.' })

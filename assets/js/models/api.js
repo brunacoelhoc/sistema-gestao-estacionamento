@@ -381,6 +381,15 @@ class ApiService {
     })
   }
 
+  // O PDF do comprovante é gerado no backend a partir do ticket já
+  // persistido — esta chamada só dispara o envio, não carrega nem manda
+  // nenhum anexo (ver TicketsService.enviarComprovanteEmail).
+  static async enviarComprovanteTicketEmail (ticketId) {
+    return await this.request(`tickets/${ticketId}/comprovante-email`, {
+      method: 'POST'
+    })
+  }
+
   // --- AUTENTICAÇÃO (backend Express: hash de senha com bcrypt + JWT) ---
   static async login (cpf, senha) {
     return await this.request('auth/login', {
@@ -468,6 +477,10 @@ class ApiService {
   }
 
   static async createUsuario (data) {
+    // CriarUsuarioDto (backend) só aceita estes campos — com
+    // forbidNonWhitelisted:true, mandar qualquer propriedade a mais (ex.:
+    // avatar, ativo, aceitouTermos, provedor, criadoEm) derruba a requisição
+    // inteira com 400, mesmo essas propriedades sendo hardcoded no server.
     const payload = {
       nome: this.sanitizeText(data.nome),
       cpf: this.sanitizeText(data.cpf || ''),
@@ -476,12 +489,7 @@ class ApiService {
       telefone: this.sanitizeText(data.telefone || ''),
       endereco: this.sanitizeText(data.endereco || ''),
       dataNascimento: data.dataNascimento || '',
-      avatar: data.avatar || '',
-      role: data.role === 'admin' ? 'admin' : 'funcionario',
-      ativo: data.ativo !== undefined ? Boolean(data.ativo) : true,
-      aceitouTermos: Boolean(data.aceitouTermos),
-      provedor: data.provedor === 'google' ? 'google' : 'local',
-      criadoEm: new Date().toISOString()
+      role: data.role === 'admin' ? 'admin' : 'funcionario'
     }
 
     return await this.request('usuarios', {

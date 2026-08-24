@@ -5,6 +5,9 @@ import { AtualizarTarifaDto } from './dto/atualizar-tarifa.dto'
 import { CriarTarifaDto } from './dto/criar-tarifa.dto'
 import { TarifasService } from './tarifas.service'
 
+// Sem AdminGuard: diferente de Usuários/Métricas, o cadastro de tarifas é
+// operação do dia a dia (é usado ao abrir ticket — ver TicketsService.abrir)
+// e fica liberado pra qualquer funcionário autenticado com perfil completo.
 @UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('tarifas')
 export class TarifasController {

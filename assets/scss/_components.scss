@@ -146,11 +146,11 @@
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  // Variantes de Cores para KPIs
+  // Variantes de Cores para KPIs — a cor identificadora do card fica só na
+  // bolha do ícone (uma única "etiqueta" de cor por card); o valor numérico
+  // usa sempre o cinza-escuro neutro definido acima em .kpi-value, para não
+  // sobrecarregar a leitura com texto colorido em todo canto.
   &.kpi-success {
-    .kpi-value {
-      color: #0d652d;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #e6f4ea 0%, #ceebd5 100%);
       color: #0d652d;
@@ -159,9 +159,6 @@
   }
 
   &.kpi-danger {
-    .kpi-value {
-      color: #c5221f;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #fce8e6 0%, #fad2cf 100%);
       color: #c5221f;
@@ -170,9 +167,6 @@
   }
 
   &.kpi-warning {
-    .kpi-value {
-      color: #b06000;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #fef7e0 0%, #feefc3 100%);
       color: #b06000;
@@ -181,9 +175,6 @@
   }
 
   &.kpi-primary {
-    .kpi-value {
-      color: #1a73e8;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
       color: #1a73e8;
@@ -192,9 +183,6 @@
   }
 
   &.kpi-secondary {
-    .kpi-value {
-      color: #334155;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
       color: #334155;
@@ -203,9 +191,6 @@
   }
 
   &.kpi-info {
-    .kpi-value {
-      color: #0284c7;
-    }
     .kpi-icon-bubble {
       background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
       color: #0284c7;

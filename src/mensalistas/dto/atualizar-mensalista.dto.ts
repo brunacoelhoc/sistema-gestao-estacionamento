@@ -14,18 +14,22 @@ export class AtualizarMensalistaDto {
   @IsNotEmpty({ message: 'Nome é obrigatório.' })
   nome?: string
 
+  // IsCpfValido/IsPlacaValida vêm antes de IsString/IsNotEmpty no
+  // empilhamento (ver o mesmo comentário em criar-mensalista.dto.ts) — só
+  // assim "obrigatório" vence quando o campo vem vazio, em vez do erro de
+  // formato.
   @IsOptional()
   @Transform(trim)
+  @IsCpfValido()
   @IsString({ message: 'CPF é obrigatório.' })
   @IsNotEmpty({ message: 'CPF é obrigatório.' })
-  @IsCpfValido()
   cpf?: string
 
   @IsOptional()
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsPlacaValida()
   @IsString({ message: 'Placa é obrigatória.' })
   @IsNotEmpty({ message: 'Placa é obrigatória.' })
-  @IsPlacaValida()
   placa?: string
 
   @IsOptional()

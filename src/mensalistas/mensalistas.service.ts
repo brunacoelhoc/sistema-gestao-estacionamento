@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '../../generated/prisma'
 import { mascararCpf } from '../common/utils/mascarar-cpf.util'
-import { ehConflitoUnico } from '../common/utils/prisma-erro.util'
+import { ehConflitoUnico, ehViolacaoRestricaoFk } from '../common/utils/prisma-erro.util'
 import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarMensalistaDto } from './dto/atualizar-mensalista.dto'
 import { CriarMensalistaDto } from './dto/criar-mensalista.dto'
@@ -92,25 +92,14 @@ export class MensalistasService {
     try {
       await this.prisma.mensalista.delete({ where: { id } })
     } catch (erro) {
-      // Violação de foreign key — mensalista tem ciclos de mensalidade no
-      // histórico (Mensalidade referencia mensalistaId com RESTRICT). Não dá
-      // pra apagar sem perder o histórico de cobrança, então recusamos com
-      // uma mensagem clara em vez de deixar vazar o erro cru do
-      // Prisma/Postgres.
-      //
-      // Com o driver adapter do Postgres (@prisma/adapter-pg), erros de
-      // banco não vêm no `erro.code` padrão do Prisma (ex.: P2003) — chegam
-      // embrulhados em `erro.meta.driverAdapterError`, com o código original
-      // do Postgres em `cause.originalCode` (23001 = restrict_violation,
-      // 23503 = foreign_key_violation).
-      if (erro instanceof Prisma.PrismaClientKnownRequestError) {
-        const meta = erro.meta as { driverAdapterError?: { cause?: { originalCode?: string } } } | undefined
-        const codigoPostgres = meta?.driverAdapterError?.cause?.originalCode
-        if (erro.code === 'P2003' || codigoPostgres === '23001' || codigoPostgres === '23503') {
-          throw new ConflictException(
-            'Este mensalista tem histórico de cobranças e não pode ser excluído. Use "Inativar" em vez disso.'
-          )
-        }
+      // Violação de FK — mensalista tem ciclos de mensalidade no histórico
+      // (Mensalidade referencia mensalistaId com RESTRICT). Não dá pra
+      // apagar sem perder o histórico de cobrança, então recusamos com uma
+      // mensagem clara em vez de deixar vazar o erro cru do Prisma/Postgres.
+      if (ehViolacaoRestricaoFk(erro)) {
+        throw new ConflictException(
+          'Este mensalista tem histórico de cobranças e não pode ser excluído. Use "Inativar" em vez disso.'
+        )
       }
       throw erro
     }

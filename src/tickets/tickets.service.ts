@@ -1,8 +1,10 @@
-import { ConflictException, Injectable } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '../../generated/prisma'
 import { CobrancaService } from '../cobranca/cobranca.service'
+import { EmailService } from '../email/email.service'
 import { MensalidadeCicloService } from '../mensalidade-ciclo/mensalidade-ciclo.service'
 import { PrismaService } from '../prisma/prisma.service'
+import { gerarComprovanteTicketPdf } from './comprovante-ticket.pdf'
 import { AbrirTicketDto } from './dto/abrir-ticket.dto'
 import { FecharTicketDto } from './dto/fechar-ticket.dto'
 
@@ -21,7 +23,8 @@ export class TicketsService {
   constructor (
     private readonly prisma: PrismaService,
     private readonly cobrancaService: CobrancaService,
-    private readonly mensalidadeCicloService: MensalidadeCicloService
+    private readonly mensalidadeCicloService: MensalidadeCicloService,
+    private readonly emailService: EmailService
   ) {}
 
   private montarWhere ({ status, termo }: FiltrosListarTickets): Prisma.TicketWhereInput {
@@ -137,6 +140,10 @@ export class TicketsService {
         throw new ConflictException('Ticket inválido ou já finalizado.')
       }
 
+      // Buscada aqui (não só no update do fim) porque o tipo da vaga
+      // (comum/coberta) entra no cálculo da tarifa avulsa, abaixo.
+      const vaga = await tx.vaga.findUnique({ where: { id: ticket.vagaId } })
+
       const dataSaida = new Date()
       const diffMinutos = Math.max(
         1,
@@ -172,7 +179,7 @@ export class TicketsService {
           : await tx.tarifa.findFirst()
         const valorHora = tarifa ? Number(tarifa.valorHora) : undefined
 
-        valorTotal = this.cobrancaService.calcularTarifaAvulsa(diffMinutos, valorHora)
+        valorTotal = this.cobrancaService.calcularTarifaAvulsa(diffMinutos, valorHora, vaga?.tipo === 'coberta')
       }
 
       const ticketAtualizado = await tx.ticket.update({
@@ -188,5 +195,52 @@ export class TicketsService {
 
   async remover (id: string) {
     await this.prisma.ticket.delete({ where: { id } })
+  }
+
+  /**
+   * Comprovante enviado por e-mail: só para tickets de mensalista com e-mail
+   * cadastrado (avulso não tem onde receber). O PDF é gerado aqui, a partir
+   * do registro do ticket já persistido — o cliente nunca envia o anexo, só
+   * o gatilho, pra este endpoint não virar um jeito de mandar um binário
+   * arbitrário em nome da empresa para o e-mail de um mensalista cadastrado.
+   */
+  async enviarComprovanteEmail (id: string) {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id },
+      include: {
+        vaga: { select: { codigo: true } },
+        mensalista: { select: { nome: true, email: true } }
+      }
+    })
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket não encontrado.')
+    }
+    if (ticket.status !== 'fechado' || !ticket.dataSaida) {
+      throw new BadRequestException('O comprovante só pode ser enviado para um ticket já encerrado.')
+    }
+    if (!ticket.mensalista?.email) {
+      throw new BadRequestException('Este mensalista não tem e-mail cadastrado.')
+    }
+
+    const anexoPdf = await gerarComprovanteTicketPdf({
+      ticketId: ticket.id,
+      placa: ticket.placa,
+      vagaCodigo: ticket.vaga.codigo,
+      nomeMensalista: ticket.mensalista.nome,
+      dataEntrada: ticket.dataEntrada,
+      dataSaida: ticket.dataSaida,
+      formaPagamento: ticket.formaPagamento,
+      valorTotal: Number(ticket.valorTotal || 0)
+    })
+
+    await this.emailService.enviarComprovanteTicket({
+      to: ticket.mensalista.email,
+      nome: ticket.mensalista.nome,
+      ticketId: ticket.id,
+      anexoPdf
+    })
+
+    return { enviado: true }
   }
 }

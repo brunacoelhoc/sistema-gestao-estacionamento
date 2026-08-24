@@ -11,16 +11,24 @@ export class CriarMensalistaDto {
   @Transform(trim)
   nome!: string
 
+  // IsCpfValido precisa vir ANTES de IsString/IsNotEmpty no empilhamento: com
+  // experimentalDecorators, decorators aplicam de baixo pra cima, então o
+  // último a ser escrito é o primeiro a validar — e a ValidationPipe só
+  // devolve a mensagem do primeiro que falhar (ver validation-exception-
+  // factory.ts). Nessa ordem, CPF vazio cai em IsNotEmpty ("obrigatório"),
+  // não no formato — só cai no formato quando o CPF já foi preenchido, mas
+  // errado.
+  @IsCpfValido()
   @IsString({ message: 'CPF é obrigatório.' })
   @IsNotEmpty({ message: 'CPF é obrigatório.' })
   @Transform(trim)
-  @IsCpfValido()
   cpf!: string
 
+  // Mesmo motivo do CPF acima.
+  @IsPlacaValida()
   @IsString({ message: 'Placa é obrigatória.' })
   @IsNotEmpty({ message: 'Placa é obrigatória.' })
   @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsPlacaValida()
   placa!: string
 
   @IsString({ message: 'O telefone é obrigatório e não pode ser removido.' })

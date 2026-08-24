@@ -28,6 +28,10 @@ export class AuthController {
     return this.authService.registrar(dto)
   }
 
+  // Sem AuthThrottlerGuard: ao contrário de login/registrar/reset, não há
+  // senha ou código pra tentar adivinhar por força bruta — a credencial é um
+  // ID token assinado pelo Google, verificado com a chave pública dele (ver
+  // AuthService.google), então não faz sentido limitar tentativas aqui.
   @Post('google')
   @HttpCode(HttpStatus.OK)
   google (@Body() dto: GoogleDto) {

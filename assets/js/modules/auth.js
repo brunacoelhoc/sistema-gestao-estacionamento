@@ -271,9 +271,12 @@ class AuthService {
       cpf: usuario.cpf || '',
       email: usuario.email,
       telefone: usuario.telefone || '',
+      endereco: usuario.endereco || '',
+      dataNascimento: usuario.dataNascimento || null,
       avatar: usuario.avatar || '',
       role: usuario.role || 'funcionario',
       provedor: usuario.provedor || 'local',
+      temSenha: usuario.temSenha === true,
       senhaTemporaria: usuario.senhaTemporaria === true,
       senhaAlteradaEm: usuario.senhaAlteradaEm || null,
       // O token só vem no login/registro/Google — em atualizações de perfil
@@ -639,9 +642,14 @@ function inicializarMenuUsuario () {
 }
 
 /**
- * Modal "Meu Perfil": avatar (galeria ou upload), nome/e-mail/telefone e,
- * opcionalmente, a senha (contas locais) do usuário logado. Contas via
- * Google não têm campo de senha, já que a senha é gerenciada pelo Google.
+ * Modal "Meu Perfil": avatar (galeria ou upload), nome/CPF(bloqueado)/
+ * e-mail/telefone/data de nascimento/endereço (com busca por CEP, igual ao
+ * cadastro de Funcionário) e, opcionalmente, a senha do usuário logado.
+ * Papel de acesso só aparece para quem já é admin — o backend só aceita
+ * mudança de role/ativo vinda de um admin (ver
+ * UsuariosService.atualizarPerfil), inclusive na própria conta. Contas via
+ * Google nascem sem senha local, mas podem cadastrar uma por aqui (útil
+ * para poder trocá-la depois, sem depender do Google) — ver temSenha.
  */
 async function abrirModalMeuPerfil () {
   if (typeof Swal === 'undefined' || typeof ApiService === 'undefined') return
@@ -649,7 +657,11 @@ async function abrirModalMeuPerfil () {
   const sessao = AuthService.getSessao()
   if (!sessao) return
 
-  const ehLocal = sessao.provedor !== 'google'
+  // Só pede a senha atual quando a conta já tem uma senha local cadastrada
+  // (qualquer conta local, ou uma conta Google que já cadastrou senha
+  // antes). Conta Google sem senha ainda só vê o campo de cadastrar.
+  const temSenha = sessao.provedor !== 'google' || sessao.temSenha === true
+  const ehAdmin = sessao.role === 'admin'
   let avatarSelecionado = sessao.avatar || ''
 
   const iniciaisAtuais = AuthService.iniciais(sessao.nome)
@@ -657,7 +669,6 @@ async function abrirModalMeuPerfil () {
     ? `<img src="${avatarSelecionado}" alt="" class="perfil-avatar-preview-img">`
     : iniciaisAtuais
 
-  const ehAdmin = sessao.role === 'admin'
   const blocoAvatar = `
     <div class="text-center mb-4">
       <div id="perfil-avatar-preview" class="user-avatar-circle-lg mx-auto mb-2">${avatarPreviewHtml}</div>
@@ -680,63 +691,85 @@ async function abrirModalMeuPerfil () {
     </div>
   `
 
-  const blocoSenha = ehLocal
+  const blocoPapel = ehAdmin
     ? `
-      <hr>
-      <div class="form-check text-start mb-2">
-        <input class="form-check-input" type="checkbox" id="perfil-quer-trocar-senha">
-        <label class="form-check-label" for="perfil-quer-trocar-senha">Quero alterar minha senha</label>
-      </div>
-      <div id="perfil-bloco-senha" class="d-none text-start">
-        <div class="mb-2">
-          <label class="form-label fw-bold">Senha atual</label>
-          <div class="input-group">
-            <input id="perfil-senha-atual" type="password" class="form-control" autocomplete="current-password">
-            <button type="button" class="btn btn-outline-secondary" id="perfil-toggle-senha-atual" tabindex="-1" aria-label="Mostrar/ocultar senha atual">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-        </div>
-        <div class="mb-2">
-          <label class="form-label fw-bold">Nova senha</label>
-          <div class="input-group">
-            <input id="perfil-senha-nova" type="password" class="form-control" autocomplete="new-password" minlength="8">
-            <button type="button" class="btn btn-outline-secondary" id="perfil-toggle-senha-nova" tabindex="-1" aria-label="Mostrar/ocultar nova senha">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-          <div class="progress mt-2" style="height: 6px;">
-            <div id="perfil-senha-forca-barra" class="progress-bar" role="progressbar" style="width: 0%"></div>
-          </div>
-          <div id="perfil-senha-forca-texto" class="form-text">Mínimo de 8 caracteres, com maiúscula, minúscula, número e caractere especial.</div>
-        </div>
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">Papel de acesso</label>
+        <select id="perfil-role" class="form-select">
+          <option value="funcionario" ${sessao.role !== 'admin' ? 'selected' : ''}>Funcionário</option>
+          <option value="admin" ${sessao.role === 'admin' ? 'selected' : ''}>Administrador</option>
+        </select>
       </div>
     `
-    : '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1" aria-hidden="true"></i>Conta vinculada ao Google — sem senha local para alterar.</p>'
+    : ''
+
+  const blocoSenha = `
+      ${temSenha
+        ? `
+      <div class="text-start mb-2">
+        <label class="form-label fw-bold">Senha atual <span class="text-muted fw-normal">(só para trocar a senha)</span></label>
+        <div class="input-group">
+          <input id="perfil-senha-atual" type="password" class="form-control" autocomplete="current-password">
+          <button type="button" class="btn btn-outline-secondary" id="perfil-toggle-senha-atual" tabindex="-1" aria-label="Mostrar/ocultar senha atual">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      `
+        : `
+      <p class="text-muted small mb-2"><i class="fas fa-circle-info me-1" aria-hidden="true"></i>Sua conta usa login do Google e ainda não tem senha própria. Cadastre uma abaixo para também poder entrar com CPF e senha, e trocá-la sempre que precisar.</p>
+      `}
+      <div class="text-start mb-3">
+        <label class="form-label fw-bold">${temSenha ? 'Nova senha' : 'Cadastrar senha'} <span class="text-muted fw-normal">(opcional)</span></label>
+        <div class="input-group">
+          <input id="perfil-senha-nova" type="password" class="form-control" autocomplete="new-password" minlength="8">
+          <button type="button" class="btn btn-outline-secondary" id="perfil-toggle-senha-nova" tabindex="-1" aria-label="Mostrar/ocultar nova senha">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div class="progress mt-2" style="height: 6px;">
+          <div id="perfil-senha-forca-barra" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div id="perfil-senha-forca-texto" class="form-text">${temSenha ? 'Deixe em branco para manter a senha atual. Se preencher: mínimo' : 'Mínimo'} de 8 caracteres, com maiúscula, minúscula, número e caractere especial.</div>
+      </div>
+    `
 
   const { value: formValues } = await Swal.fire({
     title: 'Meu Perfil',
+    width: '650px',
     html: `
       ${blocoAvatar}
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Nome completo</label>
         <input id="perfil-nome" class="form-control" value="${ApiService.sanitizeText(sessao.nome)}">
       </div>
-      <div class="text-start mb-3">
-        <label class="form-label fw-bold">CPF</label>
-        <input class="form-control" value="${ApiService.sanitizeText(sessao.cpf || 'Não informado')}" disabled>
-        <div class="form-text">O CPF é o identificador de login e não pode ser alterado por aqui.</div>
+      <div class="row g-2 text-start mb-3">
+        <div class="col-6">
+          <label class="form-label fw-bold">CPF</label>
+          <input class="form-control" value="${ApiService.sanitizeText(sessao.cpf || 'Não informado')}" disabled>
+          <div class="form-text">Identificador de login — não muda por aqui.</div>
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold">E-mail</label>
+          <input id="perfil-email" type="email" class="form-control" value="${ApiService.sanitizeText(sessao.email)}">
+          <div class="form-text">Usado para recuperação de senha.</div>
+        </div>
       </div>
-      <div class="text-start mb-3">
-        <label class="form-label fw-bold">E-mail</label>
-        <input id="perfil-email" type="email" class="form-control" value="${ApiService.sanitizeText(sessao.email)}">
-        <div class="form-text">Usado para recuperação de senha — mantenha atualizado.</div>
+      <div class="row g-2 text-start mb-3">
+        <div class="col-6">
+          <label class="form-label fw-bold">Telefone</label>
+          <input id="perfil-telefone" class="form-control" value="${ApiService.sanitizeText(sessao.telefone || '')}"
+            inputmode="tel" maxlength="15" placeholder="(11) 98765-4321">
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-bold">Data de nascimento</label>
+          <input id="perfil-nascimento" type="date" class="form-control"
+            max="${new Date().toISOString().slice(0, 10)}"
+            value="${(sessao.dataNascimento || '').slice(0, 10)}">
+        </div>
       </div>
-      <div class="text-start mb-3">
-        <label class="form-label fw-bold">Telefone</label>
-        <input id="perfil-telefone" class="form-control" value="${ApiService.sanitizeText(sessao.telefone || '')}"
-          inputmode="tel" maxlength="15" placeholder="(11) 98765-4321">
-      </div>
+      ${blocoEnderecoHtml('perfil', desmontarEndereco(sessao.endereco))}
+      ${blocoPapel}
       ${blocoSenha}
     `,
     focusConfirm: false,
@@ -745,6 +778,7 @@ async function abrirModalMeuPerfil () {
     cancelButtonText: 'Cancelar',
     didOpen: () => {
       ligarMascaraTelefone('perfil-telefone')
+      ligarBuscaCep('perfil')
 
       const preview = document.getElementById('perfil-avatar-preview')
       const atualizarPreview = () => {
@@ -801,12 +835,6 @@ async function abrirModalMeuPerfil () {
           }
         })
 
-      const checkbox = document.getElementById('perfil-quer-trocar-senha')
-      const bloco = document.getElementById('perfil-bloco-senha')
-      checkbox?.addEventListener('change', () => {
-        bloco?.classList.toggle('d-none', !checkbox.checked)
-      })
-
       ligarIndicadorForcaSenha(
         'perfil-senha-nova',
         'perfil-senha-forca-barra',
@@ -831,6 +859,8 @@ async function abrirModalMeuPerfil () {
       const nome = document.getElementById('perfil-nome').value.trim()
       const email = document.getElementById('perfil-email').value.trim()
       const telefone = document.getElementById('perfil-telefone').value.trim()
+      const dataNascimento = document.getElementById('perfil-nascimento').value
+      const endereco = montarEnderecoFinal('perfil')
 
       if (!nome || !email || !telefone) {
         Swal.showValidationMessage('Nome, e-mail e telefone são obrigatórios.')
@@ -845,17 +875,28 @@ async function abrirModalMeuPerfil () {
       // validadas pelo backend (PATCH /usuarios/:id) — getUsuarioPorEmail e
       // ApiService.getUsuarios() exigem sessão de admin, e quem está aqui
       // pode ser um funcionário comum editando o próprio perfil.
-      const payload = { nome, email, telefone, avatar: avatarSelecionado }
+      const payload = { nome, email, telefone, dataNascimento, endereco, avatar: avatarSelecionado }
 
-      const checkbox = document.getElementById('perfil-quer-trocar-senha')
-      if (checkbox?.checked) {
-        const senhaAtual = document.getElementById('perfil-senha-atual').value
-        const senhaNova = document.getElementById('perfil-senha-nova').value
+      // Só existe quando ehAdmin (ver blocoPapel) — o backend ignora role
+      // vindo de quem não é admin de qualquer forma, mas nem renderizamos o
+      // campo pra quem não pode usá-lo.
+      const selectRole = document.getElementById('perfil-role')
+      if (selectRole) payload.role = selectRole.value
 
-        if (!senhaAtual || !senhaNova) {
+      const senhaAtual = document.getElementById('perfil-senha-atual')?.value || ''
+      const senhaNova = document.getElementById('perfil-senha-nova')?.value || ''
+
+      if (senhaAtual || senhaNova) {
+        // Só exige a senha atual quando a conta já tinha uma (temSenha) —
+        // conta Google cadastrando a primeira senha não tem o que conferir.
+        if (temSenha && (!senhaAtual || !senhaNova)) {
           Swal.showValidationMessage(
             'Preencha a senha atual e a nova senha para alterá-la.'
           )
+          return false
+        }
+        if (!senhaNova) {
+          Swal.showValidationMessage('Informe a nova senha.')
           return false
         }
         if (!avaliarForcaSenha(senhaNova).valida) {
@@ -864,7 +905,7 @@ async function abrirModalMeuPerfil () {
         }
 
         payload.senha = senhaNova
-        payload.senhaAtual = senhaAtual
+        if (senhaAtual) payload.senhaAtual = senhaAtual
       }
 
       return payload
@@ -874,7 +915,8 @@ async function abrirModalMeuPerfil () {
   if (!formValues) return
 
   try {
-    const { senhaAtual, ...dadosParaSessao } = formValues
+    const { senhaAtual, senha, ...dadosParaSessao } = formValues
+    if (senha) dadosParaSessao.temSenha = true
     await ApiService.updateUsuario(sessao.id, formValues)
     AuthService.salvarSessao({ ...sessao, ...dadosParaSessao })
     inicializarMenuUsuario()

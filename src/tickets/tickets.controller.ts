@@ -10,6 +10,11 @@ import { TicketsService } from './tickets.service'
 export class TicketsController {
   constructor (private readonly ticketsService: TicketsService) {}
 
+  // Sem `page`, devolve a lista completa (já filtrada por status/termo, se
+  // vierem) — usado pelo Dashboard (tickets ativos) e pela exportação
+  // CSV/Excel, que precisam do resultado inteiro, não só uma página. Com
+  // `page`, pagina no backend — usado pela tabela da tela de Tickets (ver
+  // ApiClient.getTickets em assets/js/models/api.js).
   @Get()
   listar (
     @Query('page') page?: string,
@@ -36,6 +41,12 @@ export class TicketsController {
   @Post(':id/fechar')
   fechar (@Param('id') id: string, @Body() dto: FecharTicketDto) {
     return this.ticketsService.fechar(id, dto)
+  }
+
+  @Post(':id/comprovante-email')
+  @HttpCode(HttpStatus.OK)
+  enviarComprovanteEmail (@Param('id') id: string) {
+    return this.ticketsService.enviarComprovanteEmail(id)
   }
 
   @Delete(':id')

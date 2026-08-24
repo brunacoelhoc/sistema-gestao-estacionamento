@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common'
-import { TEMPO_TOLERANCIA_MINUTOS } from './cobranca/cobranca.service'
+import { ADICIONAL_VAGA_COBERTA_VALOR, TEMPO_TOLERANCIA_MINUTOS } from './cobranca/cobranca.service'
 import { DURACAO_CICLO_DIAS } from './mensalidade-ciclo/mensalidade-ciclo.service'
 
 @Controller()
@@ -18,7 +18,8 @@ export class AppController {
   config () {
     return {
       toleranciaMinutos: TEMPO_TOLERANCIA_MINUTOS,
-      duracaoCicloMensalistaDias: DURACAO_CICLO_DIAS
+      duracaoCicloMensalistaDias: DURACAO_CICLO_DIAS,
+      adicionalVagaCobertaValor: ADICIONAL_VAGA_COBERTA_VALOR
     }
   }
 }

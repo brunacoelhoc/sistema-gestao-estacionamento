@@ -54,7 +54,19 @@ export class DashboardService {
       )
       : null
 
+    // Data do ticket fechado mais antigo — usada só pelo front para exibir o
+    // período coberto pelos KPIs acumulados (faturamento/ticket médio/tempo
+    // médio), que somam o histórico inteiro em vez de uma janela fixa.
+    const dataInicioHistorico = ticketsFechados.length > 0
+      ? ticketsFechados.reduce(
+        (min, t) => (t.dataEntrada < min ? t.dataEntrada : min),
+        ticketsFechados[0].dataEntrada
+      )
+      : null
+
     return {
+      geradoEm: new Date(),
+      dataInicioHistorico,
       totalVagas: vagas.length,
       totalVagasFiltradas,
       vagasLivres,
