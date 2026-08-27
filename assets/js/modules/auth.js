@@ -263,6 +263,38 @@ class AuthService {
     return this.getSessao()?.role === 'admin'
   }
 
+  static ehRhOuAdmin () {
+    const role = this.getSessao()?.role
+    return role === 'admin' || role === 'rh'
+  }
+
+  // Distinto de ehRhOuAdmin: gestor enxerga a lista de funcionários e o
+  // desempenho por atendimentos, mas nunca dado de RH (salário, ponto,
+  // férias, folha de pagamento de terceiros) — isso continua exclusivo de
+  // ehRhOuAdmin().
+  static podeGerenciarFuncionarios () {
+    const role = this.getSessao()?.role
+    return role === 'admin' || role === 'rh' || role === 'gestor'
+  }
+
+  // Financeiro só enxerga Métricas/Faturamento (dado operacional/financeiro
+  // agregado) — nunca dado de RH de terceiros, isso continua exclusivo de
+  // ehRhOuAdmin().
+  static ehFinanceiroOuAdmin () {
+    const role = this.getSessao()?.role
+    return role === 'admin' || role === 'financeiro'
+  }
+
+  // Rótulo/classe de badge do papel — usado na navbar, no modal "Meu Perfil"
+  // e na tela de Funcionários, pra não repetir o mapa em cada um.
+  static rotuloPapel (role) {
+    return { admin: 'Admin', rh: 'RH', gestor: 'Gestor', funcionario: 'Funcionário', financeiro: 'Financeiro' }[role] || 'Funcionário'
+  }
+
+  static classeBadgePapel (role) {
+    return { admin: 'bg-primary', rh: 'bg-info', gestor: 'bg-warning text-dark', funcionario: 'bg-secondary', financeiro: 'bg-success' }[role] || 'bg-secondary'
+  }
+
   static salvarSessao (usuario, token = null) {
     const sessaoAnterior = this.getSessao()
     const sessao = {
@@ -579,35 +611,34 @@ function inicializarMenuUsuario () {
   if (nomeEl) nomeEl.textContent = sessao.nome
 
   if (badgePapelEl) {
-    const ehAdmin = sessao.role === 'admin'
-    badgePapelEl.textContent = ehAdmin ? 'Admin' : 'Funcionário'
-    badgePapelEl.classList.remove('d-none', 'bg-primary', 'bg-secondary')
-    badgePapelEl.classList.add(
-      'd-xl-inline-block',
-      ehAdmin ? 'bg-primary' : 'bg-secondary'
-    )
+    badgePapelEl.textContent = AuthService.rotuloPapel(sessao.role)
+    badgePapelEl.classList.remove('d-none', 'bg-primary', 'bg-secondary', 'bg-info', 'bg-warning', 'text-dark')
+    badgePapelEl.classList.add('d-xl-inline-block', ...AuthService.classeBadgePapel(sessao.role).split(' '))
   }
 
   if (linkFuncionarios) {
-    linkFuncionarios.classList.toggle('d-none', sessao.role !== 'admin')
+    // RH e gestor também precisam da lista de funcionários (RH gerencia
+    // dados de RH; gestor vê desempenho) — só quem não é admin/rh/gestor
+    // fica de fora.
+    linkFuncionarios.classList.toggle('d-none', !AuthService.podeGerenciarFuncionarios())
   }
 
-  // Métricas (com dados financeiros/receita) só é visível para admin.
+  // Métricas (com dados financeiros/receita) só é visível para admin/financeiro.
   const navItemMetricas = document.getElementById('nav-item-metricas')
   if (navItemMetricas) {
-    navItemMetricas.classList.toggle('d-none', sessao.role !== 'admin')
+    navItemMetricas.classList.toggle('d-none', !AuthService.ehFinanceiroOuAdmin())
   }
 
-  // Faturamento (com dados financeiros de mensalidades) só é visível para admin.
+  // Faturamento (com dados financeiros de mensalidades) só é visível para admin/financeiro.
   const navItemFaturamento = document.getElementById('nav-item-faturamento')
   if (navItemFaturamento) {
-    navItemFaturamento.classList.toggle('d-none', sessao.role !== 'admin')
+    navItemFaturamento.classList.toggle('d-none', !AuthService.ehFinanceiroOuAdmin())
   }
 
-  // KPI "Faturamento Total" do Dashboard expõe receita agregada — some para não-admin.
+  // KPI "Faturamento Total" do Dashboard expõe receita agregada — some para quem não é admin/financeiro.
   const kpiCardFaturamento = document.getElementById('kpi-card-faturamento')
   if (kpiCardFaturamento) {
-    kpiCardFaturamento.classList.toggle('d-none', sessao.role !== 'admin')
+    kpiCardFaturamento.classList.toggle('d-none', !AuthService.ehFinanceiroOuAdmin())
   }
 
   // index.html mora na raiz do projeto, as demais páginas ficam em /views/
@@ -672,10 +703,8 @@ async function abrirModalMeuPerfil () {
   const blocoAvatar = `
     <div class="text-center mb-4">
       <div id="perfil-avatar-preview" class="user-avatar-circle-lg mx-auto mb-2">${avatarPreviewHtml}</div>
-      <span class="badge rounded-pill ${ehAdmin ? 'bg-primary' : 'bg-secondary'} mb-2">
-        <i class="fas ${ehAdmin ? 'fa-user-shield' : 'fa-user'} me-1" aria-hidden="true"></i>${
-    ehAdmin ? 'Administrador' : 'Funcionário'
-  }
+      <span class="badge rounded-pill ${AuthService.classeBadgePapel(sessao.role)} mb-2">
+        <i class="fas ${ehAdmin ? 'fa-user-shield' : 'fa-user'} me-1" aria-hidden="true"></i>${AuthService.rotuloPapel(sessao.role)}
       </span>
       <div class="d-flex justify-content-center gap-2 flex-wrap">
         <button type="button" class="btn btn-sm btn-outline-secondary" id="perfil-btn-galeria">
@@ -696,7 +725,10 @@ async function abrirModalMeuPerfil () {
       <div class="text-start mb-3">
         <label class="form-label fw-bold">Papel de acesso</label>
         <select id="perfil-role" class="form-select">
-          <option value="funcionario" ${sessao.role !== 'admin' ? 'selected' : ''}>Funcionário</option>
+          <option value="funcionario" ${sessao.role === 'funcionario' ? 'selected' : ''}>Funcionário</option>
+          <option value="gestor" ${sessao.role === 'gestor' ? 'selected' : ''}>Gestor</option>
+          <option value="rh" ${sessao.role === 'rh' ? 'selected' : ''}>RH</option>
+          <option value="financeiro" ${sessao.role === 'financeiro' ? 'selected' : ''}>Financeiro</option>
           <option value="admin" ${sessao.role === 'admin' ? 'selected' : ''}>Administrador</option>
         </select>
       </div>

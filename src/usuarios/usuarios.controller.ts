@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { Roles } from '../common/decorators/roles.decorator'
 import { AdminGuard } from '../common/guards/admin.guard'
 import { JwtAuthGuard, type UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
+import { RolesGuard } from '../common/guards/roles.guard'
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto'
 import { CriarUsuarioDto } from './dto/criar-usuario.dto'
 import { UsuariosService } from './usuarios.service'
@@ -11,7 +13,14 @@ import { UsuariosService } from './usuarios.service'
 export class UsuariosController {
   constructor (private readonly usuariosService: UsuariosService) {}
 
-  @UseGuards(AdminGuard)
+  // Listagem também aberta a RH e gestor (RolesGuard, não o AdminGuard fixo
+  // usado no resto do controller): RH precisa enxergar os funcionários pra
+  // vincular perfil de RH, justificativas de ponto, férias e folha de
+  // pagamento; gestor precisa pra gerenciamento e relatório de desempenho
+  // (nunca vê dado de RH em si — isso continua restrito a admin/rh, ver
+  // ehGestaoDeRh).
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'rh', 'gestor')
   @Get()
   listar () {
     return this.usuariosService.listar()

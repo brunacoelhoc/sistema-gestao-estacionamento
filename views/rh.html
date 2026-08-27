@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://vlibras.gov.br; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com https://vlibras.gov.br; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <script>
+        (function () {
+            try {
+                var sessaoBruta = localStorage.getItem('parkgestao:session');
+                if (!sessaoBruta) {
+                    window.location.replace('login.html');
+                    return;
+                }
+                var sessao = JSON.parse(sessaoBruta);
+                if (!sessao || !sessao.cpf) {
+                    window.location.replace('completar-cadastro.html');
+                }
+            } catch (erro) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Recursos Humanos - ParkGestão">
+    <title>Recursos Humanos | ParkGestão</title>
+
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+    <div class="accessibility-bar bg-dark text-white py-1 px-3 d-flex flex-wrap align-items-center justify-content-between text-xs"
+        role="region" aria-label="Barra de Acessibilidade">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold me-2"><i class="fas fa-universal-access" aria-hidden="true"></i> Acessibilidade:</span>
+            <button id="btn-font-increase" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Aumentar Fonte" aria-label="Aumentar tamanho da fonte">A+</button>
+            <button id="btn-font-decrease" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Diminuir Fonte" aria-label="Diminuir tamanho da fonte">A-</button>
+            <button id="btn-font-reset" class="btn btn-sm btn-outline-light py-0 px-2" type="button"
+                title="Restaurar Fonte" aria-label="Restaurar tamanho padrão da fonte">A</button>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button id="btn-contrast" class="btn btn-sm btn-outline-warning py-0 px-2" type="button"
+                title="Alternar Alto Contraste" aria-label="Alternar modo de alto contraste" aria-pressed="false">
+                <i class="fas fa-adjust" aria-hidden="true"></i> Contraste
+            </button>
+            <button id="btn-dyslexic" class="btn btn-sm btn-outline-info py-0 px-2" type="button"
+                title="Modo Fonte Dislexia" aria-label="Alternar fonte para leitura facilitada (dislexia)"
+                aria-pressed="false">
+                <i class="fas fa-font" aria-hidden="true"></i> Dislexia
+            </button>
+            <button id="btn-motion" class="btn btn-sm btn-outline-secondary py-0 px-2 text-white" type="button"
+                title="Reduzir Animações" aria-label="Reduzir ou pausar animações da página" aria-pressed="false">
+                <i class="fas fa-running" aria-hidden="true"></i> Animação Off
+            </button>
+            <button id="btn-dark-mode" class="btn btn-sm btn-outline-light py-0 px-2 text-white" type="button"
+                title="Alternar Modo Noturno" aria-label="Alternar modo noturno" aria-pressed="false">
+                <i class="fas fa-moon" aria-hidden="true"></i> Modo Noturno
+            </button>
+            <label for="select-daltonism" class="visually-hidden">Filtro para Daltonismo</label>
+            <select id="select-daltonism" class="form-select form-select-sm w-auto py-0 text-xs"
+                aria-label="Selecionar filtro para daltonismo">
+                <option value="normal">Daltonismo: Normal</option>
+                <option value="protanopia">Protanopia</option>
+                <option value="deuteranopia">Deuteranopia</option>
+                <option value="tritanopia">Tritanopia</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="app-content">
+    <header>
+        <nav class="navbar navbar-expand-xl navbar-light">
+            <div class="container">
+                <div class="navbar-top-row d-flex align-items-center justify-content-between w-100">
+                    <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="../index.html">
+                        <i class="fas fa-parking text-warning fs-3" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+
+                    <div class="d-flex align-items-center gap-2 gap-xl-3">
+                        <div id="api-status-indicator" class="d-none d-md-flex align-items-center gap-1 text-xs text-muted"
+                            role="status" aria-live="polite">
+                            <span id="api-status-dot" class="js-api-status-dot rounded-circle bg-secondary"
+                                style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                            <span id="api-status-text" class="js-api-status-text">Verificando servidor…</span>
+                        </div>
+
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                                id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="user-avatar" class="user-avatar-circle">--</span>
+                                <span id="user-nome-navbar" class="d-none d-xl-inline">Usuário</span>
+                                <span id="user-role-badge" class="badge rounded-pill d-none d-xl-inline-block"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-abrir-perfil">
+                                        <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Meu Perfil
+                                    </button>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-none" id="link-funcionarios" href="funcionarios.html">
+                                        <i class="fas fa-users-cog me-2" aria-hidden="true"></i>Funcionários
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" id="btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Sair
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar menu de navegação">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="../index.html"><i class="fas fa-chart-line me-1"
+                                    aria-hidden="true"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="fas fa-ticket-alt me-1"
+                                    aria-hidden="true"></i> Tickets</a></li>
+                        <li class="nav-item"><a class="nav-link" href="vagas-tarifas.html"><i class="fas fa-car me-1"
+                                    aria-hidden="true"></i> Vagas &amp; Tarifas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="mensalistas.html"><i
+                                    class="fas fa-id-card me-1" aria-hidden="true"></i> Mensalistas</a></li>
+                        <li class="nav-item d-none" id="nav-item-faturamento"><a class="nav-link" href="faturamento.html"><i
+                                    class="fas fa-file-invoice-dollar me-1" aria-hidden="true"></i> Faturamento</a></li>
+                        <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
+                                    aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link active" aria-current="page" href="rh.html"><i class="fas fa-users me-1"
+                                    aria-hidden="true"></i> RH</a></li>
+                        <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
+                                    aria-hidden="true"></i> Sobre</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content" class="container py-4">
+        <div class="mb-4">
+            <h1 class="h3 fw-bold mb-0">
+                <i class="fas fa-users text-primary me-2" aria-hidden="true"></i>Recursos Humanos
+            </h1>
+            <p class="text-muted mb-0">Ponto, férias, seus dados de RH, notificações e folha de pagamento — em um só lugar.</p>
+        </div>
+
+        <!-- ABAS -->
+        <ul class="nav nav-pills mb-4 flex-wrap gap-2" id="rh-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="rh-tab-ponto-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-ponto"
+                    type="button" role="tab" aria-controls="rh-tab-ponto" aria-selected="true">
+                    <i class="fas fa-business-time me-1" aria-hidden="true"></i>Ponto
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rh-tab-ferias-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-ferias"
+                    type="button" role="tab" aria-controls="rh-tab-ferias" aria-selected="false">
+                    <i class="fas fa-umbrella-beach me-1" aria-hidden="true"></i>Férias
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rh-tab-perfilrh-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-perfilrh"
+                    type="button" role="tab" aria-controls="rh-tab-perfilrh" aria-selected="false">
+                    <i class="fas fa-briefcase me-1" aria-hidden="true"></i>Dados do RH
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rh-tab-notif-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-notif"
+                    type="button" role="tab" aria-controls="rh-tab-notif" aria-selected="false">
+                    <i class="fas fa-bell me-1" aria-hidden="true"></i>Notificações
+                    <span id="badge-notificacoes-nao-lidas" class="badge bg-danger rounded-pill d-none"></span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rh-tab-folha-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-folha"
+                    type="button" role="tab" aria-controls="rh-tab-folha" aria-selected="false">
+                    <i class="fas fa-money-check-dollar me-1" aria-hidden="true"></i>Folha de Pagamento
+                </button>
+            </li>
+            <li class="nav-item d-none" role="presentation" id="rh-tab-auditoria-item">
+                <button class="nav-link" id="rh-tab-auditoria-btn" data-bs-toggle="pill" data-bs-target="#rh-tab-auditoria"
+                    type="button" role="tab" aria-controls="rh-tab-auditoria" aria-selected="false">
+                    <i class="fas fa-clipboard-list me-1" aria-hidden="true"></i>Auditoria
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="rh-tabContent">
+
+            <!-- ===================== MEU PONTO ===================== -->
+            <div class="tab-pane fade show active" id="rh-tab-ponto" role="tabpanel" aria-labelledby="rh-tab-ponto-btn" tabindex="0">
+                <div id="ponto-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="ponto-page-error-text">Não foi possível carregar seus dados de ponto. Verifique sua conexão e tente novamente.</span>
+                    <button id="ponto-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <div id="ponto-sem-perfil-rh" class="alert alert-info d-none" role="status">
+                    <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                    Seus dados de RH ainda não foram cadastrados, então ainda não é possível bater ponto. Fale com o RH ou a administração.
+                    Veja abaixo um exemplo (com dados simulados) de como esta aba fica preenchida.
+                </div>
+
+                <div id="conteudo-ponto" class="d-none">
+                    <!-- BATER PONTO -->
+                    <div class="card shadow-sm mb-3" id="card-bater-ponto">
+                        <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center gap-2">
+                            <i class="fas fa-fingerprint text-primary me-2" aria-hidden="true"></i>Bater Ponto de Hoje
+                            <span class="badge bg-secondary badge-ponto-simulado d-none">Exemplo simulado</span>
+                        </div>
+                        <div class="card-body text-center py-4">
+                            <div id="ponto-hoje-status" class="mb-3 text-muted">Carregando...</div>
+                            <button type="button" class="btn btn-primary btn-lg d-none" id="btn-bater-entrada">
+                                <i class="fas fa-right-to-bracket me-2" aria-hidden="true"></i>Registrar Entrada
+                            </button>
+                            <button type="button" class="btn btn-warning btn-lg d-none" id="btn-bater-saida">
+                                <i class="fas fa-right-from-bracket me-2" aria-hidden="true"></i>Registrar Saída
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ESPELHO DE PONTO DO MÊS -->
+                    <div class="card shadow-sm mb-3" id="card-espelho-ponto">
+                        <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <span><i class="fas fa-calendar-days text-primary me-2" aria-hidden="true"></i>Espelho de Ponto
+                                <span class="badge bg-secondary badge-ponto-simulado d-none">Exemplo simulado</span></span>
+                            <input type="month" id="ponto-mes-referencia" class="form-control form-control-sm w-auto" aria-label="Mês de referência">
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0" aria-label="Espelho de ponto do mês">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Data</th>
+                                            <th scope="col">Entrada</th>
+                                            <th scope="col">Saída</th>
+                                            <th scope="col">Horas Normais</th>
+                                            <th scope="col">Horas Extras</th>
+                                            <th scope="col">Horas Fora de Escala</th>
+                                            <th scope="col">Situação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-ponto-mes">
+                                        <tr><td colspan="7" class="text-center text-muted py-3">Carregando...</td></tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-light fw-bold">
+                                            <td colspan="3">Totais</td>
+                                            <td id="total-horas-normais">-</td>
+                                            <td id="total-horas-extras">-</td>
+                                            <td id="total-horas-fora-escala">-</td>
+                                            <td id="total-faltas">-</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JUSTIFICATIVAS (só RH/admin) -->
+                    <div class="card shadow-sm mb-3 d-none" id="card-justificativas-rh">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-file-medical text-primary me-2" aria-hidden="true"></i>Registrar Justificativa (Atestado, Abono ou Folga)
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted text-xs">Cobre uma ausência num dia de escala do funcionário — o dia fica pago e não conta como falta.</p>
+                            <form id="form-justificativa" class="row g-2 align-items-end">
+                                <div class="col-12 col-sm-4">
+                                    <label for="select-justificativa-funcionario" class="form-label fw-bold">Funcionário</label>
+                                    <select id="select-justificativa-funcionario" class="form-select" required></select>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <label for="input-justificativa-data" class="form-label fw-bold">Data</label>
+                                    <input type="date" id="input-justificativa-data" class="form-control" required>
+                                </div>
+                                <div class="col-6 col-sm-2">
+                                    <label for="select-justificativa-tipo" class="form-label fw-bold">Tipo</label>
+                                    <select id="select-justificativa-tipo" class="form-select" required>
+                                        <option value="atestado">Atestado</option>
+                                        <option value="abono">Abono</option>
+                                        <option value="folga">Folga</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-sm-3">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-check me-1" aria-hidden="true"></i>Registrar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- GERAR ESPELHO DE PONTO (só RH/admin) -->
+                    <div class="card shadow-sm mb-3 d-none" id="card-gerar-espelho">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-file-signature text-primary me-2" aria-hidden="true"></i>Gerar Espelho de Ponto Mensal
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted text-xs">Gera o espelho de um mês já encerrado e envia para a caixa de notificações do funcionário assinar.</p>
+                            <form id="form-gerar-espelho" class="row g-2 align-items-end">
+                                <div class="col-12 col-sm-5">
+                                    <label for="select-espelho-funcionario" class="form-label fw-bold">Funcionário</label>
+                                    <select id="select-espelho-funcionario" class="form-select" required></select>
+                                </div>
+                                <div class="col-6 col-sm-4">
+                                    <label for="input-espelho-referencia" class="form-label fw-bold">Mês</label>
+                                    <input type="month" id="input-espelho-referencia" class="form-control" required>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Gerar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- APROVAÇÕES DE TRABALHO EXTRA (só RH/admin) -->
+                    <div class="card shadow-sm mb-3 d-none" id="card-aprovacoes-extra">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-clipboard-check text-primary me-2" aria-hidden="true"></i>Solicitações de Trabalho Extra Pendentes
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" aria-label="Solicitações de trabalho extra pendentes">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Funcionário</th>
+                                            <th scope="col">Data</th>
+                                            <th scope="col">Motivo</th>
+                                            <th scope="col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-aprovacoes-extra">
+                                        <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma solicitação pendente.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SOLICITAR TRABALHO EXTRA -->
+                    <div class="card shadow-sm" id="card-solicitar-extra">
+                        <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center gap-2">
+                            <i class="fas fa-calendar-plus text-primary me-2" aria-hidden="true"></i>Solicitar Trabalho Fora da Escala
+                            <span class="badge bg-secondary badge-ponto-simulado d-none">Exemplo simulado</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted text-xs">Trabalhar num dia que não é da sua escala exige autorização aprovada previamente pelo RH. Se aprovada, as horas desse dia são pagas com 100% de adicional.</p>
+                            <form id="form-solicitar-extra" class="row g-2 align-items-end mb-3">
+                                <div class="col-12 col-sm-4">
+                                    <label for="input-extra-data" class="form-label fw-bold">Data</label>
+                                    <input type="date" id="input-extra-data" class="form-control" required>
+                                </div>
+                                <div class="col-12 col-sm-5">
+                                    <label for="input-extra-motivo" class="form-label fw-bold">Motivo</label>
+                                    <input type="text" id="input-extra-motivo" class="form-control" required maxlength="200">
+                                </div>
+                                <div class="col-12 col-sm-3">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Solicitar
+                                    </button>
+                                </div>
+                            </form>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" aria-label="Minhas solicitações de trabalho extra">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Data</th>
+                                            <th scope="col">Motivo</th>
+                                            <th scope="col">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-minhas-solicitacoes-extra">
+                                        <tr><td colspan="3" class="text-center text-muted py-3">Nenhuma solicitação ainda.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== MINHAS FÉRIAS ===================== -->
+            <div class="tab-pane fade" id="rh-tab-ferias" role="tabpanel" aria-labelledby="rh-tab-ferias-btn" tabindex="0">
+                <p class="text-muted" id="ferias-texto-direito">Você tem direito a 60 dias de férias por ano, escolhidos por você, com pelo menos 90 dias de antecedência para a empresa se programar.</p>
+
+                <div id="ferias-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="ferias-page-error-text">Não foi possível carregar seus dados de férias. Verifique sua conexão e tente novamente.</span>
+                    <button id="ferias-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <div id="ferias-sem-perfil-rh" class="alert alert-info d-none" role="status">
+                    <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                    Seus dados de RH ainda não foram cadastrados, então ainda não é possível solicitar férias. Fale com o RH ou a administração.
+                </div>
+
+                <!-- CALENDÁRIO DE FÉRIAS DA EQUIPE (dados simulados — visível mesmo sem perfil de RH cadastrado) -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-white py-2 fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span><i class="fas fa-calendar-days text-primary me-2" aria-hidden="true"></i>Calendário de Férias da Equipe</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-ferias-ano-anterior" aria-label="Ver ano anterior">
+                                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <span id="ferias-ano-vigente-label" class="fw-bold" style="min-width: 3.5em; text-align: center; display: inline-block;"></span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-ferias-proximo-ano" aria-label="Ver próximo ano">
+                                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="ferias-legenda-equipe" class="d-flex flex-wrap gap-3 mb-3"></div>
+                        <div id="ferias-calendario-equipe" class="ferias-calendario-grid"></div>
+                    </div>
+                </div>
+
+                <!-- QUEM JÁ TIROU / ESTÁ / VAI TIRAR FÉRIAS -->
+                <div class="row g-3 mb-3" id="ferias-status-equipe"></div>
+
+                <div id="conteudo-ferias" class="d-none">
+                    <!-- SALDO DE FÉRIAS -->
+                    <div class="row g-3 mb-3" id="ferias-saldo-resumo" aria-live="polite"></div>
+
+                    <!-- SOLICITAR FÉRIAS -->
+                    <div class="card shadow-sm mb-3" id="card-solicitar-ferias">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-calendar-plus text-primary me-2" aria-hidden="true"></i>Solicitar Férias
+                        </div>
+                        <div class="card-body">
+                            <form id="form-solicitar-ferias" class="row g-2 align-items-end">
+                                <div class="col-12 col-sm-4">
+                                    <label for="input-ferias-inicio" class="form-label fw-bold">Data de início</label>
+                                    <input type="date" id="input-ferias-inicio" class="form-control" required>
+                                </div>
+                                <div class="col-12 col-sm-4">
+                                    <label for="input-ferias-fim" class="form-label fw-bold">Data de fim</label>
+                                    <input type="date" id="input-ferias-fim" class="form-control" required>
+                                </div>
+                                <div class="col-12 col-sm-4">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Solicitar
+                                    </button>
+                                </div>
+                            </form>
+                            <p class="text-xs text-muted mb-0 mt-2">
+                                <i class="fas fa-lightbulb me-1" aria-hidden="true"></i>
+                                Dica: clique em um dia de início e depois em um dia de fim no calendário acima para preencher automaticamente.
+                            </p>
+                            <p class="text-xs mb-0 mt-1" id="ferias-resumo-selecao">&nbsp;</p>
+                        </div>
+                    </div>
+
+                    <!-- MINHAS SOLICITAÇÕES -->
+                    <div class="card shadow-sm mb-3" id="card-minhas-ferias">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-list text-primary me-2" aria-hidden="true"></i>Minhas Solicitações
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" aria-label="Minhas solicitações de férias">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Início</th>
+                                            <th scope="col">Fim</th>
+                                            <th scope="col">Dias</th>
+                                            <th scope="col">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-minhas-ferias">
+                                        <tr><td colspan="4" class="text-center text-muted py-3">Nenhuma solicitação ainda.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- APROVAÇÕES (só RH/admin) -->
+                    <div class="card shadow-sm d-none" id="card-aprovacoes-ferias">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-clipboard-check text-primary me-2" aria-hidden="true"></i>Solicitações de Férias Pendentes
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" aria-label="Solicitações de férias pendentes">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Funcionário</th>
+                                            <th scope="col">Início</th>
+                                            <th scope="col">Fim</th>
+                                            <th scope="col">Dias</th>
+                                            <th scope="col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-aprovacoes-ferias">
+                                        <tr><td colspan="5" class="text-center text-muted py-3">Nenhuma solicitação pendente.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== MEUS DADOS DE RH ===================== -->
+            <div class="tab-pane fade" id="rh-tab-perfilrh" role="tabpanel" aria-labelledby="rh-tab-perfilrh-btn" tabindex="0">
+                <p class="text-muted">Transparência sobre o seu cargo, jornada, salário e benefícios — só você enxerga estes dados.</p>
+
+                <div id="perfilrh-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="perfilrh-page-error-text">Não foi possível carregar seus dados de RH. Verifique sua conexão e tente novamente.</span>
+                    <button id="perfilrh-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <div id="perfilrh-sem-perfil-rh" class="alert alert-info d-none" role="status">
+                    <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                    Seus dados de RH ainda não foram cadastrados. Fale com o RH ou a administração.
+                </div>
+
+                <div id="conteudo-perfil-rh" class="d-none">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-id-badge text-primary me-2" aria-hidden="true"></i>Cargo e Contrato
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-5 text-muted">Cargo</dt>
+                                        <dd class="col-7" id="rh-cargo">-</dd>
+                                        <dt class="col-5 text-muted">Vaga de origem</dt>
+                                        <dd class="col-7" id="rh-vaga-origem">-</dd>
+                                        <dt class="col-5 text-muted">Modalidade</dt>
+                                        <dd class="col-7" id="rh-contrato">-</dd>
+                                        <dt class="col-5 text-muted">Data de admissão</dt>
+                                        <dd class="col-7" id="rh-admissao">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-calendar-week text-primary me-2" aria-hidden="true"></i>Jornada e Escala
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-5 text-muted">Dias de escala</dt>
+                                        <dd class="col-7" id="rh-dias-escala">-</dd>
+                                        <dt class="col-5 text-muted">Entrada prevista</dt>
+                                        <dd class="col-7" id="rh-hora-inicio">-</dd>
+                                        <dt class="col-5 text-muted">Horas por dia</dt>
+                                        <dd class="col-7" id="rh-horas">-</dd>
+                                        <dt class="col-5 text-muted">Horas por semana</dt>
+                                        <dd class="col-7" id="rh-horas-semana">-</dd>
+                                        <dt class="col-5 text-muted">Horas por mês</dt>
+                                        <dd class="col-7" id="rh-horas-mes">-</dd>
+                                    </dl>
+                                    <p class="text-muted text-xs mb-0">Horas por semana e por mês são informativas (dias de escala × horas por dia). Trabalho fora dos seus dias de escala só é permitido com autorização prévia — nesses dias, as horas são pagas com 100% de adicional.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-sack-dollar text-primary me-2" aria-hidden="true"></i>Salário
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-5 text-muted">Salário-base</dt>
+                                        <dd class="col-7" id="rh-salario">-</dd>
+                                    </dl>
+                                    <p class="text-muted text-xs mb-0">A fórmula completa de cálculo (hora extra, adicional de dia fora de escala, descontos obrigatórios) está descrita na página <a href="sobre.html#regras-negocio">Sobre</a>.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-university text-primary me-2" aria-hidden="true"></i>Dados Bancários
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-5 text-muted">Banco</dt>
+                                        <dd class="col-7" id="rh-banco">-</dd>
+                                        <dt class="col-5 text-muted">Agência</dt>
+                                        <dd class="col-7" id="rh-agencia">-</dd>
+                                        <dt class="col-5 text-muted">Conta</dt>
+                                        <dd class="col-7" id="rh-conta">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <span><i class="fas fa-file-signature text-primary me-2" aria-hidden="true"></i>Histórico do Contrato de Trabalho</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-recarregar-contratos">
+                                <i class="fas fa-rotate-right me-1" aria-hidden="true"></i>Atualizar
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0" aria-label="Histórico de versões do contrato">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Versão</th>
+                                            <th scope="col">Gerado em</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-contratos-trabalho">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">Carregando...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-sitemap text-primary me-2" aria-hidden="true"></i>Hierarquia
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-3">
+                                <dt class="col-5 col-md-3 text-muted">Você responde a</dt>
+                                <dd class="col-7 col-md-9 mb-0" id="rh-gestor">-</dd>
+                            </dl>
+                            <p class="text-muted text-xs mb-2">Estrutura completa da empresa — quem responde a quem (só nome e cargo; dados sensíveis não aparecem aqui):</p>
+                            <div id="rh-organograma" aria-live="polite">
+                                <p class="text-muted text-center py-2 mb-0">Carregando...</p>
+                            </div>
+                            <p class="text-muted text-xs mb-0 mt-2">Dúvidas sobre a quem recorrer em cada situação (ponto, férias, folha de pagamento, conflitos) podem ser tiradas diretamente com o seu gestor ou com o RH.</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-scale-balanced text-primary me-2" aria-hidden="true"></i>Direitos
+                                </div>
+                                <div class="card-body">
+                                    <ul class="mb-0 text-sm ps-3" id="rh-lista-direitos">
+                                        <li class="text-muted">Não informado.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-clipboard-check text-primary me-2" aria-hidden="true"></i>Deveres
+                                </div>
+                                <div class="card-body">
+                                    <ul class="mb-0 text-sm ps-3" id="rh-lista-deveres">
+                                        <li class="text-muted">Não informado.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-white py-2 fw-semibold">
+                                    <i class="fas fa-list-check text-primary me-2" aria-hidden="true"></i>Tarefas do Cargo
+                                </div>
+                                <div class="card-body">
+                                    <ul class="mb-0 text-sm ps-3" id="rh-lista-tarefas">
+                                        <li class="text-muted">Não informado.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-route text-primary me-2" aria-hidden="true"></i>Trilha de Carreira
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted text-xs">Onde você está hoje nesta trilha e até onde pode chegar — use como referência para o seu desenvolvimento.</p>
+                            <div id="rh-trilha-carreira" class="roadmap">
+                                <p class="text-muted text-center py-2">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <span><i class="fas fa-diagram-project text-primary me-2" aria-hidden="true"></i>Plano de Desenvolvimento Individual (PDI)</span>
+                            <span class="text-muted text-xs" id="rh-pdi-resumo">-</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted text-xs">Cada etapa concluída — confirmada pelo RH — avança o anel e a barra abaixo. Use como referência para negociar salário ou cargo no futuro.</p>
+                            <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                                <div class="progress-ring-wrap" aria-hidden="true">
+                                    <svg viewBox="0 0 100 100" width="88" height="88">
+                                        <circle class="progress-ring-trilha" cx="50" cy="50" r="42"></circle>
+                                        <circle class="progress-ring-valor" id="rh-pdi-anel" cx="50" cy="50" r="42"></circle>
+                                    </svg>
+                                    <span class="progress-ring-texto" id="rh-pdi-anel-texto">0%</span>
+                                </div>
+                                <div class="flex-grow-1" style="min-width: 200px;">
+                                    <div class="progress" style="height: 10px;" role="progressbar" aria-label="Progresso do PDI" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar bg-success" id="rh-pdi-progress-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="rh-pdi-timeline" class="roadmap">
+                                <p class="text-muted text-center py-2">Carregando...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-signature text-primary me-2" aria-hidden="true"></i>Assinatura Eletrônica
+                        </div>
+                        <div class="card-body">
+                            <div id="assinatura-ja-cadastrada" class="d-none">
+                                <p class="text-muted mb-2">Sua assinatura já está cadastrada — ela é reaplicada automaticamente sempre que você assinar uma folha de ponto ou um holerite na sua caixa de notificações. Não é possível recadastrar.</p>
+                                <img id="assinatura-preview-cadastrada" alt="Sua assinatura eletrônica cadastrada"
+                                    style="max-width: 320px; border: 1px solid #ced4da; border-radius: 4px; background: #fff;">
+                            </div>
+                            <div id="assinatura-cadastro" class="d-none">
+                                <p class="text-muted mb-2">Desenhe sua assinatura no quadro abaixo. Ela será cadastrada uma única vez e usada para assinar suas folhas de ponto e holerites.</p>
+                                <canvas id="assinatura-canvas" width="400" height="150"
+                                    style="border: 1px solid #ced4da; border-radius: 4px; background: #fff; touch-action: none; max-width: 100%; cursor: crosshair;"
+                                    aria-label="Área para desenhar sua assinatura"></canvas>
+                                <div class="mt-2 d-flex gap-2 flex-wrap">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-limpar-assinatura">
+                                        <i class="fas fa-eraser me-1" aria-hidden="true"></i>Limpar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-primary" id="btn-salvar-assinatura">
+                                        <i class="fas fa-check me-1" aria-hidden="true"></i>Salvar assinatura
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white py-2 fw-semibold">
+                            <i class="fas fa-gift text-primary me-2" aria-hidden="true"></i>Benefícios
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-3">
+                                <dt class="col-5 text-muted">Vale-transporte / combustível</dt>
+                                <dd class="col-7" id="rh-beneficio-vale">-</dd>
+                                <dt class="col-5 text-muted">Bônus por desempenho</dt>
+                                <dd class="col-7" id="rh-beneficio-bonus">-</dd>
+                                <dt class="col-5 text-muted">Observações</dt>
+                                <dd class="col-7" id="rh-beneficio-obs">-</dd>
+                            </dl>
+                            <hr>
+                            <p class="text-muted text-xs">Mesmos benefícios para todos os funcionários, com transparência total — para você saber exatamente o que tem direito.</p>
+                            <ul class="mb-0">
+                                <li>Vale-Refeição (VR): no mínimo R$ 45,00 por dia trabalhado.</li>
+                                <li>Vale-Alimentação (VA): no mínimo R$ 1.000,00 fixo por mês.</li>
+                                <li>Plano de saúde: subsidiado em 100% pela empresa — sem desconto no seu salário.</li>
+                                <li>Plano odontológico — sem desconto no seu salário.</li>
+                                <li>TotalPass — acesso a qualquer modalidade esportiva, sem desconto no seu salário.</li>
+                                <li>Vale-transporte ou vale-combustível, conforme sua necessidade de deslocamento.</li>
+                                <li>Bônus por desempenho, com metas saudáveis — sem cobrança que leve à exaustão.</li>
+                                <li>Folga remunerada no dia do seu aniversário.</li>
+                                <li>Recesso remunerado de uma semana no final do ano, com escala revezada entre os funcionários.</li>
+                                <li>Apoio à saúde mental: suporte com terapia e psicólogos, em parceria com a empresa.</li>
+                                <li>Desconto para compra de livros (parceria da empresa).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== NOTIFICAÇÕES ===================== -->
+            <div class="tab-pane fade" id="rh-tab-notif" role="tabpanel" aria-labelledby="rh-tab-notif-btn" tabindex="0">
+                <p class="text-muted">Documentos gerados pelo RH (folhas de ponto e holerites) aparecem aqui para você revisar e assinar.</p>
+
+                <div id="notif-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="notif-page-error-text">Não foi possível carregar suas notificações. Verifique sua conexão e tente novamente.</span>
+                    <button id="notif-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <div id="lista-notificacoes" class="d-flex flex-column gap-2" aria-live="polite">
+                    <p class="text-muted text-center py-4">Carregando...</p>
+                </div>
+            </div>
+
+            <!-- ===================== FOLHA DE PAGAMENTO ===================== -->
+            <div class="tab-pane fade" id="rh-tab-folha" role="tabpanel" aria-labelledby="rh-tab-folha-btn" tabindex="0">
+                <p class="text-muted">Histórico de holerites. RH e administradores também geram e marcam pagamentos (sempre simulados) aqui.</p>
+
+                <div id="folha-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="folha-page-error-text">Não foi possível carregar os holerites. Verifique sua conexão e tente novamente.</span>
+                    <button id="folha-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <!-- GERAR HOLERITE (só RH/admin) -->
+                <div class="card shadow-sm mb-3 d-none" id="folha-card-gerar-holerite">
+                    <div class="card-header bg-white py-2 fw-semibold">
+                        <i class="fas fa-file-invoice-dollar text-primary me-2" aria-hidden="true"></i>Gerar Holerite Mensal
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted text-xs">Calcula com base no ponto do mês (já encerrado) e envia para a caixa de notificações do funcionário assinar. Para gerar o espelho de ponto (pré-requisito de conferência), use a aba <strong>Ponto</strong>.</p>
+                        <form id="form-gerar-holerite" class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-5">
+                                <label for="select-holerite-funcionario" class="form-label fw-bold">Funcionário</label>
+                                <select id="select-holerite-funcionario" class="form-select" required></select>
+                            </div>
+                            <div class="col-6 col-sm-4">
+                                <label for="input-holerite-referencia" class="form-label fw-bold">Mês</label>
+                                <input type="month" id="input-holerite-referencia" class="form-control" required>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane me-1" aria-hidden="true"></i>Gerar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- HISTÓRICO -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white py-2 fw-semibold d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span><i class="fas fa-clock-rotate-left text-primary me-2" aria-hidden="true"></i>Histórico de Holerites</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-recarregar-holerites">
+                            <i class="fas fa-rotate-right me-1" aria-hidden="true"></i>Atualizar
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0" aria-label="Histórico de holerites">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Funcionário</th>
+                                        <th scope="col">Referência</th>
+                                        <th scope="col">Salário Líquido</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-holerites">
+                                    <tr><td colspan="5" class="text-center text-muted py-3">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== AUDITORIA (só RH/admin) ===================== -->
+            <div class="tab-pane fade" id="rh-tab-auditoria" role="tabpanel" aria-labelledby="rh-tab-auditoria-btn" tabindex="0">
+                <p class="text-muted">Trilha de quem fez o quê nos dados de RH — inclusive ações do próprio RH.</p>
+
+                <div id="auditoria-page-error" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+                    <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+                    <span id="auditoria-page-error-text">Não foi possível carregar a auditoria. Verifique sua conexão e tente novamente.</span>
+                    <button id="auditoria-btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
+                        <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+                    </button>
+                </div>
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <form id="form-filtro-auditoria" class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-4">
+                                <label for="input-auditoria-entidade" class="form-label fw-bold">Entidade</label>
+                                <input id="input-auditoria-entidade" class="form-control" placeholder="Ex: SolicitacaoFerias">
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label for="input-auditoria-entidade-id" class="form-label fw-bold">ID da entidade</label>
+                                <input id="input-auditoria-entidade-id" class="form-control">
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-1" aria-hidden="true"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white py-2 fw-semibold d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span><i class="fas fa-clipboard-list text-primary me-2" aria-hidden="true"></i>Registros</span>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="btn-exportar-auditoria"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-export me-1" aria-hidden="true"></i>Exportar
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="btn-exportar-auditoria">
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-exportar-auditoria-csv">
+                                        <i class="fas fa-file-csv me-2" aria-hidden="true"></i>Exportar CSV
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item" type="button" id="btn-exportar-auditoria-excel">
+                                        <i class="fas fa-file-excel me-2" aria-hidden="true"></i>Exportar Excel
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0" aria-label="Trilha de auditoria">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Data/Hora</th>
+                                        <th scope="col">Usuário</th>
+                                        <th scope="col">Papel</th>
+                                        <th scope="col">Ação</th>
+                                        <th scope="col">Entidade</th>
+                                        <th scope="col">Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-auditoria">
+                                    <tr><td colspan="6" class="text-center text-muted py-3">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="py-5 border-top mt-5">
+        <div class="container">
+            <div class="row g-4 align-items-center">
+                <div class="col-12 col-md-4 text-center text-md-start">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Contato &amp; Localização</h3>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-phone text-warning me-2" aria-hidden="true"></i>
+                        <a href="tel:11987654321" class="footer-muted text-decoration-none">(11) 98765-4321</a>
+                    </p>
+                    <p class="mb-2 text-sm">
+                        <i class="fas fa-envelope text-warning me-2" aria-hidden="true"></i>
+                        <a href="mailto:contato@parkgestao.com.br"
+                            class="footer-muted text-decoration-none">contato@parkgestao.com.br</a>
+                    </p>
+                    <p class="mb-0 text-sm footer-muted">
+                        <i class="fas fa-map-marker-alt text-warning me-2" aria-hidden="true"></i>
+                        Av. Paulista, 1000 — São Paulo, SP
+                    </p>
+                </div>
+                <div class="col-12 col-md-4 text-center">
+                    <a class="d-inline-flex align-items-center gap-2 fw-bold text-white text-decoration-none fs-4 mb-2"
+                        href="../index.html">
+                        <i class="fas fa-parking text-warning" aria-hidden="true"></i>
+                        <span>ParkGestão</span>
+                    </a>
+                    <p class="mb-1 text-xs footer-muted">
+                        &copy; <span id="footer-year">2026</span> ParkGestão — Desenvolvido por Bruna Coelho.
+                    </p>
+                    <p class="mb-0 text-xs footer-muted">
+                        <i class="fas fa-shield-alt text-success me-1" aria-hidden="true"></i>
+                        WCAG 2.1 AAA &amp; LGPD compliant.
+                    </p>
+                    <p class="mb-0 mt-1 text-xs footer-muted d-flex align-items-center justify-content-center gap-1">
+                        <span id="api-status-dot-footer" class="js-api-status-dot rounded-circle bg-secondary"
+                            style="width:8px;height:8px;display:inline-block;" aria-hidden="true"></span>
+                        <span id="api-status-text-footer" class="js-api-status-text">Verificando servidor…</span>
+                    </p>
+                </div>
+                <div class="col-12 col-md-4 text-center text-md-end">
+                    <h3 class="h6 text-white text-uppercase fw-bold mb-3">Acesso Rápido</h3>
+                    <div class="d-flex flex-column gap-2 align-items-center align-items-md-end">
+                        <a href="tickets.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-ticket-alt me-2 text-warning" aria-hidden="true"></i>Emitir Ticket
+                        </a>
+                        <a href="mensalistas.html" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-id-card me-2 text-warning" aria-hidden="true"></i>Mensalistas
+                        </a>
+                        <a href="sobre.html#privacidade" class="btn btn-sm btn-outline-light w-75 w-md-auto text-start">
+                            <i class="fas fa-user-shield me-2 text-warning" aria-hidden="true"></i>Política de
+                            Privacidade
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    </div>
+
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script defer src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+
+    <script defer src="../assets/js/modules/accessibility.js"></script>
+    <script defer src="../assets/js/modules/lgpd.js"></script>
+    <script defer src="../assets/js/models/api.js"></script>
+    <script defer src="../assets/js/modules/endereco.js"></script>
+    <script defer src="../assets/js/modules/auth.js"></script>
+    <script defer src="../assets/js/modules/telemetria.js"></script>
+    <script defer src="../assets/js/modules/toast.js"></script>
+    <script defer src="../assets/js/modules/exportar-tabela.js"></script>
+    <script defer src="../assets/js/modules/gsap-init.js"></script>
+    <script defer src="../assets/js/modules/ferias-equipe-mock.js"></script>
+    <script defer src="../assets/js/modules/ponto-mock.js"></script>
+    <script defer src="../assets/js/main.js"></script>
+    <script defer src="../assets/js/controllers/rh.js"></script>
+
+    <script>
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+        window.addEventListener('load', function () {
+            if (window.VLibras) {
+                new window.VLibras.Widget('https://vlibras.gov.br/app');
+            }
+        });
+    </script>
+</body>
+
+</html>

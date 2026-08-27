@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '../../generated/prisma'
+import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { mascararCpf } from '../common/utils/mascarar-cpf.util'
 import { ehConflitoUnico, ehViolacaoRestricaoFk } from '../common/utils/prisma-erro.util'
 import { PrismaService } from '../prisma/prisma.service'
@@ -17,8 +18,13 @@ export class MensalistasService {
     return mensalistas.map(m => ({ ...m, cpf: mascararCpf(m.cpf) }))
   }
 
-  buscarPorId (id: string) {
-    return this.prisma.mensalista.findUnique({ where: { id } })
+  // CPF completo só vai para admin — funcionário comum recebe o mesmo dado
+  // mascarado da listagem, mesmo abrindo o registro individual para edição.
+  async buscarPorId (id: string, solicitante: UsuarioAutenticado) {
+    const mensalista = await this.prisma.mensalista.findUnique({ where: { id } })
+    if (!mensalista) return null
+    if (solicitante.role === 'admin') return mensalista
+    return { ...mensalista, cpf: mascararCpf(mensalista.cpf) }
   }
 
   async existeCpfDuplicado (cpf: string, excluirId?: string) {
@@ -60,7 +66,7 @@ export class MensalistasService {
     }
   }
 
-  async atualizar (id: string, dto: AtualizarMensalistaDto) {
+  async atualizar (id: string, dto: AtualizarMensalistaDto, solicitante: UsuarioAutenticado) {
     const atual = await this.prisma.mensalista.findUnique({ where: { id } })
     if (!atual) {
       throw new NotFoundException('Mensalista não encontrado.')
@@ -68,11 +74,19 @@ export class MensalistasService {
 
     const data: Prisma.MensalistaUpdateInput = {}
     if (dto.nome !== undefined) data.nome = dto.nome
-    if (dto.cpf !== undefined) data.cpf = dto.cpf
+    // CPF só é alterável por admin — o front nem envia o campo para quem não
+    // é admin, mas o backend ignora silenciosamente qualquer tentativa (a
+    // mesma defesa em profundidade usada em UsuariosService.atualizarPerfil
+    // para o campo "role").
+    if (dto.cpf !== undefined && solicitante.role === 'admin') data.cpf = dto.cpf
     if (dto.placa !== undefined) data.placa = dto.placa
     if (dto.telefone !== undefined) data.telefone = dto.telefone
     if (dto.email !== undefined) data.email = dto.email
-    if (dto.valorMensalidade !== undefined) data.valorMensalidade = dto.valorMensalidade
+    // Valor da mensalidade também só é alterável por admin — se um
+    // funcionário perceber uma cobrança errada, o caminho é avisar um
+    // admin para ele corrigir, não editar direto (mesma defesa em
+    // profundidade do CPF, acima).
+    if (dto.valorMensalidade !== undefined && solicitante.role === 'admin') data.valorMensalidade = dto.valorMensalidade
     if (dto.categoriaPlano !== undefined) data.categoriaPlano = dto.categoriaPlano
     if (dto.ativo !== undefined) data.ativo = dto.ativo
 

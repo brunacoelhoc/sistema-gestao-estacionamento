@@ -77,6 +77,9 @@ function criarService (seed?: Parameters<typeof criarPrismaFake>[0]) {
   return { service, prismaFake }
 }
 
+const ADMIN = { id: 'u-admin', role: 'admin', nome: 'Admin', cpfPendente: false }
+const FUNCIONARIO = { id: 'u-func', role: 'funcionario', nome: 'Funcionário', cpfPendente: false }
+
 describe('MensalistasService', () => {
   describe('listarTodos', () => {
     it('mascara o CPF na listagem', async () => {
@@ -139,14 +142,14 @@ describe('MensalistasService', () => {
   describe('atualizar', () => {
     it('recusa quando o mensalista não existe', async () => {
       const { service } = criarService({ mensalistas: [] })
-      await expect(service.atualizar('inexistente', { nome: 'X' } as any)).rejects.toBeInstanceOf(NotFoundException)
+      await expect(service.atualizar('inexistente', { nome: 'X' } as any, ADMIN)).rejects.toBeInstanceOf(NotFoundException)
     })
 
     it('atualiza só os campos enviados', async () => {
       const { service, prismaFake } = criarService({
         mensalistas: [{ id: 'm1', nome: 'Antigo', telefone: '111', ativo: true }]
       })
-      await service.atualizar('m1', { nome: 'Novo Nome' } as any)
+      await service.atualizar('m1', { nome: 'Novo Nome' } as any, ADMIN)
       expect(prismaFake.mensalistas[0].nome).toBe('Novo Nome')
       expect(prismaFake.mensalistas[0].telefone).toBe('111') // não mexeu
     })
@@ -155,7 +158,61 @@ describe('MensalistasService', () => {
       const { service } = criarService({
         mensalistas: [{ id: 'm1', cpf: '111', placa: 'AAA0000' }, { id: 'm2', cpf: '222', placa: 'BBB1111' }]
       })
-      await expect(service.atualizar('m2', { cpf: '111' } as any)).rejects.toBeInstanceOf(ConflictException)
+      await expect(service.atualizar('m2', { cpf: '111' } as any, ADMIN)).rejects.toBeInstanceOf(ConflictException)
+    })
+
+    it('admin pode alterar o CPF', async () => {
+      const { service, prismaFake } = criarService({
+        mensalistas: [{ id: 'm1', cpf: '111', nome: 'Fulano' }]
+      })
+      await service.atualizar('m1', { cpf: '999' } as any, ADMIN)
+      expect(prismaFake.mensalistas[0].cpf).toBe('999')
+    })
+
+    it('não-admin não consegue alterar o CPF (ignorado silenciosamente)', async () => {
+      const { service, prismaFake } = criarService({
+        mensalistas: [{ id: 'm1', cpf: '111', nome: 'Fulano' }]
+      })
+      await service.atualizar('m1', { cpf: '999', nome: 'Novo Nome' } as any, FUNCIONARIO)
+      expect(prismaFake.mensalistas[0].cpf).toBe('111') // não mudou
+      expect(prismaFake.mensalistas[0].nome).toBe('Novo Nome') // resto atualiza normal
+    })
+
+    it('admin pode alterar o valor da mensalidade', async () => {
+      const { service, prismaFake } = criarService({
+        mensalistas: [{ id: 'm1', valorMensalidade: 180 }]
+      })
+      await service.atualizar('m1', { valorMensalidade: 250 } as any, ADMIN)
+      expect(prismaFake.mensalistas[0].valorMensalidade).toBe(250)
+    })
+
+    it('não-admin não consegue alterar o valor da mensalidade (ignorado silenciosamente)', async () => {
+      const { service, prismaFake } = criarService({
+        mensalistas: [{ id: 'm1', valorMensalidade: 180, nome: 'Fulano' }]
+      })
+      await service.atualizar('m1', { valorMensalidade: 250, nome: 'Novo Nome' } as any, FUNCIONARIO)
+      expect(prismaFake.mensalistas[0].valorMensalidade).toBe(180) // não mudou
+      expect(prismaFake.mensalistas[0].nome).toBe('Novo Nome') // resto atualiza normal
+    })
+  })
+
+  describe('buscarPorId', () => {
+    it('devolve o CPF completo para admin', async () => {
+      const { service } = criarService({ mensalistas: [{ id: 'm1', cpf: '11122233344' }] })
+      const mensalista: any = await service.buscarPorId('m1', ADMIN)
+      expect(mensalista.cpf).toBe('11122233344')
+    })
+
+    it('mascara o CPF para não-admin', async () => {
+      const { service } = criarService({ mensalistas: [{ id: 'm1', cpf: '11122233344' }] })
+      const mensalista: any = await service.buscarPorId('m1', FUNCIONARIO)
+      expect(mensalista.cpf).not.toBe('11122233344')
+      expect(mensalista.cpf).toContain('**')
+    })
+
+    it('retorna null quando não encontra, sem quebrar por causa do role', async () => {
+      const { service } = criarService({ mensalistas: [] })
+      expect(await service.buscarPorId('inexistente', FUNCIONARIO)).toBeNull()
     })
   })
 

@@ -562,3 +562,393 @@ body.high-contrast {
     transform: none !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   11. CALENDÁRIO DE FÉRIAS DA EQUIPE (aba "Minhas Férias" do RH)
+   -------------------------------------------------------------------------- */
+.ferias-calendario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.fce-mes {
+  background: $color-surface-light;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: $border-radius-sm;
+  padding: 0.6rem;
+  box-shadow: $shadow-sm;
+}
+
+.fce-mes-titulo {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: $color-text-muted-aaa;
+  margin-bottom: 0.35rem;
+  text-align: center;
+}
+
+.fce-semana-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 0.62rem;
+  color: $color-text-muted;
+  text-align: center;
+  margin-bottom: 0.15rem;
+  font-weight: 600;
+}
+
+.fce-dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+// Cada dia é um <button> — a grade inteira do ano fica navegável e
+// selecionável por teclado sem JS extra além do listener de clique.
+.fce-dia {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: $border-radius-sm;
+  font-size: 0.68rem;
+  color: $color-text-muted-aaa;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color $transition-fast, transform $transition-fast;
+
+  &:hover:not(.fce-vazio):not(.fce-bloqueado) {
+    background: rgba(0, 0, 0, 0.06);
+    transform: scale(1.08);
+  }
+}
+
+.fce-vazio {
+  cursor: default;
+  pointer-events: none;
+}
+
+.fce-dia-numero {
+  line-height: 1.1;
+}
+
+.fce-dia-dots {
+  display: flex;
+  gap: 1px;
+  justify-content: center;
+  min-height: 5px;
+  margin-top: 1px;
+}
+
+.fce-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.fce-passado {
+  opacity: 0.45;
+}
+
+.fce-bloqueado {
+  cursor: not-allowed;
+
+  &:not(.fce-passado) {
+    opacity: 0.55;
+  }
+}
+
+.fce-hoje {
+  box-shadow: inset 0 0 0 2px $color-focus-outline;
+
+  .fce-dia-numero {
+    color: $color-focus-outline;
+    font-weight: 800;
+  }
+}
+
+.fce-minhas-aprovada {
+  background: $color-sucesso-text;
+  color: #ffffff;
+
+  &:hover {
+    background: #053f2f; // $color-sucesso-text um pouco mais escuro
+  }
+}
+
+.fce-minhas-pendente {
+  background: repeating-linear-gradient(
+    45deg,
+    $color-pendente,
+    $color-pendente 4px,
+    #ffe69c 4px,
+    #ffe69c 8px
+  );
+  color: $color-pendente-text;
+  font-weight: 700;
+}
+
+.fce-selecionado-inicio,
+.fce-selecionado-fim {
+  background: $color-focus-outline;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.fce-selecionado-meio {
+  background: rgba(37, 99, 235, 0.22); // $color-focus-outline translúcido
+}
+
+.fce-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: $color-text-muted-aaa;
+}
+
+.fce-legenda-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  flex: none;
+}
+
+.ferias-equipe-lista {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+// A cor identificadora de cada colega vem via --fce-cor (setada inline pelo
+// JS a partir do departamento), a mesma técnica usada nos KPIs coloridos.
+.ferias-equipe-item {
+  border-left: 4px solid var(--fce-cor, #{$color-text-muted});
+  background: $color-bg-light;
+  border-radius: $border-radius-sm;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.4rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   12. TRILHA DE PROGRESSO (ROADMAP) — Trilha de Carreira & PDI (aba RH)
+   Nós conectados por uma linha de progresso: vertical em telas estreitas,
+   horizontal a partir de `lg` (ver assets/js/controllers/rh.js, que monta as
+   classes .is-concluido/.is-atual/.is-futuro por item). O conector é um
+   pseudo-elemento do PRÓPRIO marcador (não do node) — assim ele fica sempre
+   ancorado ao centro do círculo, independente da altura do texto ao lado.
+   -------------------------------------------------------------------------- */
+$roadmap-marker-size: 2.25rem;
+
+.roadmap {
+  display: flex;
+  flex-direction: column;
+}
+
+.roadmap-node {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding-bottom: 1.5rem;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.roadmap-marker {
+  position: relative;
+  flex: 0 0 $roadmap-marker-size;
+  width: $roadmap-marker-size;
+  height: $roadmap-marker-size;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  z-index: 1;
+  background: $color-surface-light;
+  border: 2px solid #cbd5e1;
+  color: #94a3b8;
+  transition: background-color $transition-normal, border-color $transition-normal, color $transition-normal;
+
+  .roadmap-node:not(:last-child) &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 3px;
+    height: 1.5rem;
+    background: #cbd5e1;
+    transform: translateX(-50%);
+    transition: background-color $transition-normal;
+  }
+}
+
+.roadmap-node.is-concluido .roadmap-marker {
+  background: $color-sucesso-text;
+  border-color: $color-sucesso-text;
+  color: #ffffff;
+
+  &::after {
+    background: $color-sucesso-text;
+  }
+}
+
+.roadmap-node.is-atual .roadmap-marker {
+  background: $color-focus-outline;
+  border-color: $color-focus-outline;
+  color: #ffffff;
+  animation: roadmap-pulso 2.2s ease-out infinite;
+}
+
+@keyframes roadmap-pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-node.is-atual .roadmap-marker {
+    animation: none;
+  }
+}
+
+.roadmap-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: 0.15rem;
+}
+
+.roadmap-node.is-futuro .roadmap-label {
+  opacity: 0.75;
+}
+
+// A partir de `lg`, a trilha vira um roadmap horizontal com rolagem lateral
+// se não couber tudo — cada nó reserva uma largura mínima pra caber
+// título + descrição sem espremer.
+@media (min-width: 992px) {
+  .roadmap {
+    flex-direction: row;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+
+  .roadmap-node {
+    flex: 1 0 200px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 0;
+    padding-right: 1.75rem;
+
+    &:last-child {
+      padding-right: 0;
+    }
+  }
+
+  .roadmap-marker {
+    .roadmap-node:not(:last-child) &::after {
+      top: 50%;
+      left: 100%;
+      width: 1.75rem;
+      height: 3px;
+      transform: translateY(-50%);
+    }
+  }
+
+  .roadmap-label {
+    margin-top: 0.6rem;
+    padding-top: 0;
+  }
+}
+
+body.dark-mode {
+  .roadmap-marker {
+    background: $color-surface-dark;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: $color-text-muted-dark;
+
+    .roadmap-node:not(:last-child) &::after {
+      background: rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  .roadmap-node.is-concluido .roadmap-marker,
+  .roadmap-node.is-atual .roadmap-marker {
+    color: #ffffff;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   13. ANEL DE PROGRESSO (SVG donut) — resumo do PDI ao lado da barra linear.
+   O valor (stroke-dashoffset) é calculado e animado via JS — ver
+   animarAnelProgresso em assets/js/modules/gsap-init.js.
+   -------------------------------------------------------------------------- */
+.progress-ring-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+}
+
+.progress-ring-trilha {
+  fill: none;
+  stroke: #e2e8f0;
+  stroke-width: 8;
+}
+
+.progress-ring-valor {
+  fill: none;
+  stroke: $color-focus-outline;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  // Perímetro de um círculo r=42 (2πr ≈ 263.9) todo "vazio" por padrão —
+  // evita o flash de anel cheio antes de animarAnelProgresso calcular o
+  // dasharray real assim que os dados chegam (ver gsap-init.js).
+  stroke-dasharray: 264;
+  stroke-dashoffset: 264;
+}
+
+.progress-ring-texto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: $color-text-light;
+}
+
+body.dark-mode {
+  .progress-ring-trilha {
+    stroke: rgba(255, 255, 255, 0.12);
+  }
+
+  .progress-ring-texto {
+    color: $color-text-dark;
+  }
+}

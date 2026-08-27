@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://vlibras.gov.br; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com https://vlibras.gov.br; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <!-- Guarda de rota: exige sessão E papel "admin" — Faturamento expõe
          dados financeiros de mensalidades, então não é uma tela de
          funcionário comum. Sem sessão -> login; logado mas não-admin ->
@@ -17,7 +17,7 @@
                     return;
                 }
                 var sessao = JSON.parse(sessaoBruta);
-                if (!sessao || sessao.role !== 'admin') {
+                if (!sessao || (sessao.role !== 'admin' && sessao.role !== 'financeiro')) {
                     window.location.replace('../index.html');
                     return;
                 }
@@ -177,6 +177,8 @@
                                     class="fas fa-file-invoice-dollar me-1" aria-hidden="true"></i> Faturamento</a></li>
                         <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="rh.html"><i class="fas fa-users me-1"
+                                    aria-hidden="true"></i> RH</a></li>
                         <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
                                     aria-hidden="true"></i> Sobre</a></li>
                     </ul>

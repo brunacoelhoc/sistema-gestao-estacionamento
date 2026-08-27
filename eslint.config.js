@@ -53,6 +53,8 @@ module.exports = [
         abrirAnexoComprovante: 'readonly',
         abrirModalTrocaSenhaObrigatoria: 'readonly',
         animarContadorGsap: 'readonly',
+        animarAnelProgresso: 'readonly',
+        animarEntradaEmCascata: 'readonly',
         avisarExportacaoVazia: 'readonly',
         avaliarForcaSenha: 'readonly',
         lerComprovanteComoDataURI: 'readonly',
@@ -70,6 +72,7 @@ module.exports = [
         mostrarFraseMotivacionalSeAplicavel: 'readonly',
         preverCicloMensalista: 'readonly',
         formatarDataCicloMensalista: 'readonly',
+        toastInfo: 'readonly',
         toastSucesso: 'readonly',
         validarEstruturaCpf: 'readonly',
         validarPlaca: 'readonly'

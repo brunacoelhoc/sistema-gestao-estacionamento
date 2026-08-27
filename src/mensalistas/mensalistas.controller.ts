@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { JwtAuthGuard, type UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { ProfileCompleteGuard } from '../common/guards/profile-complete.guard'
 import { AtualizarMensalistaDto } from './dto/atualizar-mensalista.dto'
 import { CriarMensalistaDto } from './dto/criar-mensalista.dto'
@@ -23,8 +24,8 @@ export class MensalistasController {
   }
 
   @Get(':id')
-  buscarPorId (@Param('id') id: string) {
-    return this.mensalistasService.buscarPorId(id)
+  buscarPorId (@Param('id') id: string, @CurrentUser() usuario: UsuarioAutenticado) {
+    return this.mensalistasService.buscarPorId(id, usuario)
   }
 
   @Post()
@@ -34,8 +35,8 @@ export class MensalistasController {
   }
 
   @Patch(':id')
-  atualizar (@Param('id') id: string, @Body() dto: AtualizarMensalistaDto) {
-    return this.mensalistasService.atualizar(id, dto)
+  atualizar (@Param('id') id: string, @Body() dto: AtualizarMensalistaDto, @CurrentUser() usuario: UsuarioAutenticado) {
+    return this.mensalistasService.atualizar(id, dto, usuario)
   }
 
   @Delete(':id')

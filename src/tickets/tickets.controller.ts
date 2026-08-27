@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common'
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { JwtAuthGuard, type UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { ProfileCompleteGuard } from '../common/guards/profile-complete.guard'
 import { AbrirTicketDto } from './dto/abrir-ticket.dto'
 import { FecharTicketDto } from './dto/fechar-ticket.dto'
@@ -39,8 +40,12 @@ export class TicketsController {
   }
 
   @Post(':id/fechar')
-  fechar (@Param('id') id: string, @Body() dto: FecharTicketDto) {
-    return this.ticketsService.fechar(id, dto)
+  fechar (
+    @Param('id') id: string,
+    @Body() dto: FecharTicketDto,
+    @CurrentUser() solicitante: UsuarioAutenticado
+  ) {
+    return this.ticketsService.fechar(id, dto, solicitante.id)
   }
 
   @Post(':id/comprovante-email')

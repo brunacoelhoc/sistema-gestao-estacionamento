@@ -262,7 +262,10 @@ function renderizarTabelaMensalistas (lista) {
 
 // Verifica duplicidade de CPF (checado no servidor — a listagem só tem o
 // CPF mascarado) e de Placa (não sensível, segue comparando local).
-async function verificarDuplicidade (cpf, placa, idAtual) {
+// `verificarCpf` vem false quando o campo está bloqueado (edição por
+// não-admin): o valor em tela é mascarado, então checar duplicidade nele
+// não faz sentido.
+async function verificarDuplicidade (cpf, placa, idAtual, verificarCpf = true) {
   const placaClean = (placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 
   const placaDuplicada = mensalistasCache.some(
@@ -271,6 +274,8 @@ async function verificarDuplicidade (cpf, placa, idAtual) {
       (m.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '') === placaClean
   )
   if (placaDuplicada) return 'Esta placa já está cadastrada para outro mensalista.'
+
+  if (!verificarCpf) return null
 
   const cpfDuplicado = await ApiService.verificarCpfMensalistaDuplicado(cpf, idAtual)
   if (cpfDuplicado) return 'Este CPF já está cadastrado para outro mensalista.'
@@ -284,16 +289,25 @@ async function salvarMensalista (e) {
 
   const id = document.getElementById('mensalista-id').value || null
   const nome = document.getElementById('mensalista-nome').value.trim()
-  const cpf = document.getElementById('mensalista-cpf').value.trim()
+  const cpfInput = document.getElementById('mensalista-cpf')
+  const cpf = cpfInput.value.trim()
+  // Bloqueado = editando um mensalista existente sem ser admin — o input
+  // fica desabilitado e mostra o CPF mascarado (ver editarMensalista), então
+  // nem validação de formato nem checagem de duplicidade fazem sentido, e o
+  // valor não é enviado ao backend (que também ignoraria por segurança).
+  const cpfBloqueado = cpfInput.disabled
   const telefone = document.getElementById('mensalista-telefone').value.trim()
   const email = document.getElementById('mensalista-email').value.trim()
   const placa = document
     .getElementById('mensalista-placa')
     .value.trim()
     .toUpperCase()
-  const valorMensalidade = Number(
-    document.getElementById('mensalista-valor-mensalidade').value
-  )
+  const valorInput = document.getElementById('mensalista-valor-mensalidade')
+  const valorMensalidade = Number(valorInput.value)
+  // Mesma lógica do CPF: valor da mensalidade de um mensalista já
+  // cadastrado só é alterável por admin — funcionário que perceber uma
+  // cobrança errada precisa avisar um admin para corrigir.
+  const valorBloqueado = valorInput.disabled
   const categoriaPlano = document
     .getElementById('mensalista-categoria-plano')
     .value.trim()
@@ -314,8 +328,8 @@ async function salvarMensalista (e) {
     document.getElementById('mensalista-nome')?.classList.remove('is-invalid')
   }
 
-  // 2. Validação de CPF
-  if (!validarEstruturaCpf(cpf)) {
+  // 2. Validação de CPF (pulada quando o campo está bloqueado — não-admin editando)
+  if (!cpfBloqueado && !validarEstruturaCpf(cpf)) {
     Swal.fire({
       icon: 'warning',
       title: 'CPF Inválido',
@@ -375,7 +389,7 @@ async function salvarMensalista (e) {
   }
 
   // 6. Validação de Duplicidade
-  const erroDuplicidade = await verificarDuplicidade(cpf, placa, id)
+  const erroDuplicidade = await verificarDuplicidade(cpf, placa, id, !cpfBloqueado)
   if (erroDuplicidade) {
     Swal.fire({
       icon: 'warning',
@@ -392,11 +406,14 @@ async function salvarMensalista (e) {
     if (id) {
       await ApiService.updateMensalista(id, {
         nome,
-        cpf,
+        // Não manda cpf quando o campo está bloqueado — evita sobrescrever
+        // o CPF real no banco com o valor mascarado exibido em tela.
+        ...(cpfBloqueado ? {} : { cpf }),
         telefone,
         email,
         placa,
-        valorMensalidade,
+        // Idem: não manda valorMensalidade quando o campo está bloqueado.
+        ...(valorBloqueado ? {} : { valorMensalidade }),
         categoriaPlano
       })
       toastSucesso('Mensalista atualizado com sucesso.')
@@ -433,18 +450,44 @@ async function editarMensalista (id) {
   const mCache = mensalistasCache.find(item => String(item.id) === String(id))
   if (!mCache) return
 
-  // A listagem só traz o CPF mascarado — busca o registro completo pra
-  // preencher o campo de edição com o valor real.
+  // A listagem já traz o CPF mascarado; buscarPorId também mascara para
+  // quem não é admin (só admin recebe o CPF completo — ver
+  // MensalistasService.buscarPorId no backend).
   const m = (await ApiService.getMensalistaPorId(id)) || mCache
 
   document.getElementById('mensalista-id').value = m.id
   document.getElementById('mensalista-nome').value = m.nome
-  document.getElementById('mensalista-cpf').value = m.cpf
   document.getElementById('mensalista-telefone').value = m.telefone || ''
+
+  const cpfInput = document.getElementById('mensalista-cpf')
+  const cpfHelp = document.getElementById('mensalista-cpf-help')
+  const podeEditarCpf = AuthService.ehAdmin()
+  cpfInput.value = m.cpf
+  cpfInput.disabled = !podeEditarCpf
+  cpfInput.required = podeEditarCpf
+  if (cpfHelp) {
+    cpfHelp.textContent = podeEditarCpf
+      ? 'Apenas a estrutura de 11 números é validada (sem verificação de dígito verificador).'
+      : 'Apenas administradores podem visualizar e alterar o CPF.'
+  }
+
   document.getElementById('mensalista-email').value = m.email || ''
   document.getElementById('mensalista-placa').value = m.placa
-  document.getElementById('mensalista-valor-mensalidade').value =
-    m.valorMensalidade || ''
+
+  // Idem para o valor da mensalidade: só admin corrige, evitando que uma
+  // cobrança errada seja "consertada" sem revisão — funcionário que notar
+  // o erro precisa avisar um admin.
+  const valorInput = document.getElementById('mensalista-valor-mensalidade')
+  const valorHelp = document.getElementById('mensalista-valor-mensalidade-help')
+  const podeEditarValor = AuthService.ehAdmin()
+  valorInput.value = m.valorMensalidade || ''
+  valorInput.disabled = !podeEditarValor
+  if (valorHelp) {
+    valorHelp.textContent = podeEditarValor
+      ? 'Cobrado uma única vez a cada 30 dias — na primeira vez que o mensalista estacionar sem ter um ciclo vigente. Os demais tickets dentro desses 30 dias saem isentos automaticamente.'
+      : 'Apenas administradores podem alterar o valor da mensalidade. Se a cobrança estiver errada, avise um administrador para corrigir.'
+  }
+
   document.getElementById('mensalista-categoria-plano').value =
     m.categoriaPlano || 'Mensal Integral'
 
@@ -644,4 +687,26 @@ function resetFormulario () {
   document.getElementById('mensalista-id').value = ''
   document.getElementById('modalMensalistaLabel').innerHTML =
     '<i class="fas fa-user-plus text-primary me-2" aria-hidden="true"></i>Cadastrar Mensalista'
+
+  // Cadastro de mensalista novo sempre pede o CPF, mesmo para não-admin —
+  // o bloqueio é só para não deixar EDITAR o CPF de um cadastro existente.
+  const cpfInput = document.getElementById('mensalista-cpf')
+  const cpfHelp = document.getElementById('mensalista-cpf-help')
+  if (cpfInput) {
+    cpfInput.disabled = false
+    cpfInput.required = true
+  }
+  if (cpfHelp) {
+    cpfHelp.textContent = 'Apenas a estrutura de 11 números é validada (sem verificação de dígito verificador).'
+  }
+
+  // Idem para o valor da mensalidade: cadastro novo define o valor
+  // livremente, a restrição é só sobre alterar o valor de um mensalista
+  // já existente.
+  const valorInput = document.getElementById('mensalista-valor-mensalidade')
+  const valorHelp = document.getElementById('mensalista-valor-mensalidade-help')
+  if (valorInput) valorInput.disabled = false
+  if (valorHelp) {
+    valorHelp.textContent = 'Cobrado uma única vez a cada 30 dias — na primeira vez que o mensalista estacionar sem ter um ciclo vigente. Os demais tickets dentro desses 30 dias saem isentos automaticamente.'
+  }
 }

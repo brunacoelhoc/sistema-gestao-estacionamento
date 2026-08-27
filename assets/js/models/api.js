@@ -103,7 +103,12 @@ class ApiService {
         return true
       }
 
-      return await response.json()
+      // Um handler do Nest que devolve `null` (ex.: "ainda não tem perfil de
+      // RH cadastrado") manda um corpo vazio (0 bytes), não a string "null"
+      // — response.json() direto quebra nisso com "Unexpected end of JSON
+      // input". Lê como texto primeiro e só faz parse se não estiver vazio.
+      const texto = await response.text()
+      return texto ? JSON.parse(texto) : null
     } catch (error) {
       console.error(`[API Error] Falha em /${endpoint}:`, error)
       throw error
@@ -307,6 +312,31 @@ class ApiService {
     })
   }
 
+  // --- REQUISIÇÕES CAIXA DIÁRIO ---
+  // Um registro por dia: aberto com o valor em espécie contado na hora (ver
+  // CaixaService.abrir), fechado comparando o valor contado contra o
+  // esperado (abertura + tickets pagos em dinheiro no dia — ver
+  // CaixaService.fechar). Backend também recusa registrar ticket sem o
+  // caixa do dia aberto (ver TicketsService.abrir), então esta tela sempre
+  // confere o status antes de deixar abrir o modal de novo ticket.
+  static async getCaixaHoje () {
+    return await this.request('caixa/hoje')
+  }
+
+  static async abrirCaixa (valorAbertura) {
+    return await this.request('caixa/abrir', {
+      method: 'POST',
+      body: JSON.stringify({ valorAbertura: Number(valorAbertura) })
+    })
+  }
+
+  static async fecharCaixa (id, { valorFechamento, observacoes = '' } = {}) {
+    return await this.request(`caixa/${id}/fechar`, {
+      method: 'POST',
+      body: JSON.stringify({ valorFechamento: Number(valorFechamento), observacoes: this.sanitizeText(observacoes) })
+    })
+  }
+
   // --- REQUISICÕES TICKETS & REGRAS DE NEGÓCIO ---
   /**
    * Sem `params`, devolve a lista completa (histórico inteiro — usado só
@@ -489,7 +519,7 @@ class ApiService {
       telefone: this.sanitizeText(data.telefone || ''),
       endereco: this.sanitizeText(data.endereco || ''),
       dataNascimento: data.dataNascimento || '',
-      role: data.role === 'admin' ? 'admin' : 'funcionario'
+      role: ['admin', 'rh', 'gestor'].includes(data.role) ? data.role : 'funcionario'
     }
 
     return await this.request('usuarios', {
@@ -509,13 +539,354 @@ class ApiService {
     if (data.endereco !== undefined) { payload.endereco = this.sanitizeText(data.endereco) }
     if (data.dataNascimento !== undefined) { payload.dataNascimento = data.dataNascimento }
     if (data.avatar !== undefined) payload.avatar = data.avatar
-    if (data.role !== undefined) { payload.role = data.role === 'admin' ? 'admin' : 'funcionario' }
+    if (data.role !== undefined) { payload.role = ['admin', 'rh', 'gestor'].includes(data.role) ? data.role : 'funcionario' }
     if (data.ativo !== undefined) payload.ativo = Boolean(data.ativo)
 
     return await this.request(`usuarios/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     })
+  }
+
+  // --- REQUISIÇÕES DE RH (perfil de RH do funcionário) ---
+
+  static async getMeuPerfilRh () {
+    return await this.request('rh-perfil/me')
+  }
+
+  static async getPerfilRh (usuarioId) {
+    return await this.request(`rh-perfil/${usuarioId}`)
+  }
+
+  static async getCargosRh () {
+    return await this.request('rh-perfil/cargos')
+  }
+
+  static async getOrganograma () {
+    return await this.request('rh-perfil/organograma')
+  }
+
+  // --- REQUISIÇÃO DE DESEMPENHO (gestor/rh/admin) ---
+
+  static async getDesempenho (referencia) {
+    const params = referencia ? `?referencia=${encodeURIComponent(referencia)}` : ''
+    return await this.request(`desempenho${params}`)
+  }
+
+  // --- REQUISIÇÕES DE PONTO ---
+
+  static async registrarEntradaPonto () {
+    return await this.request('ponto/entrada', { method: 'POST' })
+  }
+
+  static async registrarSaidaPonto () {
+    return await this.request('ponto/saida', { method: 'POST' })
+  }
+
+  static async getMeuPontoDoMes (referencia) {
+    return await this.request(`ponto?referencia=${encodeURIComponent(referencia)}`)
+  }
+
+  static async getResumoPonto (referencia, usuarioId) {
+    const params = new URLSearchParams({ referencia })
+    if (usuarioId) params.set('usuarioId', usuarioId)
+    return await this.request(`ponto/resumo?${params.toString()}`)
+  }
+
+  static async solicitarTrabalhoExtra (data, motivo) {
+    return await this.request('ponto/trabalho-extra', {
+      method: 'POST',
+      body: JSON.stringify({ data, motivo: this.sanitizeText(motivo) })
+    })
+  }
+
+  static async getSolicitacoesTrabalhoExtra (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`ponto/trabalho-extra${params}`)
+  }
+
+  static async decidirTrabalhoExtra (id, status) {
+    return await this.request(`ponto/trabalho-extra/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    })
+  }
+
+  static async criarJustificativaPonto (usuarioId, data, tipo, descricao) {
+    return await this.request('ponto/justificativas', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId, data, tipo, descricao: this.sanitizeText(descricao || '') })
+    })
+  }
+
+  static async getJustificativasPonto (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`ponto/justificativas${params}`)
+  }
+
+  // --- REQUISIÇÕES DE ESPELHO DE PONTO MENSAL ---
+
+  static async gerarEspelhoPonto (usuarioId, referencia) {
+    return await this.request('espelho-ponto/gerar', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId, referencia })
+    })
+  }
+
+  static async getEspelhosPonto (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`espelho-ponto${params}`)
+  }
+
+  static async assinarEspelhoPonto (id) {
+    return await this.request(`espelho-ponto/${id}/assinar`, { method: 'POST' })
+  }
+
+  // Não usa `request()`: a resposta é um PDF binário, não JSON.
+  static async baixarPdfEspelhoPonto (id) {
+    const response = await fetch(`${API_BASE_URL}/espelho-ponto/${id}/pdf`, {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    if (!response.ok) {
+      throw new Error('Não foi possível baixar o PDF do espelho de ponto.')
+    }
+    return await response.blob()
+  }
+
+  // --- REQUISIÇÕES DE FOLHA DE PAGAMENTO / HOLERITE ---
+
+  static async gerarHolerite (usuarioId, referencia) {
+    return await this.request('folha-pagamento/gerar', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId, referencia })
+    })
+  }
+
+  static async getHolerites (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`folha-pagamento${params}`)
+  }
+
+  static async assinarHolerite (id) {
+    return await this.request(`folha-pagamento/${id}/assinar`, { method: 'POST' })
+  }
+
+  static async pagarHolerite (id) {
+    return await this.request(`folha-pagamento/${id}/pagar`, { method: 'POST' })
+  }
+
+  // Não usa `request()`: a resposta é um PDF binário, não JSON.
+  static async baixarPdfHolerite (id) {
+    const response = await fetch(`${API_BASE_URL}/folha-pagamento/${id}/pdf`, {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    if (!response.ok) {
+      throw new Error('Não foi possível baixar o PDF do holerite.')
+    }
+    return await response.blob()
+  }
+
+  // --- REQUISIÇÕES DE NOTIFICAÇÕES (caixa de entrada) ---
+
+  static async getMinhasNotificacoes () {
+    return await this.request('notificacoes')
+  }
+
+  static async marcarNotificacaoComoLida (id) {
+    return await this.request(`notificacoes/${id}/lida`, { method: 'PATCH' })
+  }
+
+  // --- REQUISIÇÕES DE FÉRIAS ---
+
+  static async solicitarFerias (dataInicio, dataFim) {
+    return await this.request('ferias', {
+      method: 'POST',
+      body: JSON.stringify({ dataInicio, dataFim })
+    })
+  }
+
+  static async getFerias (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`ferias${params}`)
+  }
+
+  static async decidirFerias (id, status) {
+    return await this.request(`ferias/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    })
+  }
+
+  static async editarFerias (id, dataInicio, dataFim) {
+    return await this.request(`ferias/${id}/datas`, {
+      method: 'PATCH',
+      body: JSON.stringify({ dataInicio, dataFim })
+    })
+  }
+
+  // --- REQUISIÇÕES DE ASSINATURA ELETRÔNICA (cadastro único) ---
+
+  static async getMinhaAssinatura () {
+    return await this.request('assinatura-eletronica/me')
+  }
+
+  static async cadastrarAssinatura (imagemDataUri) {
+    return await this.request('assinatura-eletronica/me', {
+      method: 'POST',
+      body: JSON.stringify({ imagemDataUri })
+    })
+  }
+
+  static async definirPerfilRh (usuarioId, dados) {
+    const payload = {
+      cargo: this.sanitizeText(dados.cargo),
+      salarioBase: Number(dados.salarioBase),
+      tipoContrato: dados.tipoContrato === 'pj' ? 'pj' : 'clt',
+      dataAdmissao: dados.dataAdmissao,
+      dataDemissao: dados.dataDemissao || null,
+      diasEscala: dados.diasEscala,
+      horasPorDia: Number(dados.horasPorDia),
+      horaInicioEscala: dados.horaInicioEscala,
+      bancoNome: this.sanitizeText(dados.bancoNome),
+      agencia: this.sanitizeText(dados.agencia),
+      contaBancaria: this.sanitizeText(dados.contaBancaria),
+      direitos: this.sanitizeText(dados.direitos || ''),
+      deveres: this.sanitizeText(dados.deveres || ''),
+      tarefas: this.sanitizeText(dados.tarefas || ''),
+      tipoValeTransporte: ['vale_transporte', 'vale_combustivel'].includes(dados.tipoValeTransporte) ? dados.tipoValeTransporte : 'nenhum',
+      bonusDesempenho: dados.bonusDesempenho === '' || dados.bonusDesempenho == null ? null : Number(dados.bonusDesempenho),
+      observacoesBeneficios: this.sanitizeText(dados.observacoesBeneficios || ''),
+      vagaOrigem: this.sanitizeText(dados.vagaOrigem || ''),
+      gestorId: dados.gestorId || null,
+      etapaCarreiraAtualId: dados.etapaCarreiraAtualId || null
+    }
+    return await this.request(`rh-perfil/${usuarioId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    })
+  }
+
+  // --- REQUISIÇÕES DE CONTRATO DE TRABALHO (versionado, assinado) ---
+
+  static async gerarContratoTrabalho (usuarioId) {
+    return await this.request('contrato-trabalho/gerar', {
+      method: 'POST',
+      body: JSON.stringify({ usuarioId })
+    })
+  }
+
+  static async getContratosTrabalho (usuarioId) {
+    const params = usuarioId ? `?usuarioId=${encodeURIComponent(usuarioId)}` : ''
+    return await this.request(`contrato-trabalho${params}`)
+  }
+
+  static async assinarContratoTrabalho (id) {
+    return await this.request(`contrato-trabalho/${id}/assinar`, { method: 'POST' })
+  }
+
+  // Não usa `request()`: a resposta é um PDF binário, não JSON.
+  static async baixarPdfContratoTrabalho (id) {
+    const response = await fetch(`${API_BASE_URL}/contrato-trabalho/${id}/pdf`, {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    if (!response.ok) {
+      throw new Error('Não foi possível baixar o PDF do contrato.')
+    }
+    return await response.blob()
+  }
+
+  // --- REQUISIÇÕES DE TRILHA DE CARREIRA (catálogo global) ---
+
+  static async getEtapasCarreira () {
+    return await this.request('etapas-carreira')
+  }
+
+  static async criarEtapaCarreira (dados) {
+    return await this.request('etapas-carreira', {
+      method: 'POST',
+      body: JSON.stringify({
+        ordem: Number(dados.ordem),
+        titulo: this.sanitizeText(dados.titulo),
+        faixaSalarial: this.sanitizeText(dados.faixaSalarial || ''),
+        descricao: this.sanitizeText(dados.descricao)
+      })
+    })
+  }
+
+  static async atualizarEtapaCarreira (id, dados) {
+    return await this.request(`etapas-carreira/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ordem: Number(dados.ordem),
+        titulo: this.sanitizeText(dados.titulo),
+        faixaSalarial: this.sanitizeText(dados.faixaSalarial || ''),
+        descricao: this.sanitizeText(dados.descricao)
+      })
+    })
+  }
+
+  static async removerEtapaCarreira (id) {
+    return await this.request(`etapas-carreira/${id}`, { method: 'DELETE' })
+  }
+
+  // --- REQUISIÇÕES DE PDI (Plano de Desenvolvimento Individual) ---
+
+  static async getMeuPdi () {
+    return await this.request('pdi/me')
+  }
+
+  static async getPdi (usuarioId) {
+    return await this.request(`pdi/${usuarioId}`)
+  }
+
+  static async criarItemPdi (usuarioId, dados) {
+    return await this.request(`pdi/${usuarioId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        titulo: this.sanitizeText(dados.titulo),
+        descricao: this.sanitizeText(dados.descricao || '')
+      })
+    })
+  }
+
+  static async atualizarItemPdi (itemId, dados) {
+    return await this.request(`pdi/item/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        titulo: this.sanitizeText(dados.titulo),
+        descricao: this.sanitizeText(dados.descricao || '')
+      })
+    })
+  }
+
+  static async concluirItemPdi (itemId) {
+    return await this.request(`pdi/item/${itemId}/concluir`, { method: 'PATCH' })
+  }
+
+  static async reabrirItemPdi (itemId) {
+    return await this.request(`pdi/item/${itemId}/reabrir`, { method: 'PATCH' })
+  }
+
+  static async moverItemPdi (itemId, direcao) {
+    return await this.request(`pdi/item/${itemId}/mover`, {
+      method: 'PATCH',
+      body: JSON.stringify({ direcao })
+    })
+  }
+
+  static async removerItemPdi (itemId) {
+    return await this.request(`pdi/item/${itemId}`, { method: 'DELETE' })
+  }
+
+  // --- REQUISIÇÕES DE AUDITORIA (admin/rh) ---
+
+  static async getAuditoria ({ entidade, entidadeId, usuarioId } = {}) {
+    const params = new URLSearchParams()
+    if (entidade) params.set('entidade', entidade)
+    if (entidadeId) params.set('entidadeId', entidadeId)
+    if (usuarioId) params.set('usuarioId', usuarioId)
+    const query = params.toString()
+    return await this.request(`auditoria${query ? `?${query}` : ''}`)
   }
 }
 

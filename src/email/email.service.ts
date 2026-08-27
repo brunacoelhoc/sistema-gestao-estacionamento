@@ -69,7 +69,7 @@ export class EmailService {
       )
     }
 
-    await this.transporter.sendMail({
+    const info = await this.transporter.sendMail({
       from: `"ParkGestão" <${this.smtpFrom}>`,
       to,
       subject: 'Código para redefinir sua senha — ParkGestão',
@@ -88,6 +88,10 @@ export class EmailService {
         </div>
       `
     })
+
+    // Só retorna URL para contas de teste (Ethereal); em SMTP real é `false`.
+    const previewUrl = nodemailer.getTestMessageUrl(info)
+    if (previewUrl) console.log(`[email] preview (não enviado de verdade): ${previewUrl}`)
   }
 
   async enviarEmailLembreteCobranca ({ to, nome, valor, dataFim }: ParametrosEmailLembreteCobranca) {
@@ -97,7 +101,7 @@ export class EmailService {
       )
     }
 
-    await this.transporter.sendMail({
+    const info = await this.transporter.sendMail({
       from: `"ParkGestão" <${this.smtpFrom}>`,
       to,
       subject: 'Lembrete de cobrança — ParkGestão',
@@ -117,6 +121,9 @@ export class EmailService {
         </div>
       `
     })
+
+    const previewUrl = nodemailer.getTestMessageUrl(info)
+    if (previewUrl) console.log(`[email] preview (não enviado de verdade): ${previewUrl}`)
   }
 
   async enviarComprovanteTicket ({ to, nome, ticketId, anexoPdf }: ParametrosEmailComprovanteTicket) {
@@ -126,7 +133,7 @@ export class EmailService {
       )
     }
 
-    await this.transporter.sendMail({
+    const info = await this.transporter.sendMail({
       from: `"ParkGestão" <${this.smtpFrom}>`,
       to,
       subject: `Comprovante de Saída — Ticket #${ticketId} — ParkGestão`,
@@ -150,5 +157,8 @@ export class EmailService {
         }
       ]
     })
+
+    const previewUrl = nodemailer.getTestMessageUrl(info)
+    if (previewUrl) console.log(`[email] preview (não enviado de verdade): ${previewUrl}`)
   }
 }

@@ -9,6 +9,15 @@ import { PrismaService } from '../prisma/prisma.service'
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto'
 import { CriarUsuarioDto } from './dto/criar-usuario.dto'
 
+const PAPEIS_VALIDOS = ['admin', 'rh', 'gestor', 'funcionario']
+
+// Normaliza qualquer valor fora de PAPEIS_VALIDOS para 'funcionario' (nunca
+// concede um papel elevado por engano) — os DTOs já validam com @IsIn, isto
+// é só a segunda camada de defesa dentro do service.
+function normalizarRole (role: string | undefined): 'admin' | 'rh' | 'gestor' | 'funcionario' {
+  return PAPEIS_VALIDOS.includes(role || '') ? (role as 'admin' | 'rh' | 'gestor' | 'funcionario') : 'funcionario'
+}
+
 function semSenha (usuario: Usuario) {
   const { senha, ...resto } = usuario
   // temSenha permite ao front saber se a conta já tem senha local
@@ -64,7 +73,7 @@ export class UsuariosService {
           telefone: dto.telefone || null,
           endereco: dto.endereco || null,
           dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : null,
-          role: dto.role === 'admin' ? 'admin' : 'funcionario',
+          role: normalizarRole(dto.role),
           ativo: true,
           aceitouTermos: true,
           provedor: 'local',
@@ -121,7 +130,7 @@ export class UsuariosService {
 
     // Só admin pode alterar papel/status de qualquer conta (inclusive a própria).
     if (solicitante.role === 'admin') {
-      if (dto.role !== undefined) dados.role = dto.role === 'admin' ? 'admin' : 'funcionario'
+      if (dto.role !== undefined) dados.role = normalizarRole(dto.role)
       if (dto.ativo !== undefined) dados.ativo = Boolean(dto.ativo)
     }
 

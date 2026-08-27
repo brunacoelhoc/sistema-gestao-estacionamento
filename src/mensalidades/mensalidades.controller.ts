@@ -1,26 +1,28 @@
 import { Body, Controller, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import { AdminGuard } from '../common/guards/admin.guard'
+import { Roles } from '../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import type { UsuarioAutenticado } from '../common/guards/jwt-auth.guard'
 import { ProfileCompleteGuard } from '../common/guards/profile-complete.guard'
+import { RolesGuard } from '../common/guards/roles.guard'
 import { AtualizarMensalidadeDto } from './dto/atualizar-mensalidade.dto'
 import { MensalidadesService } from './mensalidades.service'
 
-// Não é admin-only: além da tela de Faturamento, estes endpoints também são
-// usados pela saída de tickets de mensalistas (cálculo do ciclo em
-// Tickets) e pelo histórico de cobranças no modal de Mensalistas — ambos
+// Não é restrito por padrão: além da tela de Faturamento, estes endpoints
+// também são usados pela saída de tickets de mensalistas (cálculo do ciclo
+// em Tickets) e pelo histórico de cobranças no modal de Mensalistas — ambos
 // acessíveis a funcionários comuns. Só a listagem SEM mensalistaId (o livro
-// financeiro completo, usado pela tela de Faturamento) é admin-only — ver
-// checagem em `listar` abaixo.
+// financeiro completo, usado pela tela de Faturamento) é restrita a
+// admin/financeiro — ver checagem em `listar` abaixo.
 @UseGuards(JwtAuthGuard, ProfileCompleteGuard)
 @Controller('mensalidades')
 export class MensalidadesController {
   constructor (private readonly mensalidadesService: MensalidadesService) {}
 
   // KPIs agregados de todo o faturamento (MRR, recebido no mês, ticket
-  // médio, sem ciclo ativo) — admin-only, mesmo padrão de MetricasController.
-  @UseGuards(AdminGuard)
+  // médio, sem ciclo ativo) — mesmo padrão restrito de MetricasController.
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'financeiro')
   @Get('kpis')
   kpis () {
     return this.mensalidadesService.calcularKpis()
@@ -31,8 +33,8 @@ export class MensalidadesController {
     @Query('mensalistaId') mensalistaId: string | undefined,
     @CurrentUser() usuario: UsuarioAutenticado
   ) {
-    if (!mensalistaId && usuario.role !== 'admin') {
-      throw new ForbiddenException('Acesso restrito a administradores.')
+    if (!mensalistaId && !['admin', 'financeiro'].includes(usuario.role)) {
+      throw new ForbiddenException('Acesso restrito a administradores e financeiro.')
     }
     return this.mensalidadesService.listar(mensalistaId)
   }

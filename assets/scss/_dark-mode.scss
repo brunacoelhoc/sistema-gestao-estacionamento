@@ -183,4 +183,29 @@ body.dark-mode {
   .dropdown-divider {
     border-color: rgba(255, 255, 255, 0.1);
   }
+
+  // Calendário de férias da equipe (aba "Minhas Férias" do RH) — os meses
+  // usam fundo branco fixo em _components.scss, o que "brilha" sobre o navy
+  // escuro do resto da página.
+  .fce-mes {
+    background-color: $color-surface-dark !important;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .fce-mes-titulo,
+  .fce-legenda-item {
+    color: $color-text-secondary-dark !important;
+  }
+
+  .fce-dia {
+    color: $color-text-secondary-dark;
+
+    &:hover:not(.fce-vazio):not(.fce-bloqueado) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .ferias-equipe-item {
+    background: rgba(255, 255, 255, 0.04);
+  }
 }

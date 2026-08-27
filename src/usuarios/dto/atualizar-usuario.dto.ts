@@ -63,7 +63,7 @@ export class AtualizarUsuarioDto {
   senhaAtual?: string
 
   @IsOptional()
-  @IsIn(['admin', 'funcionario'])
+  @IsIn(['admin', 'rh', 'gestor', 'funcionario', 'financeiro'])
   role?: string
 
   @IsOptional()

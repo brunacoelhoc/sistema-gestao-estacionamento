@@ -15,11 +15,25 @@ datasource db {
 enum Papel {
   admin
   funcionario
+  rh
+  gestor
+  financeiro
 }
 
 enum Provedor {
   local
   google
+}
+
+enum TipoContrato {
+  clt
+  pj
+}
+
+enum TipoValeTransporte {
+  vale_transporte
+  vale_combustivel
+  nenhum
 }
 
 enum TipoVaga {
@@ -35,6 +49,11 @@ enum StatusVaga {
 }
 
 enum StatusTicket {
+  aberto
+  fechado
+}
+
+enum StatusCaixa {
   aberto
   fechado
 }
@@ -63,10 +82,472 @@ model Usuario {
   senhaAlteradaEm DateTime?
   criadoEm        DateTime  @default(now())
 
-  resetSenhaCodigos     ResetSenhaCodigo[]
-  mensalidadesAlteradas Mensalidade[]
+  resetSenhaCodigos        ResetSenhaCodigo[]
+  mensalidadesAlteradas    Mensalidade[]
+  logsAuditoria            LogAuditoria[]
+  perfilRH                 PerfilRH?
+  assinaturaEletronica     AssinaturaEletronica?
+  registrosPonto           RegistroPonto[]
+  solicitacoesExtra        SolicitacaoTrabalhoExtra[] @relation("SolicitacaoExtraDoUsuario")
+  extrasAprovadas          SolicitacaoTrabalhoExtra[] @relation("SolicitacaoExtraAprovadaPor")
+  justificativas           JustificativaPonto[]       @relation("JustificativaDoUsuario")
+  justificativasCriadas    JustificativaPonto[]       @relation("JustificativaCriadaPor")
+  feriasSolicitadas        SolicitacaoFerias[]        @relation("FeriasDoUsuario")
+  feriasDecididas          SolicitacaoFerias[]        @relation("FeriasDecididaPor")
+  notificacoes             Notificacao[]
+  espelhosPonto            FolhaPontoMensal[]         @relation("EspelhoDoUsuario")
+  espelhosGerados          FolhaPontoMensal[]         @relation("EspelhoGeradoPor")
+  holerites                Holerite[]                 @relation("HoleriteDoUsuario")
+  holeritesGerados         Holerite[]                 @relation("HoleriteGeradoPor")
+  ticketsAtendidos         Ticket[]                   @relation("TicketAtendidoPor")
+  caixasAbertos            CaixaDiario[]              @relation("CaixaAbertoPor")
+  caixasFechados           CaixaDiario[]              @relation("CaixaFechadoPor")
+  itensPdi                 ItemPdi[]                  @relation("PdiDoUsuario")
+  itensPdiCriados          ItemPdi[]                  @relation("PdiCriadoPor")
+  subordinadosRH           PerfilRH[]                 @relation("HierarquiaRh")
+  contratosTrabalho        ContratoTrabalho[]         @relation("ContratoDoUsuario")
+  contratosTrabalhoGerados ContratoTrabalho[]         @relation("ContratoGeradoPor")
 
   @@map("usuarios")
+}
+
+/**
+ * Assinatura eletrônica do funcionário, cadastrada uma única vez (ver
+ * AssinaturaEletronicaService — não expõe endpoint de edição, só criação) e
+ * reaplicada em toda folha de ponto/holerite que ele assinar depois. Guardada
+ * como data URI base64, mesmo padrão já usado em Usuario.avatar e
+ * Mensalidade.comprovanteAnexo.
+ */
+model AssinaturaEletronica {
+  id            String   @id @default(cuid())
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId     String   @unique
+  imagemDataUri String   @db.Text
+  criadoEm      DateTime @default(now())
+
+  @@map("assinaturas_eletronicas")
+}
+
+/**
+ * Dados de RH do funcionário (cargo, salário, jornada, dados bancários) —
+ * tabela separada de Usuario (não colunas soltas nele) porque nem toda conta
+ * tem esses dados (ex.: um admin criado sem vínculo de RH) e porque Usuario
+ * já é tocado por fluxos sensíveis de auth/JWT/Google OAuth; separar reduz o
+ * raio de impacto de mudanças aqui. Dados bancários são sempre simulados
+ * (ver RhPerfilService) — só existem pra folha de pagamento se comportar
+ * como se fosse real, nunca integram um gateway de fato.
+ */
+model PerfilRH {
+  id               String       @id @default(cuid())
+  usuario          Usuario      @relation(fields: [usuarioId], references: [id])
+  usuarioId        String       @unique
+  cargo            String
+  salarioBase      Decimal      @db.Decimal(10, 2)
+  tipoContrato     TipoContrato @default(clt)
+  dataAdmissao     DateTime
+  dataDemissao     DateTime?
+  // Exatamente 4 dias fixos por semana (0=domingo…6=sábado) — o estacionamento
+  // funciona 24/7 com equipes de 4 dias revezando os 7 dias. Validado no DTO
+  // via IsDiasEscalaValidos (4 inteiros únicos entre 0 e 6).
+  diasEscala       Int[]
+  horasPorDia      Int          @default(6)
+  // Horário previsto de entrada nos dias de escala, formato "HH:mm" (ex.:
+  // "08:00") — referência usada pelo cálculo de ponto pra apurar atraso
+  // (tolerância de 20min) e hora extra. Texto livre validado no DTO (não
+  // DateTime: é só um horário do dia, repetido em todo dia de escala, sem
+  // data associada).
+  horaInicioEscala String       @default("08:00")
+  bancoNome        String
+  agencia          String
+  contaBancaria    String
+  // Texto livre (um item por linha, renderizado como lista no front) — o
+  // "contrato" que o funcionário enxerga na aba "Meus Dados de RH": o que
+  // ele tem direito, o que se espera dele e quais tarefas cabem ao cargo.
+  // Opcionais porque perfis já existentes não tinham isso antes desta coluna
+  // existir — RH preenche quando quiser, sem forçar re-cadastro imediato.
+  direitos         String?      @db.Text
+  deveres          String?      @db.Text
+  tarefas          String?      @db.Text
+
+  // Os únicos itens de benefício que realmente variam por funcionário — o
+  // restante (saúde 100% subsidiada, TotalPass, folga de aniversário, etc.)
+  // é política fixa da empresa, igual para todos, e por isso não é dado
+  // (fica só como texto institucional no front). tipoValeTransporte é NOT
+  // NULL com default 'nenhum' (mesmo padrão de tipoContrato); os outros dois
+  // são opcionais, mesmo motivo de direitos/deveres/tarefas.
+  tipoValeTransporte    TipoValeTransporte @default(nenhum)
+  bonusDesempenho       Decimal?           @db.Decimal(10, 2)
+  observacoesBeneficios String?            @db.Text
+
+  // Vaga/processo seletivo que originou a contratação — texto livre (ex.:
+  // "Auxiliar de Estacionamento — Turno Noturno — PCD"). Não é uma FK pra
+  // Vaga (esse model já é a vaga de ESTACIONAMENTO, outro domínio) nem existe
+  // cadastro de processo seletivo no sistema — é só o registro histórico de
+  // onde essa contratação começou, pra transparência com o funcionário.
+  vagaOrigem String? @db.Text
+
+  // A quem este funcionário responde diretamente — outro Usuario (tipicamente
+  // papel `gestor`, `rh` ou `admin`). Nulo até RH atribuir. onDelete
+  // SetNull: se o gestor for desligado/excluído, o subordinado não fica
+  // travado — só perde a referência até o RH definir outro.
+  gestor   Usuario? @relation("HierarquiaRh", fields: [gestorId], references: [id], onDelete: SetNull)
+  gestorId String?
+
+  // Posição atual na trilha de carreira (catálogo global — ver
+  // EtapaCarreira). Nula até RH atribuir uma. onDelete Restrict (padrão): não
+  // dá pra apagar uma etapa que está atribuída a alguém.
+  etapaCarreiraAtual   EtapaCarreira? @relation(fields: [etapaCarreiraAtualId], references: [id])
+  etapaCarreiraAtualId String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("perfis_rh")
+}
+
+/**
+ * Catálogo global (não por funcionário) da trilha de carreira — um degrau
+ * por linha, em ordem. RH/admin mantém este catálogo; cada PerfilRH aponta
+ * pra um degrau via etapaCarreiraAtualId. Serve pra o funcionário visualizar
+ * "onde estou" e "onde posso chegar" (ver DEFINIÇÃO em ItemPdi para o plano
+ * individual de progresso rumo ao próximo degrau).
+ */
+model EtapaCarreira {
+  id            String   @id @default(cuid())
+  ordem         Int      @unique
+  titulo        String
+  faixaSalarial String?
+  descricao     String   @db.Text
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  perfis PerfilRH[]
+
+  @@map("etapas_carreira")
+}
+
+enum StatusItemPdi {
+  pendente
+  concluido
+}
+
+/**
+ * Item do Plano de Desenvolvimento Individual de UM funcionário — lançado só
+ * por RH/admin (mesma lógica de JustificativaPonto: o funcionário não cria
+ * nem conclui o próprio item, pra não poder "auto-declarar" progresso na
+ * hora de negociar salário/cargo — quem confirma que a etapa foi
+ * efetivamente cumprida é o RH). "ordem" define a posição na linha do tempo
+ * exibida ao funcionário; a barra de progresso no front é só
+ * concluídos/total.
+ */
+model ItemPdi {
+  id           String        @id @default(cuid())
+  usuario      Usuario       @relation("PdiDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId    String
+  ordem        Int
+  titulo       String
+  descricao    String?       @db.Text
+  status       StatusItemPdi @default(pendente)
+  concluidoEm  DateTime?
+  criadoPor    Usuario       @relation("PdiCriadoPor", fields: [criadoPorId], references: [id])
+  criadoPorId  String
+  criadoEm     DateTime      @default(now())
+  atualizadoEm DateTime      @updatedAt
+
+  @@unique([usuarioId, ordem])
+  @@index([usuarioId])
+  @@map("itens_pdi")
+}
+
+/**
+ * Trilha de auditoria insert-only das ações de RH/admin sobre dado sensível
+ * do módulo de RH (ponto, justificativas, férias, folha de pagamento, etc.).
+ * Não tem endpoint de update/delete — só GET (admin) e um INSERT feito pelo
+ * AuditoriaService.registrar, chamado manualmente em cada service de RH que
+ * altera algo. Guardar dadosAntes/dadosDepois (não só quem/quando) é o que
+ * diferencia isto do padrão pontual alteradoPor/alteradoEm já usado em
+ * Mensalidade: aqui o requisito é sobreviver a uma edição retroativa que
+ * tenta esconder o rastro, não só saber quem alterou por último.
+ */
+model LogAuditoria {
+  id          String   @id @default(cuid())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
+  // Papel do usuário NO MOMENTO da ação — guardado aqui (não só lido de
+  // Usuario.role) porque o papel de quem agiu pode mudar depois (ex.:
+  // alguém sai do RH), e o log precisa continuar contando a história como
+  // ela era quando a ação ocorreu.
+  papel       Papel
+  acao        String
+  entidade    String
+  entidadeId  String
+  dadosAntes  Json?
+  dadosDepois Json?
+  criadoEm    DateTime @default(now())
+
+  @@index([entidade, entidadeId])
+  @@index([usuarioId, criadoEm])
+  @@map("logs_auditoria")
+}
+
+enum StatusSolicitacaoExtra {
+  pendente
+  aprovada
+  rejeitada
+}
+
+/**
+ * Um registro por dia batido (entrada/saída, sem intervalo de almoço) — ver
+ * PontoService. horaEntrada/horaSaida ficam nulas até o funcionário bater o
+ * respectivo ponto; o dia "em aberto" (entrada sem saída ainda) não entra no
+ * cálculo de horas do PontoCalculoService.
+ */
+model RegistroPonto {
+  id          String    @id @default(cuid())
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
+  data        DateTime  @db.Date
+  horaEntrada DateTime?
+  horaSaida   DateTime?
+  criadoEm    DateTime  @default(now())
+
+  @@unique([usuarioId, data])
+  @@map("registros_ponto")
+}
+
+/**
+ * Autorização prévia para trabalhar num dia FORA da escala do funcionário —
+ * sem uma solicitação aprovada para a data, PontoService.registrarEntrada
+ * recusa o ponto (ver requisito: "quem trabalha 4 dias não pode trabalhar
+ * mais, a não ser que seja solicitado previamente"). Aprovada, as horas
+ * daquele dia são pagas com 100% de adicional (ver PontoCalculoService).
+ */
+model SolicitacaoTrabalhoExtra {
+  id            String                 @id @default(cuid())
+  usuario       Usuario                @relation("SolicitacaoExtraDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId     String
+  data          DateTime               @db.Date
+  motivo        String
+  status        StatusSolicitacaoExtra @default(pendente)
+  aprovadoPor   Usuario?               @relation("SolicitacaoExtraAprovadaPor", fields: [aprovadoPorId], references: [id])
+  aprovadoPorId String?
+  aprovadoEm    DateTime?
+  criadoEm      DateTime               @default(now())
+
+  @@unique([usuarioId, data])
+  @@map("solicitacoes_trabalho_extra")
+}
+
+enum TipoJustificativaPonto {
+  atestado
+  abono
+  folga
+}
+
+/**
+ * Justificativa de ausência num dia de escala, lançada só por RH/admin (o
+ * próprio funcionário nunca cria a sua) — cobre atestado, abono e folga.
+ * Todas tratadas como dia pago/sem falta pelo PontoCalculoService (ver
+ * requisito: "o que puder não descontar, não desconte a não ser que seja
+ * obrigatório" — inclusive folga concedida em dia de escala).
+ */
+model JustificativaPonto {
+  id          String                 @id @default(cuid())
+  usuario     Usuario                @relation("JustificativaDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId   String
+  data        DateTime               @db.Date
+  tipo        TipoJustificativaPonto
+  descricao   String?
+  criadoPor   Usuario                @relation("JustificativaCriadaPor", fields: [criadoPorId], references: [id])
+  criadoPorId String
+  criadoEm    DateTime               @default(now())
+
+  @@unique([usuarioId, data])
+  @@map("justificativas_ponto")
+}
+
+enum StatusFerias {
+  pendente
+  aprovada
+  rejeitada
+}
+
+/**
+ * Solicitação de férias do próprio funcionário (60 dias/ano, escolhidos por
+ * ele) — ver FeriasService: exige 90 dias de antecedência da dataInicio e
+ * soma (pendente+aprovada) do ano não pode passar de 60 dias. Aprovada por
+ * RH/admin; dias cobertos por uma solicitação aprovada contam como pagos
+ * (sem falta) no PontoCalculoService, igual a uma JustificativaPonto.
+ */
+model SolicitacaoFerias {
+  id            String       @id @default(cuid())
+  usuario       Usuario      @relation("FeriasDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId     String
+  dataInicio    DateTime     @db.Date
+  dataFim       DateTime     @db.Date
+  dias          Int
+  status        StatusFerias @default(pendente)
+  decididoPor   Usuario?     @relation("FeriasDecididaPor", fields: [decididoPorId], references: [id])
+  decididoPorId String?
+  decididoEm    DateTime?
+  criadoEm      DateTime     @default(now())
+
+  @@index([usuarioId])
+  @@map("solicitacoes_ferias")
+}
+
+enum TipoNotificacao {
+  folha_ponto
+  holerite
+  ferias
+  geral
+  contrato
+}
+
+/**
+ * Caixa de entrada do funcionário. Nesta fase é só a mecânica (criar/listar/
+ * marcar como lida) — ainda sem vínculo com documento nenhum. As Fases 9 e
+ * 10 (espelho de ponto e holerite) vão adicionar as colunas opcionais
+ * folhaPontoId/holeriteId (FK dupla opcional, mesmo padrão já usado em
+ * Ticket.tarifaId/mensalistaId) e um fluxo de "assinar" a partir daqui.
+ */
+model Notificacao {
+  id           String            @id @default(cuid())
+  usuario      Usuario           @relation(fields: [usuarioId], references: [id])
+  usuarioId    String
+  tipo         TipoNotificacao
+  titulo       String
+  mensagem     String
+  // FK dupla opcional — mesmo padrão já usado em Ticket.tarifaId/mensalistaId
+  // — aponta pro documento que a notificação se refere, quando existir. Uma
+  // notificação "geral" não tem nenhum dos dois preenchido.
+  folhaPonto   FolhaPontoMensal? @relation(fields: [folhaPontoId], references: [id])
+  folhaPontoId String?
+  holerite     Holerite?         @relation(fields: [holeriteId], references: [id])
+  holeriteId   String?
+  contrato     ContratoTrabalho? @relation(fields: [contratoId], references: [id])
+  contratoId   String?
+  lida         Boolean           @default(false)
+  lidaEm       DateTime?
+  criadoEm     DateTime          @default(now())
+
+  @@index([usuarioId, lida])
+  @@map("notificacoes")
+}
+
+enum StatusDocumentoAssinatura {
+  pendente_assinatura
+  assinado
+}
+
+/**
+ * Espelho de ponto mensal gerado por RH/admin a partir do resumo calculado
+ * (PontoCalculoService.resumoMes) — snapshot congelado no momento da geração
+ * (não recalcula depois). Só pode ser exportado em PDF depois de assinado
+ * pelo próprio funcionário (ver EspelhoPontoService), usando a assinatura já
+ * cadastrada (AssinaturaEletronica).
+ */
+model FolhaPontoMensal {
+  id              String                    @id @default(cuid())
+  usuario         Usuario                   @relation("EspelhoDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId       String
+  referencia      String // "2026-08"
+  horasNormais    Decimal                   @db.Decimal(6, 2)
+  horasExtras     Decimal                   @db.Decimal(6, 2)
+  horasForaEscala Decimal                   @db.Decimal(6, 2)
+  faltas          Int
+  status          StatusDocumentoAssinatura @default(pendente_assinatura)
+  geradoPor       Usuario                   @relation("EspelhoGeradoPor", fields: [geradoPorId], references: [id])
+  geradoPorId     String
+  geradoEm        DateTime                  @default(now())
+  assinadoEm      DateTime?
+
+  notificacoes Notificacao[]
+
+  @@unique([usuarioId, referencia])
+  @@map("folhas_ponto_mensais")
+}
+
+enum StatusHolerite {
+  gerado
+  assinado
+  pago
+}
+
+/**
+ * Holerite mensal — snapshot congelado do cálculo (ver
+ * folha-pagamento-calculo.util.ts) no momento da geração. Fluxo: gerado ->
+ * assinado (pelo próprio funcionário, com a assinatura já cadastrada) ->
+ * pago (RH/admin, sempre simulado — nunca integra gateway real). PDF só sai
+ * depois de assinado. "Pagamento" exige assinatura prévia e não pode
+ * repetir (ver FolhaPagamentoService.pagar).
+ */
+model Holerite {
+  id                   String         @id @default(cuid())
+  usuario              Usuario        @relation("HoleriteDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId            String
+  referencia           String
+  salarioProporcional  Decimal        @db.Decimal(10, 2)
+  valorHorasExtras     Decimal        @db.Decimal(10, 2)
+  valorHorasForaEscala Decimal        @db.Decimal(10, 2)
+  valorVr              Decimal        @db.Decimal(10, 2)
+  valorVa              Decimal        @db.Decimal(10, 2)
+  inss                 Decimal        @db.Decimal(10, 2)
+  irrf                 Decimal        @db.Decimal(10, 2)
+  salarioLiquido       Decimal        @db.Decimal(10, 2)
+  status               StatusHolerite @default(gerado)
+  geradoPor            Usuario        @relation("HoleriteGeradoPor", fields: [geradoPorId], references: [id])
+  geradoPorId          String
+  geradoEm             DateTime       @default(now())
+  assinadoEm           DateTime?
+  pagoEm               DateTime?
+
+  notificacoes Notificacao[]
+
+  @@unique([usuarioId, referencia])
+  @@map("holerites")
+}
+
+/**
+ * Snapshot IMUTÁVEL de uma versão do contrato de trabalho — gerado sob
+ * demanda por RH/admin (ver ContratoTrabalhoService), assinado pelo próprio
+ * funcionário (reaproveitando AssinaturaEletronica) e só então liberado para
+ * download em PDF. Campos de cargo/salário/escala/benefícios/gestor são
+ * colunas CONGELADAS no momento da geração — não referenciam PerfilRH ao
+ * vivo, então uma edição posterior do perfil não altera versões já geradas.
+ * numeroVersao é sequencial por usuário (1, 2, 3...), calculado no service.
+ */
+model ContratoTrabalho {
+  id                    String                    @id @default(cuid())
+  usuario               Usuario                   @relation("ContratoDoUsuario", fields: [usuarioId], references: [id])
+  usuarioId             String
+  numeroVersao          Int
+  cargo                 String
+  vagaOrigem            String?                   @db.Text
+  tipoContrato          TipoContrato
+  dataAdmissao          DateTime
+  diasEscala            Int[]
+  horasPorDia           Int
+  horaInicioEscala      String
+  salarioBase           Decimal                   @db.Decimal(10, 2)
+  tipoValeTransporte    TipoValeTransporte
+  bonusDesempenho       Decimal?                  @db.Decimal(10, 2)
+  observacoesBeneficios String?                   @db.Text
+  direitos              String?                   @db.Text
+  deveres               String?                   @db.Text
+  tarefas               String?                   @db.Text
+  nomeGestorNoMomento   String?
+  cargoGestorNoMomento  String?
+  status                StatusDocumentoAssinatura @default(pendente_assinatura)
+  geradoPor             Usuario                   @relation("ContratoGeradoPor", fields: [geradoPorId], references: [id])
+  geradoPorId           String
+  geradoEm              DateTime                  @default(now())
+  assinadoEm            DateTime?
+
+  notificacoes Notificacao[]
+
+  @@unique([usuarioId, numeroVersao])
+  @@map("contratos_trabalho")
 }
 
 /**
@@ -117,22 +598,22 @@ model Mensalista {
  * ver MensalidadeCicloService — não no cadastro nem num dia fixo do mês.
  */
 model Mensalidade {
-  id                  String            @id @default(cuid())
-  mensalista          Mensalista        @relation(fields: [mensalistaId], references: [id])
-  mensalistaId        String
-  referencia          String // mês de início do ciclo, ex.: "2026-08"
-  dataInicio          DateTime
-  dataFim             DateTime
-  diasCobrados        Int
-  diasNoMes           Int
-  valor               Decimal           @db.Decimal(10, 2)
-  status              StatusMensalidade @default(pendente)
-  formaPagamento      String?
+  id                 String            @id @default(cuid())
+  mensalista         Mensalista        @relation(fields: [mensalistaId], references: [id])
+  mensalistaId       String
+  referencia         String // mês de início do ciclo, ex.: "2026-08"
+  dataInicio         DateTime
+  dataFim            DateTime
+  diasCobrados       Int
+  diasNoMes          Int
+  valor              Decimal           @db.Decimal(10, 2)
+  status             StatusMensalidade @default(pendente)
+  formaPagamento     String?
   // Só preenchido quando status = cancelada — justificativa do cancelamento
   // (ex.: "Cliente desistiu", "Cobrança em duplicidade"), usada nos
   // relatórios de motivo de perda em Faturamento.
-  motivoCancelamento  String?
-  criadoEm            DateTime          @default(now())
+  motivoCancelamento String?
+  criadoEm           DateTime          @default(now())
 
   // Auditoria da última alteração manual de status feita em Faturamento
   // (marcar como paga / cancelar) — nula quando o ciclo nasce cobrado
@@ -200,6 +681,14 @@ model Ticket {
   mensalista   Mensalista? @relation(fields: [mensalistaId], references: [id])
   mensalistaId String?
 
+  // Quem estava logado ao FECHAR o ticket (cobrar/liberar o veículo) — é o
+  // momento usado como "atendimento" pro relatório de desempenho de
+  // funcionário (ver DesempenhoService). Nulo em tickets abertos e em
+  // qualquer ticket fechado antes desta coluna existir (histórico antigo
+  // fica sem essa informação, de propósito — não é reconstruível).
+  atendidoPor   Usuario? @relation("TicketAtendidoPor", fields: [atendidoPorId], references: [id])
+  atendidoPorId String?
+
   // Cobre a listagem/filtro por status (Dashboard, tela de Tickets) já
   // ordenada por dataEntrada — o padrão de consulta mais comum da tabela.
   @@index([status, dataEntrada])
@@ -210,7 +699,47 @@ model Ticket {
   // groupBy do ranking de vagas e no filtro por tipo de vaga do Dashboard.
   @@index([vagaId])
   @@index([mensalistaId])
+  // Cobre o groupBy por atendidoPorId do relatório de desempenho
+  // (DesempenhoService), filtrado por status=fechado e período de dataSaida.
+  @@index([atendidoPorId, status])
   @@map("tickets")
+}
+
+/**
+ * Caixa físico do estacionamento — um registro por dia corrido (data é
+ * meia-noite local do dia, mesmo padrão de RegistroPonto.data). Aberto no
+ * primeiro ticket do dia (ver TicketsService.abrir), com o valor em espécie
+ * contado manualmente por quem abre — não herdado automaticamente do
+ * fechamento anterior, de propósito: é essa contagem física que expõe uma
+ * divergência (sobra/falta) deixada de um turno pro outro. Fechado no fim do
+ * expediente comparando o valor contado (valorFechamento) contra o esperado
+ * (valorAbertura + soma dos tickets pagos em dinheiro fechados no dia) — ver
+ * CaixaService.fechar. Só pagamento em dinheiro entra nessa conta: PIX e
+ * cartão não movimentam a gaveta física.
+ */
+model CaixaDiario {
+  id                      String      @id @default(cuid())
+  data                    DateTime    @unique @db.Date
+  valorAbertura           Decimal     @db.Decimal(10, 2)
+  abertoPor               Usuario     @relation("CaixaAbertoPor", fields: [abertoPorId], references: [id])
+  abertoPorId             String
+  abertoEm                DateTime    @default(now())
+  valorFechamento         Decimal?    @db.Decimal(10, 2)
+  // Recalculado no momento do fechamento (não no momento da abertura, quando
+  // ainda não existe) — snapshot congelado do que era esperado ali, mesmo
+  // que novos tickets em dinheiro sejam fechados depois.
+  valorEsperadoFechamento Decimal?    @db.Decimal(10, 2)
+  // valorFechamento - valorEsperadoFechamento. Positivo = sobra, negativo =
+  // falta. Guardado (não só recalculável) porque valorEsperadoFechamento é
+  // um snapshot do momento do fechamento, não recalculável depois.
+  diferenca               Decimal?    @db.Decimal(10, 2)
+  fechadoPor              Usuario?    @relation("CaixaFechadoPor", fields: [fechadoPorId], references: [id])
+  fechadoPorId            String?
+  fechadoEm               DateTime?
+  observacoesFechamento   String?
+  status                  StatusCaixa @default(aberto)
+
+  @@map("caixas_diarios")
 }
 
 /**

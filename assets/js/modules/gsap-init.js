@@ -37,12 +37,15 @@ function inicializarAnimacoesGsap () {
         duration: 0.5,
         ease: 'power2.out',
         stagger: 0.08,
-        // Remove o `transform` inline ao final: sem isso, o GSAP deixa a
-        // matriz de identidade aplicada (transform: matrix(1,0,0,1,0,0)),
-        // que cria um novo contexto de empilhamento e "prende" dropdowns
-        // (position: fixed) dentro dele — fazendo o menu aparecer atrás de
-        // elementos seguintes na página, como o próximo card.
-        clearProps: 'transform'
+        // Remove `transform` e `opacity` inline ao final: sem isso, o GSAP
+        // deixa a matriz de identidade aplicada (transform:
+        // matrix(1,0,0,1,0,0)), que cria um novo contexto de empilhamento e
+        // "prende" dropdowns (position: fixed) dentro dele — fazendo o menu
+        // aparecer atrás de elementos seguintes na página, como o próximo
+        // card. Limpar `opacity` também evita que o inline fique preso e
+        // brigue com qualquer outro sistema que mexa na opacidade do mesmo
+        // elemento depois (ex.: scroll-reveal em main.js).
+        clearProps: 'transform,opacity'
       })
     }
   }
@@ -110,7 +113,72 @@ function animarContadorGsap (elemento, valorFinal, opcoes = {}) {
   })
 }
 
+/**
+ * Entrada em cascata de uma lista de elementos recém-inseridos no DOM (ex.:
+ * nós de um .roadmap montado via fetch, depois do carregamento inicial da
+ * página — por isso não é coberto pelo `gsap.from(secoes, ...)` de
+ * inicializarAnimacoesGsap, que só roda uma vez no DOMContentLoaded). Sem
+ * GSAP ou com "reduzir movimento" ativo, não faz nada — os elementos já
+ * aparecem no estado final.
+ *
+ * @param {Element[]|NodeListOf<Element>} elementos
+ */
+function animarEntradaEmCascata (elementos) {
+  const lista = Array.from(elementos || [])
+  if (lista.length === 0) return
+  if (typeof gsap === 'undefined' || gsapDeveReduzirMovimento()) return
+
+  gsap.set(lista, { clearProps: 'opacity,transform' })
+  gsap.from(lista, {
+    opacity: 0,
+    y: 12,
+    duration: 0.4,
+    ease: 'power2.out',
+    stagger: 0.08,
+    clearProps: 'transform'
+  })
+}
+
+/**
+ * Anima o preenchimento de um anel de progresso SVG (ver .progress-ring-valor
+ * em assets/scss/_components.scss — usado no resumo do PDI da aba RH) de 0%
+ * até `percentualFinal`, via stroke-dashoffset. Sem GSAP ou com "reduzir
+ * movimento" ativo, aplica o valor final direto.
+ *
+ * @param {SVGCircleElement} circuloEl Elemento <circle> com raio já definido.
+ * @param {number} percentualFinal 0–100.
+ */
+function animarAnelProgresso (circuloEl, percentualFinal) {
+  if (!circuloEl) return
+
+  const raio = circuloEl.r.baseVal.value
+  const perimetro = 2 * Math.PI * raio
+  const alvo = Math.max(0, Math.min(100, Number(percentualFinal) || 0))
+
+  circuloEl.style.strokeDasharray = `${perimetro}`
+
+  const aplicarOffset = percentual => {
+    circuloEl.style.strokeDashoffset = `${perimetro - (percentual / 100) * perimetro}`
+  }
+
+  if (typeof gsap === 'undefined' || gsapDeveReduzirMovimento()) {
+    aplicarOffset(alvo)
+    return
+  }
+
+  const proxy = { valor: 0 }
+  aplicarOffset(0)
+  gsap.to(proxy, {
+    valor: alvo,
+    duration: 1,
+    ease: 'power2.out',
+    onUpdate: () => aplicarOffset(proxy.valor)
+  })
+}
+
 document.addEventListener('DOMContentLoaded', inicializarAnimacoesGsap)
 
 window.inicializarAnimacoesGsap = inicializarAnimacoesGsap
 window.animarContadorGsap = animarContadorGsap
+window.animarEntradaEmCascata = animarEntradaEmCascata
+window.animarAnelProgresso = animarAnelProgresso

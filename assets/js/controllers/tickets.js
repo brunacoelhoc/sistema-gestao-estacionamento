@@ -24,6 +24,12 @@ let debounceBuscaTicket = null
 // usado até a resposta chegar (ou se a busca falhar).
 let configRegrasCobranca = { toleranciaMinutos: 15, duracaoCicloMensalistaDias: 30, adicionalVagaCobertaValor: 3 }
 
+// Status do caixa do dia (ver GET /caixa/hoje) — atualizado a cada
+// carregarDados() e logo após abrir/fechar o caixa. `aberto: false` com
+// `caixa: null` significa que o caixa de hoje ainda nem foi criado (nenhum
+// ticket registrado ainda hoje).
+let caixaStatusAtual = { aberto: false, caixa: null, valorEsperadoFechamento: null }
+
 // O id do ticket é um cuid longo (ex.: "cm3k9x0p10000abcd1234efgh") — bom
 // para o banco, ilegível na tabela. Exibe só os 8 primeiros caracteres; o
 // UUID completo continua intacto no banco e em toda chamada à API (data-id,
@@ -83,6 +89,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   document
     .getElementById('form-novo-ticket')
     ?.addEventListener('submit', criarNovoTicket)
+
+  // "Emitir Novo Ticket" não abre mais o modal direto via data-bs-toggle: se
+  // o caixa do dia ainda não foi aberto, abre primeiro o modal obrigatório
+  // de abertura de caixa (ver requisito de negócio no topo do arquivo).
+  document
+    .getElementById('btn-emitir-ticket')
+    ?.addEventListener('click', () => {
+      if (!caixaStatusAtual.aberto) {
+        abrirModalBootstrap('modalAbrirCaixa')
+      } else {
+        abrirModalBootstrap('modalNovoTicket')
+      }
+    })
+
+  document
+    .getElementById('form-abrir-caixa')
+    ?.addEventListener('submit', confirmarAberturaCaixa)
+
+  document
+    .getElementById('form-fechar-caixa')
+    ?.addEventListener('submit', confirmarFechamentoCaixa)
+
+  // Preenche o valor de abertura/esperado toda vez que o modal de
+  // fechamento é aberto, refletindo o recebido em dinheiro até aquele
+  // instante (ver ApiService.getCaixaHoje).
+  document
+    .getElementById('modalFecharCaixa')
+    ?.addEventListener('show.bs.modal', preencherModalFecharCaixa)
 
   // Botão "Tentar novamente" do banner de erro global da página
   document.getElementById('btn-retry-page')?.addEventListener('click', () => {
@@ -163,6 +197,8 @@ async function carregarDados () {
     preencherSelectTarifas()
     preencherSelectMensalistas()
     atualizarAvisoFormulario()
+
+    await carregarStatusCaixa()
 
     paginaAtual = 1
     await carregarTickets()
@@ -599,6 +635,171 @@ function verificarMensalistaNaDigitacao (placa) {
   } else {
     infoDiv.innerHTML = '<span class="text-muted"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Veículo avulso (tarifado normalmente)</span>'
     if (selectMensalista) selectMensalista.value = ''
+  }
+}
+
+// --- CAIXA DO DIA ---
+// Abertura obrigatória no primeiro ticket do dia (avulso ou de mensalista) e
+// lembrete de fechamento ao final do expediente — ver CaixaService no
+// backend (src/caixa/caixa.service.ts), fonte única do cálculo de valor
+// esperado. Esta tela nunca calcula esse valor: só exibe o que a API manda.
+
+function formatarMoeda (valor) {
+  return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`
+}
+
+function abrirModalBootstrap (id) {
+  const el = document.getElementById(id)
+  if (!el || typeof bootstrap === 'undefined') return
+  const modal = bootstrap.Modal.getOrCreateInstance(el)
+  modal.show()
+}
+
+function fecharModalBootstrap (id) {
+  const el = document.getElementById(id)
+  if (!el || typeof bootstrap === 'undefined') return
+  bootstrap.Modal.getInstance(el)?.hide()
+}
+
+async function carregarStatusCaixa () {
+  try {
+    caixaStatusAtual = await ApiService.getCaixaHoje()
+  } catch (error) {
+    console.error('Erro ao carregar status do caixa:', error)
+    caixaStatusAtual = { aberto: false, caixa: null, valorEsperadoFechamento: null }
+  }
+  renderizarBannerCaixa()
+}
+
+function renderizarBannerCaixa () {
+  const banner = document.getElementById('caixa-banner')
+  const texto = document.getElementById('caixa-banner-texto')
+  const btnFechar = document.getElementById('btn-fechar-caixa')
+  if (!banner || !texto) return
+
+  const caixa = caixaStatusAtual.caixa
+
+  if (!caixa) {
+    banner.classList.add('d-none')
+    return
+  }
+
+  banner.classList.remove('d-none')
+
+  if (caixaStatusAtual.aberto) {
+    banner.classList.remove('alert-secondary')
+    banner.classList.add('alert-warning')
+    const horaAbertura = caixa.abertoEm ? new Date(caixa.abertoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'
+    texto.innerHTML = `<strong>Caixa aberto</strong> às ${horaAbertura} por ${ApiService.sanitizeText(caixa.abertoPor?.nome || '')} · ` +
+      `Valor esperado agora: <strong>${formatarMoeda(caixaStatusAtual.valorEsperadoFechamento)}</strong> · ` +
+      'Não se esqueça de fechar o caixa ao final do expediente.'
+    btnFechar?.classList.remove('d-none')
+  } else {
+    banner.classList.remove('alert-warning')
+    banner.classList.add('alert-secondary')
+    const horaFechamento = caixa.fechadoEm ? new Date(caixa.fechadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--'
+    const diferenca = Number(caixa.diferenca || 0)
+    const rotuloDiferenca = diferenca === 0 ? 'sem diferença' : diferenca > 0 ? `sobra de ${formatarMoeda(diferenca)}` : `falta de ${formatarMoeda(Math.abs(diferenca))}`
+    texto.innerHTML = `<strong>Caixa do dia fechado</strong> às ${horaFechamento} por ${ApiService.sanitizeText(caixa.fechadoPor?.nome || '')} · ${rotuloDiferenca}.`
+    btnFechar?.classList.add('d-none')
+  }
+}
+
+async function confirmarAberturaCaixa (e) {
+  e.preventDefault()
+
+  const input = document.getElementById('caixa-valor-abertura')
+  const valor = Number(input?.value)
+
+  if (input?.value === '' || Number.isNaN(valor) || valor < 0) {
+    input?.classList.add('is-invalid')
+    return
+  }
+  input?.classList.remove('is-invalid')
+
+  const btnSubmit = document.getElementById('btn-confirmar-abertura-caixa')
+  if (btnSubmit) btnSubmit.disabled = true
+
+  try {
+    await ApiService.abrirCaixa(valor)
+    await carregarStatusCaixa()
+
+    toastSucesso('Caixa do dia aberto com sucesso.')
+
+    document.getElementById('form-abrir-caixa')?.reset()
+    fecharModalBootstrap('modalAbrirCaixa')
+
+    // Continua o fluxo original: quem clicou em "Emitir Novo Ticket" queria
+    // registrar um ticket — agora que o caixa está aberto, abre o modal dele.
+    abrirModalBootstrap('modalNovoTicket')
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro ao abrir o caixa',
+      text: error.message || 'Falha na comunicação com o servidor.'
+    })
+  } finally {
+    if (btnSubmit) btnSubmit.disabled = false
+  }
+}
+
+function preencherModalFecharCaixa () {
+  const caixa = caixaStatusAtual.caixa
+  const elAbertura = document.getElementById('fechar-caixa-valor-abertura')
+  const elEsperado = document.getElementById('fechar-caixa-valor-esperado')
+  if (elAbertura) elAbertura.textContent = formatarMoeda(caixa?.valorAbertura)
+  if (elEsperado) elEsperado.textContent = formatarMoeda(caixaStatusAtual.valorEsperadoFechamento)
+}
+
+async function confirmarFechamentoCaixa (e) {
+  e.preventDefault()
+
+  const caixa = caixaStatusAtual.caixa
+  if (!caixa) return
+
+  const inputValor = document.getElementById('caixa-valor-fechamento')
+  const valorFechamento = Number(inputValor?.value)
+  const observacoes = document.getElementById('caixa-observacoes-fechamento')?.value || ''
+
+  if (inputValor?.value === '' || Number.isNaN(valorFechamento) || valorFechamento < 0) {
+    inputValor?.classList.add('is-invalid')
+    return
+  }
+  inputValor?.classList.remove('is-invalid')
+
+  const btnSubmit = document.getElementById('btn-confirmar-fechamento-caixa')
+  if (btnSubmit) btnSubmit.disabled = true
+
+  try {
+    const resultado = await ApiService.fecharCaixa(caixa.id, { valorFechamento, observacoes })
+    await carregarStatusCaixa()
+
+    document.getElementById('form-fechar-caixa')?.reset()
+    fecharModalBootstrap('modalFecharCaixa')
+
+    const diferenca = Number(resultado?.diferenca || 0)
+    const resumoDiferenca = diferenca === 0
+      ? 'O valor contado bateu certinho com o esperado.'
+      : diferenca > 0
+        ? `Sobra de ${formatarMoeda(diferenca)} em relação ao esperado.`
+        : `Falta de ${formatarMoeda(Math.abs(diferenca))} em relação ao esperado.`
+
+    Swal.fire({
+      icon: diferenca === 0 ? 'success' : 'warning',
+      title: 'Caixa fechado!',
+      html: `<p class="mb-1">Valor esperado: <strong>${formatarMoeda(resultado?.valorEsperadoFechamento)}</strong></p>` +
+        `<p class="mb-1">Valor contado: <strong>${formatarMoeda(resultado?.valorFechamento)}</strong></p>` +
+        `<p class="mb-0">${resumoDiferenca}</p>`,
+      confirmButtonColor: '#0e3a2f'
+    })
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro ao fechar o caixa',
+      text: error.message || 'Falha na comunicação com o servidor.'
+    })
+  } finally {
+    if (btnSubmit) btnSubmit.disabled = false
   }
 }
 

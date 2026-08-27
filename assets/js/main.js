@@ -109,11 +109,19 @@ window.deveReduzirMovimento = deveReduzirMovimento
  * próprio grupo (linha do grid), para um efeito mais orgânico.
  */
 function inicializarScrollReveal () {
+  // Filhos diretos de #main-content já são revelados por
+  // inicializarAnimacoesGsap() (ver gsap-init.js) na entrada da página — um
+  // segundo sistema de fade aqui, disputando opacity/transform do mesmo
+  // elemento, é o que fazia cards como "Desempenho" ou "Funcionários
+  // Cadastrados" (ambos filhos diretos de #main-content e .card) sumirem
+  // de vez em quando: dependendo da ordem de execução entre o GSAP e o
+  // IntersectionObserver, o elemento ficava com opacity:0 preso.
+  const mainContent = document.getElementById('main-content')
   const alvos = Array.from(
     document.querySelectorAll(
       '.card-kpi, .kpi-card, .metrics-chart-card, .metrics-kpi-card, .vaga-card, .card'
     )
-  ).filter(el => !el.closest('.modal, .swal2-container'))
+  ).filter(el => !el.closest('.modal, .swal2-container') && el.parentElement !== mainContent)
 
   if (alvos.length === 0) return
 

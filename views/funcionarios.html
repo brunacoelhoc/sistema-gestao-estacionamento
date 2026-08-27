@@ -3,9 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net https://viacep.com.br; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
-    <!-- Guarda de rota: exige sessão E papel "admin". Sem sessão -> login;
-         logado mas não-admin -> volta para o Dashboard. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://vlibras.gov.br; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net https://viacep.com.br; frame-src https://accounts.google.com https://vlibras.gov.br; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <!-- Guarda de rota: exige sessão E papel "admin", "rh" ou "gestor". Sem
+         sessão -> login; logado sem nenhum desses papéis -> volta pro
+         Dashboard. Gestor só enxerga a lista e o desempenho (ver
+         funcionarios.js) — nunca dados de RH/salário. -->
     <script>
         (function () {
             try {
@@ -15,7 +17,7 @@
                     return;
                 }
                 var sessao = JSON.parse(sessaoBruta);
-                if (!sessao || sessao.role !== 'admin') {
+                if (!sessao || (sessao.role !== 'admin' && sessao.role !== 'rh' && sessao.role !== 'gestor')) {
                     window.location.replace('../index.html');
                     return;
                 }
@@ -169,6 +171,8 @@
                                     aria-hidden="true"></i> Faturamento</a></li>
                         <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="rh.html"><i class="fas fa-users me-1"
+                                    aria-hidden="true"></i> RH</a></li>
                         <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
                                     aria-hidden="true"></i> Sobre</a></li>
                     </ul>
@@ -186,9 +190,14 @@
                 </h1>
                 <p class="text-muted mb-0">Área administrativa — cadastre, edite e controle o acesso de funcionários.</p>
             </div>
-            <button class="btn btn-primary" type="button" id="btn-novo-funcionario">
-                <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Novo Funcionário
-            </button>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-outline-secondary" type="button" id="btn-gerenciar-trilha-carreira">
+                    <i class="fas fa-route me-1" aria-hidden="true"></i> Trilha de Carreira
+                </button>
+                <button class="btn btn-primary" type="button" id="btn-novo-funcionario">
+                    <i class="fas fa-user-plus me-1" aria-hidden="true"></i> Novo Funcionário
+                </button>
+            </div>
         </div>
 
         <!-- MENSAGEM DE ERRO GLOBAL (oculta por padrão) -->
@@ -199,6 +208,34 @@
             <button id="btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
                 <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
             </button>
+        </div>
+
+        <!-- DESEMPENHO POR ATENDIMENTOS -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h2 class="h5 mb-0 fw-semibold">Desempenho por Atendimentos</h2>
+                    <p class="text-muted text-xs mb-0">Quantidade de tickets que cada funcionário fechou (cobrou/liberou o veículo).</p>
+                </div>
+                <label for="input-desempenho-referencia" class="visually-hidden">Filtrar por mês</label>
+                <input type="month" id="input-desempenho-referencia" class="form-control form-control-sm w-auto" aria-label="Filtrar desempenho por mês">
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0" aria-label="Ranking de desempenho por atendimentos">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Funcionário</th>
+                                <th scope="col">Atendimentos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-desempenho">
+                            <tr><td colspan="3" class="text-center text-muted py-3">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- TABELA DE FUNCIONÁRIOS -->

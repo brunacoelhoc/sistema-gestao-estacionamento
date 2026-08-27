@@ -1,4 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
+import { CaixaService } from '../caixa/caixa.service'
+import { dataSemHora } from '../caixa/caixa-datas.util'
 import { CobrancaService } from '../cobranca/cobranca.service'
 import { MensalidadeCicloService } from '../mensalidade-ciclo/mensalidade-ciclo.service'
 import { TicketsService } from './tickets.service'
@@ -15,12 +17,18 @@ function criarPrismaFake (seed: {
   mensalistas?: any[]
   tarifas?: any[]
   mensalidades?: any[]
+  // Por padrão, simula o caixa do dia já aberto — só os testes do módulo de
+  // caixa em si (ou o teste dedicado de recusa abaixo) precisam de false.
+  caixaAberto?: boolean
 } = {}) {
   const vagas = seed.vagas ?? []
   const tickets = seed.tickets ?? []
   const mensalistas = seed.mensalistas ?? []
   const tarifas = seed.tarifas ?? []
   const mensalidades = seed.mensalidades ?? []
+  const caixas: any[] = seed.caixaAberto === false
+    ? []
+    : [{ id: 'caixa1', data: dataSemHora(new Date()), valorAbertura: 100, status: 'aberto', abertoPorId: 'func-teste' }]
   let proximoTicketId = 1
   let proximaMensalidadeId = 1
 
@@ -80,6 +88,14 @@ function criarPrismaFake (seed: {
       async findUnique ({ where: { id } }: any) { return tarifas.find(t => t.id === id) ?? null },
       async findFirst () { return tarifas[0] ?? null }
     },
+    // Só o suficiente pra CaixaService (usada como instância real aqui, não
+    // mockada) checar o caixa do dia dentro da mesma transação.
+    caixaDiario: {
+      async findUnique ({ where: { id, data } }: any) {
+        if (id) return caixas.find(c => c.id === id) ?? null
+        return caixas.find(c => c.data.getTime() === data.getTime()) ?? null
+      }
+    },
     // Só o suficiente pra MensalidadeCicloService (usada como instância real
     // aqui, não mockada) buscar/abrir ciclo dentro da mesma transação.
     mensalidade: {
@@ -102,6 +118,7 @@ function criarPrismaFake (seed: {
     tickets,
     mensalistas,
     mensalidades,
+    caixas,
     async $transaction (fn: any) { return fn(modelos) }
   }
 }
@@ -113,7 +130,8 @@ function criarService (seed?: Parameters<typeof criarPrismaFake>[0]) {
     prismaFake as any,
     new CobrancaService(),
     new MensalidadeCicloService(),
-    emailServiceFake as any
+    emailServiceFake as any,
+    new CaixaService(prismaFake as any)
   )
   return { service, prismaFake, emailServiceFake }
 }
@@ -128,6 +146,12 @@ describe('TicketsService', () => {
       expect(ticket.placa).toBe('ABC1234')
       expect(ticket.status).toBe('aberto')
       expect(prismaFake.vagas[0].status).toBe('ocupada')
+    })
+
+    it('recusa registrar ticket sem o caixa do dia aberto', async () => {
+      const { service } = criarService({ vagas: [{ id: 'v1', status: 'livre' }], caixaAberto: false })
+      await expect(service.abrir({ placa: 'ABC1234', vagaId: 'v1' } as any))
+        .rejects.toBeInstanceOf(ConflictException)
     })
 
     it('recusa quando a vaga não existe', async () => {
@@ -175,8 +199,8 @@ describe('TicketsService', () => {
       const { service } = criarService({
         tickets: [{ id: 't1', status: 'fechado', vagaId: 'v1', dataEntrada: new Date() }]
       })
-      await expect(service.fechar('t1', {})).rejects.toBeInstanceOf(ConflictException)
-      await expect(service.fechar('inexistente', {})).rejects.toBeInstanceOf(ConflictException)
+      await expect(service.fechar('t1', {}, 'func-teste')).rejects.toBeInstanceOf(ConflictException)
+      await expect(service.fechar('inexistente', {}, 'func-teste')).rejects.toBeInstanceOf(ConflictException)
     })
 
     it('ticket avulso dentro da tolerância fecha sem cobrar e libera a vaga', async () => {
@@ -187,10 +211,11 @@ describe('TicketsService', () => {
         tarifas: [{ id: 'tar1', valorHora: 10 }]
       })
 
-      const resultado: any = await service.fechar('t1', { formaPagamento: 'pix' })
+      const resultado: any = await service.fechar('t1', { formaPagamento: 'pix' }, 'func-teste')
 
       expect(resultado.valorTotal).toBe(0)
       expect(resultado.status).toBe('fechado')
+      expect(resultado.atendidoPorId).toBe('func-teste')
       expect(prismaFake.vagas[0].status).toBe('livre')
     })
 
@@ -202,7 +227,7 @@ describe('TicketsService', () => {
         tarifas: [{ id: 'tar1', valorHora: 10 }]
       })
 
-      const resultado: any = await service.fechar('t1', { formaPagamento: 'dinheiro' })
+      const resultado: any = await service.fechar('t1', { formaPagamento: 'dinheiro' }, 'func-teste')
 
       expect(resultado.valorTotal).toBe(20) // 2 horas x R$10
       expect(resultado.formaPagamento).toBe('dinheiro')
@@ -216,7 +241,7 @@ describe('TicketsService', () => {
         mensalistas: [{ id: 'm1', ativo: true, valorMensalidade: 300 }]
       })
 
-      const resultado: any = await service.fechar('t1', { formaPagamento: 'pix' })
+      const resultado: any = await service.fechar('t1', { formaPagamento: 'pix' }, 'func-teste')
 
       expect(resultado.valorTotal).toBe(300)
       expect(resultado.formaPagamento).toBe('pix')
@@ -240,7 +265,7 @@ describe('TicketsService', () => {
         }]
       })
 
-      const resultado: any = await service.fechar('t1', {})
+      const resultado: any = await service.fechar('t1', {}, 'func-teste')
 
       expect(resultado.valorTotal).toBe(0)
       expect(resultado.formaPagamento).toBe('isento')
@@ -255,7 +280,7 @@ describe('TicketsService', () => {
         tarifas: [{ id: 'tar1', valorHora: 7 }]
       })
 
-      const resultado: any = await service.fechar('t1', { formaPagamento: 'dinheiro' })
+      const resultado: any = await service.fechar('t1', { formaPagamento: 'dinheiro' }, 'func-teste')
 
       expect(resultado.valorTotal).toBe(20) // 2 horas x (R$7 + R$3)
     })
@@ -269,7 +294,7 @@ describe('TicketsService', () => {
         tarifas: [{ id: 'tar1', valorHora: 10 }]
       })
 
-      const resultado: any = await service.fechar('t1', {})
+      const resultado: any = await service.fechar('t1', {}, 'func-teste')
 
       expect(resultado.valorTotal).toBe(20)
       expect(resultado.mensalistaCiclo).toBeNull()

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://vlibras.gov.br; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com https://vlibras.gov.br; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Sobre o ParkGestão - Sistema de Gestão de Estacionamento Acessível e em conformidade com a LGPD">
@@ -174,6 +174,8 @@
                                     aria-hidden="true"></i> Faturamento</a></li>
                         <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="rh.html"><i class="fas fa-users me-1"
+                                    aria-hidden="true"></i> RH</a></li>
                         <li class="nav-item"><a class="nav-link active" aria-current="page" href="sobre.html"><i
                                     class="fas fa-info-circle me-1" aria-hidden="true"></i> Sobre</a></li>
                     </ul>
@@ -184,22 +186,25 @@
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main id="main-content" class="container py-4">
-        <!-- CABEÇALHO DA PÁGINA -->
-        <div class="bg-primary text-white rounded-3 p-4 p-md-5 mb-4 shadow-sm">
-            <div class="max-w-700">
+        <!-- CABEÇALHO DA PÁGINA (mesma foto de fundo + véu do Dashboard) -->
+        <section class="hero-section rounded-3 p-4 p-md-5 mb-4 shadow-sm" aria-labelledby="sobre-hero-title">
+            <div class="hero-bg-photo" aria-hidden="true"></div>
+            <div class="hero-bg-scrim" aria-hidden="true"></div>
+            <div class="max-w-700 position-relative z-1">
                 <span class="badge bg-warning text-dark mb-2 fw-bold">
                     <i class="fas fa-universal-access me-1" aria-hidden="true"></i> Acessibilidade WCAG 2.1 AAA
                 </span>
-                <h1 class="display-5 fw-bold mb-3">Sobre o ParkGestão</h1>
-                <p class="lead mb-0">Sistema para gestão completa de tickets, mensalistas, ocupação de vagas e
+                <h1 id="sobre-hero-title" class="display-5 fw-bold mb-3 text-white">Sobre o ParkGestão</h1>
+                <p class="lead mb-0 text-white-80">Sistema para gestão completa de tickets, mensalistas, ocupação de vagas e
                     indicadores financeiros do estacionamento.</p>
             </div>
-        </div>
+        </section>
 
         <!-- NAVEGAÇÃO RÁPIDA ENTRE SEÇÕES DA PÁGINA -->
         <nav aria-label="Navegação nesta página" class="mb-4">
             <ul class="nav nav-pills flex-wrap gap-2">
                 <li class="nav-item"><a class="nav-link border" href="#proposito">Propósito</a></li>
+                <li class="nav-item"><a class="nav-link border" href="#missao-visao-valores">Missão, Visão e Valores</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#contas">Contas e Acessos</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#acessibilidade">Acessibilidade</a></li>
                 <li class="nav-item"><a class="nav-link border" href="#regras-negocio">Regras de Negócio</a></li>
@@ -223,19 +228,102 @@
                     </div>
                 </section>
 
+                <section id="missao-visao-valores" class="card shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h4 fw-bold text-primary mb-3">
+                            <i class="fas fa-compass me-2" aria-hidden="true"></i>Missão, Visão e Valores
+                        </h2>
+
+                        <h3 class="h6 fw-bold mt-3 mb-2">Missão</h3>
+                        <p>Melhorar a qualidade de vida de quem usa e de quem trabalha no estacionamento,
+                            simplificando o controle de vagas, tickets, mensalistas e faturamento em uma
+                            ferramenta acessível a todos.</p>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Visão</h3>
+                        <p>Ser um sistema de referência em gestão de estacionamentos que coloca o bem-estar
+                            coletivo acima do lucro individual, tratando o pátio como um espaço compartilhado
+                            e organizado em benefício de todos.</p>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Valores</h3>
+                        <ul class="list-group list-group-flush mb-0">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Bem-estar coletivo acima do lucro individual:</strong> as decisões do
+                                projeto priorizam o benefício de toda a equipe e de todos os usuários, não o
+                                ganho de um grupo isolado.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Equidade entre a equipe:</strong> mesmas regras, condições e
+                                oportunidades para todos os colaboradores, sem privilégios de cargo ou tempo de
+                                casa.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Cooperação em vez de competição interna:</strong> o trabalho é
+                                organizado em torno de metas compartilhadas, não de disputa entre colegas.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Distribuição justa do trabalho e do reconhecimento:</strong> tarefas,
+                                carga horária e créditos pelos resultados são divididos de forma equilibrada.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Qualidade de vida no trabalho:</strong> respeito à jornada, às pausas e
+                                ao equilíbrio entre vida pessoal e profissional de quem constrói e mantém o
+                                sistema.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Gestão participativa:</strong> decisões importantes são discutidas em
+                                conjunto com a equipe, não impostas de cima para baixo.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Transparência das informações:</strong> critérios, mudanças e decisões
+                                do projeto são comunicados abertamente a todos, sem informação restrita a
+                                poucos.
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2" aria-hidden="true"></i>
+                                <strong>Acesso igualitário a crescimento e capacitação:</strong> oportunidades
+                                de aprender e evoluir no projeto são abertas a qualquer integrante da equipe.
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+
                 <section id="contas" class="card shadow-sm mb-4">
                     <div class="card-body p-4">
                         <h2 class="h4 fw-bold text-primary mb-3">
                             <i class="fas fa-user-shield me-2" aria-hidden="true"></i>Contas e Papéis de Acesso
                         </h2>
-                        <p>O sistema tem dois papéis de acesso, definidos no cadastro do usuário:</p>
+                        <p>O sistema tem quatro papéis de acesso, definidos no cadastro do usuário:</p>
                         <ul class="mb-0">
                             <li class="mb-2"><strong>Funcionário:</strong> acessa o Dashboard, Tickets, Vagas &amp;
-                                Tarifas, Mensalistas e Métricas — o dia a dia operacional do pátio.</li>
+                                Tarifas, Mensalistas e Métricas — o dia a dia operacional do pátio — além da própria
+                                aba <a href="rh.html">RH</a> (ponto, férias, dados de RH, notificações e o próprio
+                                histórico de folha de pagamento).</li>
+                            <li class="mb-2">
+                                <strong>Gestor:</strong> tem acesso a tudo que o funcionário tem, e também à lista de
+                                funcionários e ao relatório de desempenho por atendimentos (tickets fechados) — nunca
+                                vê salário, folha de pagamento ou dados bancários de terceiros, que continuam
+                                exclusivos de RH/administrador.
+                            </li>
+                            <li class="mb-2">
+                                <strong>RH:</strong> tem acesso a tudo que o funcionário tem, e também à área
+                                <a href="funcionarios.html">Gestão de Funcionários</a> (só para consulta e edição dos
+                                dados de RH, não para criar contas ou trocar papel de acesso) e à aba
+                                <strong>Folha de Pagamento</strong> dentro de <a href="rh.html">RH</a>, onde alimenta
+                                o sistema com ponto, justificativas, férias e folha de pagamento de todos os
+                                funcionários. Ações do RH sobre dado sensível ficam registradas numa trilha de
+                                auditoria que só o administrador consulta.
+                            </li>
                             <li>
-                                <strong>Administrador:</strong> tem acesso a tudo que o funcionário tem, e também à
-                                área <a href="funcionarios.html">Gestão de Funcionários</a>, onde é possível cadastrar
-                                novos usuários, definir seu papel de acesso e inativar contas.
+                                <strong>Administrador:</strong> tem acesso a tudo que RH, gestor e funcionário têm, e
+                                também pode cadastrar novos usuários, definir o papel de acesso de qualquer conta e
+                                inativar contas — além de acompanhar, pela auditoria, o que o RH está fazendo.
                             </li>
                         </ul>
                     </div>
@@ -326,6 +414,41 @@
                                 um mensalista específico.</li>
                             <li>Um lembrete de cobrança pode ser enviado por e-mail, se o mensalista tiver e-mail
                                 cadastrado.</li>
+                        </ul>
+
+                        <h3 class="h6 fw-bold mt-4 mb-2">Ponto, férias e folha de pagamento</h3>
+                        <ul class="mb-0">
+                            <li class="mb-2">Cada funcionário tem uma escala fixa de <strong>4 dias por semana</strong>
+                                (o estacionamento funciona 24 horas por dia, 7 dias por semana, com equipes revezando
+                                os dias), com uma quantidade de horas e um horário de entrada previstos, definidos
+                                pelo RH no cadastro.</li>
+                            <li class="mb-2">A entrada é registrada com <strong>20 minutos de tolerância</strong>:
+                                dentro desse prazo, o atraso não é descontado. Acima disso, o tempo perdido não é
+                                pago, mas não vira falta — o funcionário trabalhou parte do dia.</li>
+                            <li class="mb-2">Trabalhar além da jornada num dia de escala é pago pelo
+                                <strong>valor-hora normal</strong>. Trabalhar num dia <strong>fora da escala</strong>
+                                só é permitido com uma solicitação aprovada previamente pelo RH — e, nesse caso, é
+                                pago com <strong>100% de adicional</strong> (dobro do valor-hora).</li>
+                            <li class="mb-2">Falta é um dia de escala sem nenhum registro de ponto e sem cobertura de
+                                atestado, abono, folga ou férias aprovadas — essas quatro situações nunca geram
+                                desconto no salário.</li>
+                            <li class="mb-2">Férias: <strong>60 dias por ano</strong>, escolhidos pelo próprio
+                                funcionário, solicitados com pelo menos <strong>90 dias de antecedência</strong> para
+                                a empresa se programar, e aprovados pelo RH.</li>
+                            <li class="mb-2">A assinatura eletrônica é cadastrada <strong>uma única vez</strong> pelo
+                                funcionário e reaplicada em toda folha de ponto e holerite que ele assinar depois.
+                                Um documento só pode ser baixado em PDF <strong>depois de assinado</strong>.</li>
+                            <li class="mb-2">Cálculo do holerite mensal: salário-base (proporcional às faltas não
+                                abonadas) + horas extras + horas fora da escala (100% de adicional) +
+                                <strong>Vale-Refeição</strong> (R$ 45,00 por dia trabalhado) +
+                                <strong>Vale-Alimentação</strong> (R$ 800,00 fixo por mês) — menos
+                                <strong>INSS</strong> e <strong>IRRF</strong>, os únicos descontos, por serem
+                                obrigatórios por lei. Plano de convênio médico, plano odontológico, Gympass e o
+                                desconto para compra de livros são benefícios sem nenhum desconto no salário do
+                                funcionário.</li>
+                            <li>O "pagamento" de um holerite é sempre <strong>simulado</strong>: o fluxo se comporta
+                                como se fosse real (exige assinatura prévia, não pode ser repetido), mas nunca integra
+                                um banco de verdade.</li>
                         </ul>
 
                         <h3 class="h6 fw-bold mt-4 mb-2">Contas e acesso</h3>

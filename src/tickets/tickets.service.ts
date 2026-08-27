@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '../../generated/prisma'
+import { CaixaService } from '../caixa/caixa.service'
 import { CobrancaService } from '../cobranca/cobranca.service'
 import { EmailService } from '../email/email.service'
 import { MensalidadeCicloService } from '../mensalidade-ciclo/mensalidade-ciclo.service'
@@ -24,7 +25,8 @@ export class TicketsService {
     private readonly prisma: PrismaService,
     private readonly cobrancaService: CobrancaService,
     private readonly mensalidadeCicloService: MensalidadeCicloService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly caixaService: CaixaService
   ) {}
 
   private montarWhere ({ status, termo }: FiltrosListarTickets): Prisma.TicketWhereInput {
@@ -86,6 +88,11 @@ export class TicketsService {
   // inconsistentes entre si.
   abrir (dto: AbrirTicketDto) {
     return this.prisma.$transaction(async tx => {
+      // Sem caixa do dia aberto (contagem física feita e confirmada por
+      // alguém), nenhum ticket — avulso ou de mensalista — pode ser
+      // registrado. Ver CaixaService.verificarAbertoParaTicket.
+      await this.caixaService.verificarAbertoParaTicket(tx)
+
       const vaga = await tx.vaga.findUnique({ where: { id: dto.vagaId } })
       if (!vaga || vaga.status !== 'livre') {
         throw new ConflictException('A vaga selecionada não está livre ou é inválida.')
@@ -133,7 +140,7 @@ export class TicketsService {
    * data de entrada deste ticket, ele fecha isento; senão, este ticket é
    * quem cobra o ciclo inteiro e o abre a partir da data de entrada.
    */
-  fechar (id: string, dto: FecharTicketDto) {
+  fechar (id: string, dto: FecharTicketDto, atendidoPorId: string) {
     return this.prisma.$transaction(async tx => {
       const ticket = await tx.ticket.findUnique({ where: { id } })
       if (!ticket || ticket.status !== 'aberto') {
@@ -184,7 +191,7 @@ export class TicketsService {
 
       const ticketAtualizado = await tx.ticket.update({
         where: { id },
-        data: { dataSaida, valorTotal, formaPagamento: formaPagamentoFinal, status: 'fechado' }
+        data: { dataSaida, valorTotal, formaPagamento: formaPagamentoFinal, status: 'fechado', atendidoPorId }
       })
 
       await tx.vaga.update({ where: { id: ticket.vagaId }, data: { status: 'livre' } })

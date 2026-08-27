@@ -116,6 +116,22 @@ describe('UsuariosService', () => {
       expect(usuario.role).toBe('admin')
     })
 
+    it('aceita role rh quando explicitamente pedido', async () => {
+      const { service } = criarService()
+      const usuario: any = await service.criarFuncionario({
+        nome: 'RH', email: 'rh@teste.com', senha: 'SenhaForte1!', role: 'rh'
+      } as any)
+      expect(usuario.role).toBe('rh')
+    })
+
+    it('rebaixa role desconhecido para funcionario (defesa em profundidade além do DTO)', async () => {
+      const { service } = criarService()
+      const usuario: any = await service.criarFuncionario({
+        nome: 'X', email: 'x@teste.com', senha: 'SenhaForte1!', role: 'superadmin'
+      } as any)
+      expect(usuario.role).toBe('funcionario')
+    })
+
     it('recusa e-mail já cadastrado', async () => {
       const { service } = criarService({ usuarios: [{ id: 'u1', email: 'ja@teste.com' }] })
       await expect(service.criarFuncionario({
@@ -192,6 +208,15 @@ describe('UsuariosService', () => {
 
       expect(prismaFake.usuarios[0].role).toBe('admin')
       expect(prismaFake.usuarios[0].ativo).toBe(false)
+    })
+
+    it('admin pode promover uma conta para rh', async () => {
+      const { service, prismaFake } = criarService({ usuarios: [{ id: 'u1', role: 'funcionario', ativo: true }] })
+      const solicitante: any = { id: 'admin1', role: 'admin' }
+
+      await service.atualizarPerfil('u1', { role: 'rh' } as any, solicitante)
+
+      expect(prismaFake.usuarios[0].role).toBe('rh')
     })
 
     it('reemite o token só quando o próprio dono edita o perfil', async () => {

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://vlibras.gov.br; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://accounts.google.com https://vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://accounts.google.com https://vlibras.gov.br; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <!-- Guarda de rota: sem sessão salva, manda para o login antes de
          renderizar qualquer conteúdo protegido. Sessão sem CPF (primeiro
          login via Google) manda para a conclusão de cadastro. -->
@@ -193,6 +193,8 @@
                                     aria-hidden="true"></i> Faturamento</a></li>
                         <li class="nav-item d-none" id="nav-item-metricas"><a class="nav-link" href="metricas.html"><i class="fas fa-chart-pie me-1"
                                     aria-hidden="true"></i> Métricas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="rh.html"><i class="fas fa-users me-1"
+                                    aria-hidden="true"></i> RH</a></li>
                         <li class="nav-item"><a class="nav-link" href="sobre.html"><i class="fas fa-info-circle me-1"
                                     aria-hidden="true"></i> Sobre</a></li>
                     </ul>
@@ -228,8 +230,7 @@
                         </li>
                     </ul>
                 </div>
-                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNovoTicket"
-                    id="btn-emitir-ticket">
+                <button class="btn btn-primary" type="button" id="btn-emitir-ticket">
                     <i class="fas fa-plus-circle me-1" aria-hidden="true"></i> Emitir Novo Ticket
                 </button>
             </div>
@@ -242,6 +243,21 @@
                 novamente.</span>
             <button id="btn-retry-page" class="btn btn-sm btn-outline-danger ms-3" type="button">
                 <i class="fas fa-rotate-right me-1" aria-hidden="true"></i> Tentar novamente
+            </button>
+        </div>
+
+        <!-- STATUS DO CAIXA DO DIA — some quando o caixa de hoje ainda não existe
+             (nenhum ticket foi registrado ainda); mostra "aberto" com lembrete de
+             fechamento, ou "fechado" com o resumo do dia. -->
+        <div id="caixa-banner" class="alert d-none d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4"
+            role="status" aria-live="polite">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-cash-register fs-5" aria-hidden="true"></i>
+                <span id="caixa-banner-texto"></span>
+            </div>
+            <button type="button" class="btn btn-sm btn-dark d-none" id="btn-fechar-caixa" data-bs-toggle="modal"
+                data-bs-target="#modalFecharCaixa">
+                <i class="fas fa-lock me-1" aria-hidden="true"></i> Fechar Caixa
             </button>
         </div>
 
@@ -405,6 +421,94 @@
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary" id="btn-registrar-entrada">
                             <i class="fas fa-check me-1" aria-hidden="true"></i> Registrar Entrada
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ABERTURA DE CAIXA — disparado automaticamente ao tentar emitir o
+         primeiro ticket do dia (nenhum data-bs-toggle no botão "Emitir Novo
+         Ticket": ver assets/js/controllers/tickets.js). Sem botão de fechar e com
+         backdrop estático de propósito — a contagem do valor em caixa é
+         obrigatória antes de registrar qualquer ticket, avulso ou de mensalista. -->
+    <div class="modal fade" id="modalAbrirCaixa" tabindex="-1" aria-labelledby="modalAbrirCaixaLabel"
+        aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="modalAbrirCaixaLabel">
+                        <i class="fas fa-cash-register text-primary me-2" aria-hidden="true"></i>Abertura do Caixa do
+                        Dia
+                    </h2>
+                </div>
+                <form id="form-abrir-caixa" novalidate>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 mb-3">
+                            <i class="fas fa-circle-info me-2" aria-hidden="true"></i>
+                            Este é o primeiro ticket do dia. Antes de registrá-lo, conte o dinheiro que está
+                            atualmente no caixa físico e informe o valor abaixo para abrir o caixa.
+                        </div>
+                        <div class="mb-2">
+                            <label for="caixa-valor-abertura" class="form-label fw-semibold">Valor contado em caixa
+                                (R$) <span class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="caixa-valor-abertura"
+                                placeholder="0,00" required aria-describedby="caixa-valor-abertura-help">
+                            <div id="caixa-valor-abertura-help" class="form-text">
+                                Se o caixa começou o dia vazio, informe 0,00.
+                            </div>
+                            <div class="invalid-feedback">Informe o valor contado em caixa (0,00 ou mais).</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" id="btn-confirmar-abertura-caixa">
+                            <i class="fas fa-check me-1" aria-hidden="true"></i> Confirmar Abertura do Caixa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE FECHAMENTO DE CAIXA -->
+    <div class="modal fade" id="modalFecharCaixa" tabindex="-1" aria-labelledby="modalFecharCaixaLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="modalFecharCaixaLabel">
+                        <i class="fas fa-cash-register text-danger me-2" aria-hidden="true"></i>Fechamento do Caixa do
+                        Dia
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <form id="form-fechar-caixa" novalidate>
+                    <div class="modal-body">
+                        <p class="mb-1 text-muted">Valor de abertura: <strong id="fechar-caixa-valor-abertura"
+                                class="text-dark">R$ 0,00</strong></p>
+                        <p class="mb-3 text-muted">Valor esperado agora (abertura + recebido em dinheiro hoje):
+                            <strong id="fechar-caixa-valor-esperado" class="text-dark fs-5 d-block mt-1">R$
+                                0,00</strong>
+                        </p>
+                        <div class="mb-3">
+                            <label for="caixa-valor-fechamento" class="form-label fw-semibold">Valor contado em caixa
+                                agora (R$) <span class="text-danger" aria-hidden="true">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="caixa-valor-fechamento"
+                                placeholder="0,00" required>
+                            <div class="invalid-feedback">Informe o valor contado ao fechar o caixa.</div>
+                        </div>
+                        <div class="mb-2">
+                            <label for="caixa-observacoes-fechamento" class="form-label fw-semibold">Observações
+                                (opcional)</label>
+                            <textarea class="form-control" id="caixa-observacoes-fechamento" rows="2"
+                                placeholder="Ex.: motivo de uma sobra/falta identificada..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger" id="btn-confirmar-fechamento-caixa">
+                            <i class="fas fa-lock me-1" aria-hidden="true"></i> Confirmar Fechamento
                         </button>
                     </div>
                 </form>

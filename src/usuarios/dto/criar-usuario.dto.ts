@@ -43,6 +43,6 @@ export class CriarUsuarioDto {
   dataNascimento?: string | null
 
   @IsOptional()
-  @IsIn(['admin', 'funcionario'])
+  @IsIn(['admin', 'rh', 'gestor', 'funcionario', 'financeiro'])
   role?: string
 }
