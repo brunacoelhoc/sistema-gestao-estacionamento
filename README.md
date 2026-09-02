@@ -32,6 +32,13 @@
 - [📧 Recuperação de senha por e-mail](#-recuperação-de-senha-por-e-mail)
 - [📐 Padrão de commits](#-padrão-de-commits)
 - [👩‍💻 Autora](#-autora)
+- [🗺️ Mapeamento de rotas da API (CRUD)](./MAPEAMENTO_ROTAS.md)
+- [📏 Regras de negócio e validações](./REGRAS_NEGOCIO.md)
+- [🔐 Autenticação e controle de acesso (RBAC)](./AUTENTICACAO_PERMISSOES.md)
+- [🗄️ Modelo de dados (ERD)](./MODELO_DADOS.md)
+- [⚙️ Ambiente e infraestrutura](./AMBIENTE_E_INFRAESTRUTURA.md)
+- [🔌 Integrações externas e documentos](./INTEGRACOES_EXTERNAS.md)
+- [🏗️ Arquitetura, convenções e guia de extensão](./ARQUITETURA_E_CONVENCOES.md)
 
 ---
 
